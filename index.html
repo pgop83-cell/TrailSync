@@ -10,7 +10,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
   <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
-  <title>TrailSync v14.23 — Fix Cloned SDP en BroadcastChannel + Envío Completo de Oferta/Respuesta WebRTC</title>
+  <title>TrailSync v14.24 — Salida de Audio por Auriculares Bluetooth y Seguimiento del Dispositivo</title>
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
         onerror="this.onerror=null;this.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';" />
@@ -1826,7 +1826,7 @@
     <h2>Ajustes de ruta y App</h2>
     <div style="background:#18141a;padding:10px 12px;border-radius:12px;margin-bottom:12px;border:1px solid #334155;display:flex;align-items:center;justify-content:space-between;gap:8px;">
       <div>
-        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">14.23.0</span></div>
+        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">14.24.0</span></div>
         <div style="font-size:11px;color:#94a3b8;" id="webVerStatusLabel">Comprobando actualizaciones en la web...</div>
       </div>
       <button class="solid-btn" style="flex:0 0 auto;background:#16a34a;color:#fff;padding:8px 12px;font-size:12px;" onclick="manualCheckForUpdates()">🔄 Buscar / Actualizar</button>
@@ -1858,7 +1858,7 @@
 </div>
 
 <script>
-  const APP_VERSION = '14.23.0';
+  const APP_VERSION = '14.24.0';
   let swWaitingWorker = null;
   let remoteVersionFound = null;
 
@@ -3668,7 +3668,7 @@ window.addEventListener('offline', () => {
       brokers.forEach((brokerUrl, idx) => {
         try {
           const client = window.mqtt.connect(brokerUrl, {
-            clientId: `ts1423_${myPeerId}_${idx}_${Math.floor(Math.random()*999)}`,
+            clientId: `ts1424_${myPeerId}_${idx}_${Math.floor(Math.random()*999)}`,
             reconnectPeriod: 3000,
             connectTimeout: 8000
           });
@@ -4923,6 +4923,39 @@ ${trkptsXml}
   let rxMeterTimerId = null;
   let rxAnalysers = {};
 
+
+  async function applyDeviceOutputSinkToAudioElements() {
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return;
+      const devs = await navigator.mediaDevices.enumerateDevices();
+      const outputs = devs.filter(d => d.kind === 'audiooutput');
+      if (!outputs.length) return;
+      // Prefer Bluetooth / headset / handsfree output if available, else default ('')
+      const btOrHeadset = outputs.find(d =>
+        d.deviceId &&
+        d.deviceId !== 'default' &&
+        d.deviceId !== 'communications' &&
+        /bluetooth|bt|headset|auricular|casco|airpods|buds|freebuds|intercom|cardo|sena|lexin|ejeas/i.test(d.label || '')
+      );
+      const targetSinkId = btOrHeadset ? btOrHeadset.deviceId : '';
+      logAudioDiag('AUDIO_SINK', `outputs=${outputs.length} btFound=${Boolean(btOrHeadset)} label="${btOrHeadset ? btOrHeadset.label : 'system'}"`);
+
+      for (const el of Object.values(remoteAudioEls)) {
+        if (el && typeof el.setSinkId === 'function') {
+          try {
+            await el.setSinkId(targetSinkId);
+          } catch (e) {}
+        }
+      }
+    } catch (e) {}
+  }
+
+  if (navigator.mediaDevices && navigator.mediaDevices.addEventListener) {
+    navigator.mediaDevices.addEventListener('devicechange', () => {
+      applyDeviceOutputSinkToAudioElements();
+    });
+  }
+
   function attachRemoteAudioLevelMonitor(peerId, stream) {
     try {
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -4936,7 +4969,6 @@ ${trkptsXml}
       an.fftSize = 256;
       src.connect(rxGain);
       rxGain.connect(an);
-      rxGain.connect(voiceAudioCtx.destination);
       rxAnalysers[peerId] = { an, data: new Uint8Array(an.frequencyBinCount) };
 
       if (!rxMeterTimerId) {
@@ -5139,6 +5171,7 @@ ${trkptsXml}
   }
 
   function forceUnlockAndReconnectVoice() {
+    applyDeviceOutputSinkToAudioElements();
     Object.values(remoteAudioEls).forEach(el => {
       try {
         el.muted = false;
@@ -5235,6 +5268,7 @@ ${trkptsXml}
       const streamToPlay = (event.streams && event.streams[0]) ? event.streams[0] : new MediaStream([event.track]);
       logAudioDiag('RTC_ONTRACK', `from=${remotePeerId} trackState=${event.track ? event.track.readyState : 'none'} streams=${event.streams ? event.streams.length : 0}`);
       audioEl.srcObject = streamToPlay;
+      applyDeviceOutputSinkToAudioElements();
       attachRemoteAudioLevelMonitor(remotePeerId, streamToPlay);
       audioEl.play().then(() => {
         logAudioDiag('AUDIO_PLAY_OK', `from=${remotePeerId}`);
