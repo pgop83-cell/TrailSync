@@ -10,7 +10,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
   <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
-  <title>TrailSync v14.22 — Botón Temporal Log Audio WhatsApp en Mapa + Telemetría WebRTC Completa</title>
+  <title>TrailSync v14.23 — Fix Cloned SDP en BroadcastChannel + Envío Completo de Oferta/Respuesta WebRTC</title>
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
         onerror="this.onerror=null;this.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';" />
@@ -1826,7 +1826,7 @@
     <h2>Ajustes de ruta y App</h2>
     <div style="background:#18141a;padding:10px 12px;border-radius:12px;margin-bottom:12px;border:1px solid #334155;display:flex;align-items:center;justify-content:space-between;gap:8px;">
       <div>
-        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">14.22.0</span></div>
+        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">14.23.0</span></div>
         <div style="font-size:11px;color:#94a3b8;" id="webVerStatusLabel">Comprobando actualizaciones en la web...</div>
       </div>
       <button class="solid-btn" style="flex:0 0 auto;background:#16a34a;color:#fff;padding:8px 12px;font-size:12px;" onclick="manualCheckForUpdates()">🔄 Buscar / Actualizar</button>
@@ -1858,7 +1858,7 @@
 </div>
 
 <script>
-  const APP_VERSION = '14.22.0';
+  const APP_VERSION = '14.23.0';
   let swWaitingWorker = null;
   let remoteVersionFound = null;
 
@@ -3668,7 +3668,7 @@ window.addEventListener('offline', () => {
       brokers.forEach((brokerUrl, idx) => {
         try {
           const client = window.mqtt.connect(brokerUrl, {
-            clientId: `ts1422_${myPeerId}_${idx}_${Math.floor(Math.random()*999)}`,
+            clientId: `ts1423_${myPeerId}_${idx}_${Math.floor(Math.random()*999)}`,
             reconnectPeriod: 3000,
             connectTimeout: 8000
           });
@@ -3702,7 +3702,11 @@ window.addEventListener('offline', () => {
       route: routeObj,
       ts: Date.now()
     };
-    if (bcChannel) bcChannel.postMessage(msg);
+    if (bcChannel) {
+      try {
+        bcChannel.postMessage(JSON.parse(JSON.stringify(msg)));
+      } catch (e) {}
+    }
     const encrypted = await encryptPayload(msg);
     const routeTopic = `trailsync/e2e/v7/${groupCode}/shared_route`;
     const connected = mqttClients.filter(c => c && c.connected);
@@ -3730,7 +3734,11 @@ window.addEventListener('offline', () => {
       ts: Date.now(),
       ...extra
     };
-    if (bcChannel) bcChannel.postMessage(msg);
+    if (bcChannel) {
+      try {
+        bcChannel.postMessage(JSON.parse(JSON.stringify(msg)));
+      } catch (e) {}
+    }
     const encrypted = await encryptPayload(msg);
     const peerTopic = `trailsync/e2e/v7/${groupCode}/${myPeerId}`;
     const connected = mqttClients.filter(c => c && c.connected);
@@ -5279,7 +5287,8 @@ ${trkptsXml}
       const offer = await pc.createOffer({ offerToReceiveAudio: true });
       await pc.setLocalDescription(offer);
       voiceOfferCounts[remotePeerId] = (voiceOfferCounts[remotePeerId] || 0) + 1;
-      sendVoiceSignal(remotePeerId, 'OFFER', { sdp: pc.localDescription });
+      const plainOffer = pc.localDescription ? { type: pc.localDescription.type, sdp: pc.localDescription.sdp } : { type: offer.type, sdp: offer.sdp };
+      sendVoiceSignal(remotePeerId, 'OFFER', { sdp: plainOffer });
       updateVoiceDiagStatus('oferta enviada');
     } catch (e) {
       updateVoiceDiagStatus('error oferta');
@@ -5354,8 +5363,9 @@ ${trkptsXml}
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
         voiceAnswerCounts[fromId] = (voiceAnswerCounts[fromId] || 0) + 1;
+        const plainAnswer = pc.localDescription ? { type: pc.localDescription.type, sdp: pc.localDescription.sdp } : { type: answer.type, sdp: answer.sdp };
         logAudioDiag('SIG_SEND_ANSWER', `to=${fromId}`);
-        sendVoiceSignal(fromId, 'ANSWER', { sdp: pc.localDescription });
+        sendVoiceSignal(fromId, 'ANSWER', { sdp: plainAnswer });
         updateVoiceDiagStatus('respuesta enviada');
       } catch (e) {}
       return;
