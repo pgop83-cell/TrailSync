@@ -10,7 +10,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
   <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
-  <title>TrailSync v14.11 — Unión y Compartición de Grupo por Código QR</title>
+  <title>TrailSync v14.15 — Salida de Grupo con Aviso y Eliminación en Vivo + Escala Dinámica del Mapa</title>
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
         onerror="this.onerror=null;this.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';" />
@@ -675,6 +675,7 @@
     body.family-spectator-mode #btnRecToggle,
     body.family-spectator-mode #headerCodeChip,
     body.family-spectator-mode #btnHeaderBackLobby,
+    body.family-spectator-mode #btnLeaveGroupDoor,
     body.family-spectator-mode #btnFamilyHeader,
     body.family-spectator-mode #btnSettingsHeader,
     body.family-spectator-mode .telemetry-bar {
@@ -1128,9 +1129,12 @@
         <div class="rec-square" id="recIconShape"></div>
       </button>
 
-      <button class="top-icon-btn" id="btnWakeLock" onclick="toggleWakeLock(true)" title="Pantalla siempre encendida (Wake Lock)">
-        <svg width="19" height="19" fill="none" stroke="currentColor" stroke-width="2.1" viewBox="0 0 24 24">
-          <circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41m11.32-11.32l1.41-1.41"/>
+      <button class="top-icon-btn" id="btnLeaveGroupDoor" onclick="requestLeaveGroupViaDoor()" title="Salir del grupo y avisar a los compañeros" style="color:#f87171;">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+          <path d="M4 20h12V4L4 2v18z"/>
+          <path d="M16 4h3v16h-3"/>
+          <circle cx="13" cy="12" r="1.1" fill="currentColor"/>
+          <path d="M21 12h-3m0 0l2-2m-2 2l2 2"/>
         </svg>
       </button>
 
@@ -1194,7 +1198,7 @@
 
     <!-- TOP-RIGHT: SCALE + GOOGLE MAPS COMPASS + DISPLAY CONTRAST -->
     <div class="top-right-stack" id="topRightStack">
-      <div class="scale-box">0,3 km</div>
+      <div class="scale-box" id="mapScaleBox">0,3 km</div>
 
       <button class="gmaps-compass-btn" id="gmapsCompassBtn" onclick="toggleNavigationHeadingMode()" title="Alternar orientación: Norte arriba / Sentido de navegación">
         <div class="gmaps-compass-inner" id="gmapsCompassNeedle">
@@ -1347,6 +1351,52 @@
                 </div>
                 <span id="vadGateBadge" style="font-size:9.5px;font-weight:800;color:#64748b;">CERRADA</span>
               </div>
+              <div id="voiceLinkDiagText" style="font-size:10px;color:#94a3b8;margin-top:6px;line-height:1.3;">
+                Enlace peers: sin conexiones activas
+              </div>
+              <button type="button" onclick="forceUnlockAndReconnectVoice()"
+                      style="margin-top:6px;width:100%;background:#1e293b;color:#38bdf8;border:1px solid #38bdf8;border-radius:7px;padding:5px 8px;font-size:11px;font-weight:800;cursor:pointer;">
+                🔊 Forzar salida audio y reconectar enlace
+              </button>
+            </div>
+
+            <div style="background:#0f172a;border:1px solid #334155;border-radius:10px;padding:8px 9px;margin-top:6px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:5px;">
+                <span style="font-size:11.5px;font-weight:800;color:#e2e8f0;">🎵 Música grupo (Auto-bajada voz)</span>
+                <span id="musicDuckStatusBadge" style="font-size:9.5px;font-weight:800;color:#94a3b8;">INACTIVA</span>
+              </div>
+              <div style="display:flex;gap:5px;margin-bottom:6px;">
+                <label style="flex:1;background:#1e293b;color:#f8fafc;border:1px solid #475569;border-radius:7px;padding:5px 7px;font-size:10.5px;font-weight:700;text-align:center;cursor:pointer;">
+                  📂 Elegir audio
+                  <input type="file" id="groupMusicFileInput" accept="audio/*" style="display:none;" onchange="loadSharedMusicFile(event)" />
+                </label>
+                <button type="button" id="btnToggleSharedMusic" onclick="toggleSharedMusicPlayback()"
+                        style="flex:1;background:#16a34a;color:#fff;border:none;border-radius:7px;padding:5px 7px;font-size:10.5px;font-weight:800;cursor:pointer;">
+                  ▶ Play
+                </button>
+              </div>
+              <div style="display:flex;gap:4px;margin-bottom:6px;">
+                <input type="url" id="sharedMusicUrlInput" placeholder="URL audio / stream (MP3, AAC, radio...)"
+                       style="flex:1;min-width:0;background:#111622;color:#f8fafc;border:1px solid #334155;border-radius:7px;padding:4px 6px;font-size:10.5px;" />
+                <button type="button" onclick="loadSharedMusicUrl()"
+                        style="background:#0284c7;color:#fff;border:none;border-radius:7px;padding:4px 8px;font-size:10.5px;font-weight:800;cursor:pointer;white-space:nowrap;">
+                  URL
+                </button>
+              </div>
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+                <span style="font-size:10px;color:#94a3b8;">Vol:</span>
+                <input type="range" id="sharedMusicVolSlider" min="0" max="100" value="75" oninput="setSharedMusicBaseVolume(this.value)" style="flex:1;accent-color:#38bdf8;" />
+                <span id="sharedMusicVolLabel" style="font-size:10px;color:#cbd5e1;font-weight:700;min-width:30px;text-align:right;">75%</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:6px;">
+                <span style="font-size:10px;color:#94a3b8;">Bajada voz:</span>
+                <input type="range" id="sharedMusicDuckSlider" min="0" max="100" value="85" oninput="setSharedMusicDuckReduction(this.value)" style="flex:1;accent-color:#fbbf24;" />
+                <span id="sharedMusicDuckLabel" style="font-size:10px;color:#fbbf24;font-weight:700;min-width:30px;text-align:right;">-85%</span>
+              </div>
+              <div id="sharedMusicTrackName" style="font-size:10px;color:#94a3b8;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                Sin pista cargada
+              </div>
+              <audio id="sharedMusicAudioEl" preload="auto" playsinline style="display:none;"></audio>
             </div>
 
             <div id="remoteAudioContainer" style="display:none;"></div>
@@ -1778,7 +1828,7 @@
     <h2>Ajustes de ruta y App</h2>
     <div style="background:#18141a;padding:10px 12px;border-radius:12px;margin-bottom:12px;border:1px solid #334155;display:flex;align-items:center;justify-content:space-between;gap:8px;">
       <div>
-        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">14.11.0</span></div>
+        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">14.15.0</span></div>
         <div style="font-size:11px;color:#94a3b8;" id="webVerStatusLabel">Comprobando actualizaciones en la web...</div>
       </div>
       <button class="solid-btn" style="flex:0 0 auto;background:#16a34a;color:#fff;padding:8px 12px;font-size:12px;" onclick="manualCheckForUpdates()">🔄 Buscar / Actualizar</button>
@@ -1810,7 +1860,7 @@
 </div>
 
 <script>
-  const APP_VERSION = '14.11.0';
+  const APP_VERSION = '14.15.0';
   let swWaitingWorker = null;
   let remoteVersionFound = null;
 
@@ -3354,14 +3404,99 @@ function keepOriginalRouteAndNavigate() {
     }
   }
 
-  function confirmLeaveGroup() {
-    if (isFamilySpectator) return;
-    const ok = window.confirm(`¿Quieres salir del grupo "${groupName}" (#${groupCode})?
+// --- DYNAMIC MAP SCALE BAR (UPDATES ACCURATELY WITH ZOOM & LATITUDE) ---
+  function updateDynamicMapScale() {
+    const el = document.getElementById('mapScaleBox');
+    if (!el || !map) return;
+    try {
+      const size = map.getSize();
+      if (!size || !size.x || !size.y) return;
+      const y = Math.round(size.y / 2);
+      const x0 = Math.max(10, Math.round(size.x / 2 - 45));
+      const x1 = Math.min(size.x - 10, Math.round(size.x / 2 + 45));
+      const p0 = map.containerPointToLatLng([x0, y]);
+      const p1 = map.containerPointToLatLng([x1, y]);
+      const spanMeters = p0.distanceTo(p1);
+      if (!spanMeters || isNaN(spanMeters) || spanMeters <= 0) return;
 
-Si solo minimizas o sales de la app sin pulsar aquí, seguirás dentro de este mismo grupo al volver.`);
-    if (ok) {
-      returnToLobby();
+      const rawMeters = spanMeters * 0.85;
+      const steps = [10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000];
+      let chosen = steps[0];
+      for (const st of steps) {
+        if (st <= rawMeters) chosen = st;
+      }
+
+      if (chosen >= 1000) {
+        const kmVal = chosen / 1000;
+        const formattedKm = Number.isInteger(kmVal) ? String(kmVal) : kmVal.toFixed(1).replace('.', ',');
+        el.textContent = `${formattedKm} km`;
+      } else {
+        el.textContent = `${chosen} m`;
+      }
+    } catch (e) {}
+  }
+
+  function removePeerFromTracking(peerId) {
+    if (!peerId) return;
+    if (peerMarkers[peerId] && map) {
+      try { map.removeLayer(peerMarkers[peerId]); } catch (e) {}
+      delete peerMarkers[peerId];
     }
+    delete peers[peerId];
+    delete peerVoiceStates[peerId];
+    peerAlertedIds.delete(peerId);
+    if (typeof closeRtcPeer === 'function') {
+      closeRtcPeer(peerId);
+    }
+    updateGroupRadarLabel();
+  }
+
+  async function publishGroupLeaveNotice() {
+    if (isFamilySpectator || !groupCode) return;
+    const leaveMsg = {
+      peerId: myPeerId,
+      nick: userNick,
+      kind: 'LEAVE_GROUP',
+      lat: userPos[0],
+      lon: userPos[1],
+      ts: Date.now()
+    };
+    if (bcChannel) {
+      try { bcChannel.postMessage(leaveMsg); } catch (e) {}
+    }
+    try {
+      const encrypted = await encryptPayload(leaveMsg);
+      const leaveTopic = `trailsync/e2e/v7/${groupCode}/leave_${myPeerId}`;
+      const peerTopic = `trailsync/e2e/v7/${groupCode}/${myPeerId}`;
+      const connected = mqttClients.filter(c => c && c.connected);
+      connected.forEach(c => {
+        try {
+          c.publish(leaveTopic, encrypted, { retain: false, qos: 1 });
+          c.publish(peerTopic, '', { retain: true, qos: 0 });
+        } catch (e) {}
+      });
+    } catch (e) {}
+  }
+
+  function requestLeaveGroupViaDoor() {
+    if (isFamilySpectator) return;
+    const ok = window.confirm(`¿Quieres salir del grupo "${groupName}" (#${groupCode})?\n\nSe avisará al resto del grupo y dejarán de verte en el mapa.`);
+    if (ok) {
+      leaveGroupNow();
+    }
+  }
+
+  function confirmLeaveGroup() {
+    requestLeaveGroupViaDoor();
+  }
+
+  async function leaveGroupNow() {
+    if (typeof setGroupVoiceMode === 'function' && groupVoiceMode !== 'off') {
+      await setGroupVoiceMode('off');
+    }
+    await publishGroupLeaveNotice();
+    returnToLobby();
+    showToast('🚪 Has salido del grupo');
   }
 
   function returnToLobby() {
@@ -3494,7 +3629,7 @@ window.addEventListener('offline', () => {
       brokers.forEach((brokerUrl, idx) => {
         try {
           const client = window.mqtt.connect(brokerUrl, {
-            clientId: `ts1411_${myPeerId}_${idx}_${Math.floor(Math.random()*999)}`,
+            clientId: `ts1415_${myPeerId}_${idx}_${Math.floor(Math.random()*999)}`,
             reconnectPeriod: 3000,
             connectTimeout: 8000
           });
@@ -3507,7 +3642,11 @@ window.addEventListener('offline', () => {
             }
           });
           client.on('message', async (_topic, payload) => {
-            try { handleIncomingGroupMessage(await decryptPayload(payload.toString())); } catch (e) {}
+            try {
+              const raw = payload ? payload.toString() : '';
+              if (!raw) return;
+              handleIncomingGroupMessage(await decryptPayload(raw));
+            } catch (e) {}
           });
           mqttClients.push(client);
         } catch (e) {}
@@ -3591,6 +3730,14 @@ window.addEventListener('offline', () => {
     }
 
     if (msg.peerId === myPeerId || msg.spectatorOnly) return;
+
+    if (msg.kind === 'LEAVE_GROUP') {
+      const departedName = (peers[msg.peerId] && peers[msg.peerId].nick) || msg.nick || 'Un compañero';
+      removePeerFromTracking(msg.peerId);
+      showToast(`🚪 ${departedName} ha salido del grupo`);
+      speakAlert(`${departedName} ha salido del grupo`);
+      return;
+    }
 
     const isNewFriend = !peers[msg.peerId];
     peers[msg.peerId] = {
@@ -3987,7 +4134,13 @@ window.addEventListener('offline', () => {
     if (dzCb) dzCb.checked = dynamicSpeedZoomEnabled;
     const wgCb = document.getElementById('windNoiseGateToggle');
     if (wgCb) wgCb.checked = windNoiseGateEnabled;
+    const duckPctSaved = Math.round(sharedMusicDuckReduction * 100);
+    const duckSlider = document.getElementById('sharedMusicDuckSlider');
+    const duckLbl = document.getElementById('sharedMusicDuckLabel');
+    if (duckSlider) duckSlider.value = duckPctSaved;
+    if (duckLbl) duckLbl.textContent = `-${duckPctSaved}%`;
     map = L.map('map', { zoomControl: false, zoomSnap: 0.5, zoomDelta: 0.5 }).setView(userPos, 16.5);
+    map.on('zoomend moveend', () => updateDynamicMapScale());
     map.on('dragstart', () => {
       registerManualMapExplore();
     });
@@ -4013,6 +4166,7 @@ window.addEventListener('offline', () => {
     });
 
     refreshOfflineStats();
+    updateDynamicMapScale();
 
     const savedActiveCode = (localStorage.getItem('trailsync_active_group_code') || '').trim().toUpperCase();
     const savedActiveName = (localStorage.getItem('trailsync_active_group_name') || '').trim();
@@ -4137,6 +4291,7 @@ window.addEventListener('offline', () => {
       lbl.textContent = `Descargando ${done} / ${urlList.length} teselas (${pct}% · ~${estMb} MB)`;
       if (done % (batchSize * 14) === 0) {
         refreshOfflineStats();
+    updateDynamicMapScale();
       }
     }
 
@@ -4203,6 +4358,7 @@ window.addEventListener('offline', () => {
       document.getElementById('offlineProgressBar').style.width = '0%';
       document.getElementById('offlineProgressLabel').textContent = 'Caché vaciada.';
       refreshOfflineStats();
+    updateDynamicMapScale();
       showToast('🗑️ Mapas offline eliminados');
     }
   }
@@ -4497,8 +4653,11 @@ ${trkptsXml}
   let rawMicStream = null;
   let voiceAudioCtx = null;
   let vadIntervalId = null;
+  let voiceReconcileTimer = null;
   let windNoiseGateEnabled = localStorage.getItem('trailsync_wind_gate') !== '0';
   let vadHoldUntil = 0;
+  let pendingIceByPeer = {};
+  let seenVoiceSigIds = new Set();
 
   function toggleWindNoiseGate(enabled) {
     windNoiseGateEnabled = !!enabled;
@@ -4632,6 +4791,7 @@ ${trkptsXml}
       if (meter) meter.style.width = pct + '%';
 
       const now = Date.now();
+      if (typeof applyMusicDuckingState === 'function') applyMusicDuckingState();
       // Threshold tuned for voice band (300–3200 Hz) after 260 Hz wind cut; holds gate open 650ms between words
       if (!windNoiseGateEnabled || speechAvg >= 24) {
         if (speechAvg >= 24) vadHoldUntil = now + 650;
@@ -4656,8 +4816,231 @@ ${trkptsXml}
     return localVoiceStream;
   }
 
+  function updateVoiceDiagStatus(extraNote = '') {
+    const diagEl = document.getElementById('voiceLinkDiagText');
+    if (!diagEl) return;
+    const entries = Object.entries(rtcPeers);
+    if (!entries.length) {
+      diagEl.textContent = extraNote || (groupVoiceMode === 'off' ? 'Canal apagado' : 'Esperando enlace WebRTC con compañeros...');
+      return;
+    }
+    const parts = entries.map(([pid, pc]) => {
+      const nick = (peerVoiceStates[pid] && peerVoiceStates[pid].nick) || (peers[pid] && peers[pid].nick) || pid.slice(-4);
+      const state = pc.connectionState || pc.iceConnectionState || 'new';
+      return `${nick}: ${state}`;
+    });
+    diagEl.textContent = parts.join(' · ') + (extraNote ? ` (${extraNote})` : '');
+  }
+
+  function flushPendingIceForPeer(peerId, pc) {
+    const queue = pendingIceByPeer[peerId];
+    if (!Array.isArray(queue) || !queue.length || !pc.remoteDescription) return;
+    const copy = [...queue];
+    pendingIceByPeer[peerId] = [];
+    copy.forEach(async (cand) => {
+      try { await pc.addIceCandidate(new RTCIceCandidate(cand)); } catch (e) {}
+    });
+  }
+
+// --- SHARED GROUP MUSIC + AUTOMATIC VOICE DUCKING (DUCKS MUSIC WHEN ANYONE SPEAKS) ---
+  let sharedMusicCtx = null;
+  let sharedMusicSourceNode = null;
+  let sharedMusicGainNode = null;
+  let sharedMusicDest = null;
+  let musicDuckTimerId = null;
+  let sharedMusicBaseVol = 0.75;
+  let sharedMusicDuckReduction = Number(localStorage.getItem('trailsync_music_duck_pct') || 85) / 100;
+  let isSharedMusicPlaying = false;
+  let remoteVoiceActiveNow = false;
+
+  function ensureSharedMusicAudioGraph() {
+    const audioEl = document.getElementById('sharedMusicAudioEl');
+    if (!audioEl) return null;
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return null;
+
+    if (!sharedMusicCtx) {
+      sharedMusicCtx = new AudioCtx();
+      sharedMusicSourceNode = sharedMusicCtx.createMediaElementSource(audioEl);
+      sharedMusicGainNode = sharedMusicCtx.createGain();
+      sharedMusicGainNode.gain.value = sharedMusicBaseVol;
+      sharedMusicDest = sharedMusicCtx.createMediaStreamDestination();
+
+      // Route music to local speaker AND to WebRTC stream for group members
+      sharedMusicSourceNode.connect(sharedMusicGainNode);
+      sharedMusicGainNode.connect(sharedMusicCtx.destination);
+      sharedMusicGainNode.connect(sharedMusicDest);
+
+      // Attach music audio track to any existing peer connections
+      sharedMusicDest.stream.getAudioTracks().forEach(mTrack => {
+        Object.values(rtcPeers).forEach(pc => {
+          try {
+            const hasTrack = pc.getSenders().some(s => s.track && s.track.id === mTrack.id);
+            if (!hasTrack) pc.addTrack(mTrack, sharedMusicDest.stream);
+          } catch (e) {}
+        });
+      });
+    }
+
+    if (sharedMusicCtx.state === 'suspended') {
+      sharedMusicCtx.resume().catch(() => {});
+    }
+    return { audioEl, ctx: sharedMusicCtx, gain: sharedMusicGainNode, dest: sharedMusicDest };
+  }
+
+  function setSharedMusicBaseVolume(val) {
+    const pct = Math.max(0, Math.min(100, Number(val) || 0));
+    sharedMusicBaseVol = pct / 100;
+    const lbl = document.getElementById('sharedMusicVolLabel');
+    if (lbl) lbl.textContent = `${pct}%`;
+    applyMusicDuckingState();
+  }
+
+  function setSharedMusicDuckReduction(val) {
+    const pct = Math.max(0, Math.min(100, Number(val) || 0));
+    sharedMusicDuckReduction = pct / 100;
+    localStorage.setItem('trailsync_music_duck_pct', String(pct));
+    const lbl = document.getElementById('sharedMusicDuckLabel');
+    if (lbl) lbl.textContent = `-${pct}%`;
+    applyMusicDuckingState();
+  }
+
+  function loadSharedMusicUrl() {
+    const inp = document.getElementById('sharedMusicUrlInput');
+    const rawUrl = (inp && inp.value || '').trim();
+    if (!rawUrl) {
+      return showToast('Pega primero una URL de audio o stream');
+    }
+    let normalized = rawUrl;
+    if (!/^https?:\/\//i.test(normalized)) {
+      normalized = 'https://' + normalized;
+    }
+    const graph = ensureSharedMusicAudioGraph();
+    if (!graph) return;
+    graph.audioEl.crossOrigin = 'anonymous';
+    graph.audioEl.src = normalized;
+    const nameEl = document.getElementById('sharedMusicTrackName');
+    if (nameEl) nameEl.textContent = `🌐 ${normalized}`;
+    graph.audioEl.play().then(() => {
+      isSharedMusicPlaying = true;
+      startMusicDuckingMonitor();
+      const btn = document.getElementById('btnToggleSharedMusic');
+      if (btn) { btn.textContent = '⏸ Pausa'; btn.style.background = '#d97706'; }
+      applyMusicDuckingState();
+      showToast('🌐 Reproduciendo URL de audio con bajada automática al hablar');
+    }).catch(() => {
+      showToast('⚠️ No se pudo reproducir la URL (comprueba enlace directo o CORS)');
+    });
+  }
+
+  function applyMusicDuckingState() {
+    const badge = document.getElementById('musicDuckStatusBadge');
+    const isSpeakingNow = (groupVoiceMode === 'open' && Date.now() < vadHoldUntil) || remoteVoiceActiveNow;
+    const duckMultiplier = Math.max(0, 1 - sharedMusicDuckReduction);
+    const targetGain = isSpeakingNow ? (sharedMusicBaseVol * duckMultiplier) : sharedMusicBaseVol;
+
+    if (sharedMusicCtx && sharedMusicGainNode) {
+      const rampSec = isSpeakingNow ? 0.04 : 0.35;
+      sharedMusicGainNode.gain.setTargetAtTime(targetGain, sharedMusicCtx.currentTime, rampSec);
+    }
+
+    if (!badge) return;
+    if (!isSharedMusicPlaying) {
+      badge.textContent = 'INACTIVA';
+      badge.style.color = '#94a3b8';
+    } else if (isSpeakingNow) {
+      badge.textContent = '🔉 ATENUADA (VOZ)';
+      badge.style.color = '#fbbf24';
+    } else {
+      badge.textContent = '🎵 ACTIVA (100%)';
+      badge.style.color = '#4ade80';
+    }
+  }
+
+  function startMusicDuckingMonitor() {
+    if (musicDuckTimerId) return;
+    musicDuckTimerId = setInterval(() => {
+      // Check if any remote peer has active open voice mode
+      const anyPeerOpen = Object.values(peerVoiceStates).some(s => s && s.mode === 'open');
+      remoteVoiceActiveNow = anyPeerOpen;
+      applyMusicDuckingState();
+    }, 90);
+  }
+
+  function loadSharedMusicFile(ev) {
+    const file = ev.target && ev.target.files && ev.target.files[0];
+    if (!file) return;
+    const graph = ensureSharedMusicAudioGraph();
+    if (!graph) return;
+    const url = URL.createObjectURL(file);
+    graph.audioEl.src = url;
+    const nameEl = document.getElementById('sharedMusicTrackName');
+    if (nameEl) nameEl.textContent = `🎶 ${file.name}`;
+    graph.audioEl.play().then(() => {
+      isSharedMusicPlaying = true;
+      startMusicDuckingMonitor();
+      const btn = document.getElementById('btnToggleSharedMusic');
+      if (btn) { btn.textContent = '⏸ Pausa'; btn.style.background = '#d97706'; }
+      applyMusicDuckingState();
+      showToast('🎵 Reproduciendo música con bajada automática al hablar');
+    }).catch(() => {
+      showToast('⚠️ Pulsa Play para iniciar la reproducción de música');
+    });
+  }
+
+  function toggleSharedMusicPlayback() {
+    const graph = ensureSharedMusicAudioGraph();
+    if (!graph) return;
+    const btn = document.getElementById('btnToggleSharedMusic');
+    if (!graph.audioEl.src) {
+      document.getElementById('groupMusicFileInput')?.click();
+      return;
+    }
+    if (graph.audioEl.paused) {
+      graph.audioEl.play().then(() => {
+        isSharedMusicPlaying = true;
+        startMusicDuckingMonitor();
+        if (btn) { btn.textContent = '⏸ Pausa'; btn.style.background = '#d97706'; }
+        applyMusicDuckingState();
+      }).catch(() => {});
+    } else {
+      graph.audioEl.pause();
+      isSharedMusicPlaying = false;
+      if (btn) { btn.textContent = '▶ Play'; btn.style.background = '#16a34a'; }
+      applyMusicDuckingState();
+    }
+  }
+
+  function forceUnlockAndReconnectVoice() {
+    Object.values(remoteAudioEls).forEach(el => {
+      try {
+        el.muted = false;
+        el.volume = 1.0;
+        const p = el.play();
+        if (p && typeof p.catch === 'function') p.catch(() => {});
+      } catch (e) {}
+    });
+    if (voiceAudioCtx && voiceAudioCtx.state === 'suspended') {
+      voiceAudioCtx.resume().catch(() => {});
+    }
+    if (groupVoiceMode === 'off') {
+      setGroupVoiceMode('open');
+      return;
+    }
+    sendVoiceSignal('*', 'JOIN');
+    Object.keys(peers).forEach(pid => {
+      if (String(myPeerId) > String(pid)) {
+        initiateVoiceOfferToPeer(pid);
+      }
+    });
+    updateVoiceDiagStatus('reintentando enlace');
+    showToast('🔊 Audio desbloqueado y enlace de voz reenviado');
+  }
+
   function sendVoiceSignal(targetPeerId, signalKind, payloadData = {}) {
+    const sigId = `vsig_${myPeerId}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     broadcastState('VOICE_SIG', {
+      sigId,
       targetPeerId: targetPeerId || '*',
       signalKind,
       voiceMode: groupVoiceMode,
@@ -4666,6 +5049,7 @@ ${trkptsXml}
   }
 
   function closeRtcPeer(peerId) {
+    delete pendingIceByPeer[peerId];
     if (rtcPeers[peerId]) {
       try { rtcPeers[peerId].close(); } catch (e) {}
       delete rtcPeers[peerId];
@@ -4678,16 +5062,34 @@ ${trkptsXml}
       } catch (e) {}
       delete remoteAudioEls[peerId];
     }
+    updateVoiceDiagStatus();
   }
 
   function createOrGetRtcConnection(remotePeerId) {
     if (rtcPeers[remotePeerId]) return rtcPeers[remotePeerId];
     const pc = new RTCPeerConnection({ iceServers: RTC_ICE_SERVERS });
     rtcPeers[remotePeerId] = pc;
+    if (!pendingIceByPeer[remotePeerId]) pendingIceByPeer[remotePeerId] = [];
+
+    // Ensure transceiver receives remote audio even if local mic is muted
+    try {
+      pc.addTransceiver('audio', { direction: 'sendrecv' });
+    } catch (e) {}
 
     if (localVoiceStream) {
+      const existingSenders = pc.getSenders().map(s => s.track && s.track.id);
       localVoiceStream.getTracks().forEach(track => {
-        pc.addTrack(track, localVoiceStream);
+        if (!existingSenders.includes(track.id)) {
+          pc.addTrack(track, localVoiceStream);
+        }
+      });
+    }
+    if (sharedMusicDest && sharedMusicDest.stream) {
+      const existingSenders2 = pc.getSenders().map(s => s.track && s.track.id);
+      sharedMusicDest.stream.getAudioTracks().forEach(mTrack => {
+        if (!existingSenders2.includes(mTrack.id)) {
+          pc.addTrack(mTrack, sharedMusicDest.stream);
+        }
       });
     }
 
@@ -4704,19 +5106,39 @@ ${trkptsXml}
         audioEl = document.createElement('audio');
         audioEl.autoplay = true;
         audioEl.playsInline = true;
+        audioEl.muted = false;
+        audioEl.volume = 1.0;
         if (container) container.appendChild(audioEl);
         remoteAudioEls[remotePeerId] = audioEl;
       }
+      let streamToPlay = null;
       if (event.streams && event.streams[0]) {
-        audioEl.srcObject = event.streams[0];
-        audioEl.play().catch(() => {});
+        streamToPlay = event.streams[0];
+      } else if (event.track) {
+        streamToPlay = new MediaStream([event.track]);
+      }
+      if (streamToPlay) {
+        audioEl.srcObject = streamToPlay;
+        audioEl.play().then(() => {
+          updateVoiceDiagStatus('escuchando audio');
+        }).catch(() => {
+          updateVoiceDiagStatus('pulsa «Forzar salida audio»');
+        });
       }
     };
 
     pc.onconnectionstatechange = () => {
-      if (pc.connectionState === 'failed' || pc.connectionState === 'closed') {
+      updateVoiceDiagStatus();
+      if (pc.connectionState === 'connected') {
+        const nick = (peerVoiceStates[remotePeerId] && peerVoiceStates[remotePeerId].nick) || (peers[remotePeerId] && peers[remotePeerId].nick) || 'Compañero';
+        showToast(`🎧 Conectado por voz con ${nick}`);
+      } else if (pc.connectionState === 'failed' || pc.connectionState === 'closed') {
         closeRtcPeer(remotePeerId);
       }
+    };
+
+    pc.oniceconnectionstatechange = () => {
+      updateVoiceDiagStatus();
     };
 
     return pc;
@@ -4726,15 +5148,26 @@ ${trkptsXml}
     if (groupVoiceMode === 'off' || !localVoiceStream) return;
     try {
       const pc = createOrGetRtcConnection(remotePeerId);
+      if (pc.signalingState !== 'stable') return;
       const offer = await pc.createOffer({ offerToReceiveAudio: true });
       await pc.setLocalDescription(offer);
       sendVoiceSignal(remotePeerId, 'OFFER', { sdp: pc.localDescription });
+      updateVoiceDiagStatus('oferta enviada');
     } catch (e) {}
   }
 
   async function handleIncomingVoiceSignal(msg) {
     if (!msg || msg.peerId === myPeerId) return;
     if (msg.targetPeerId && msg.targetPeerId !== '*' && msg.targetPeerId !== myPeerId) return;
+
+    if (msg.sigId) {
+      if (seenVoiceSigIds.has(msg.sigId)) return;
+      seenVoiceSigIds.add(msg.sigId);
+      if (seenVoiceSigIds.size > 400) {
+        const first = seenVoiceSigIds.values().next().value;
+        seenVoiceSigIds.delete(first);
+      }
+    }
 
     const fromId = msg.peerId;
     const fromNick = msg.nick || 'Compañero';
@@ -4773,10 +5206,19 @@ ${trkptsXml}
       try {
         await ensureLocalMicrophoneStream();
         const pc = createOrGetRtcConnection(fromId);
+        // Handle glare if both peers sent offers simultaneously
+        if (pc.signalingState === 'have-local-offer') {
+          if (String(myPeerId) > String(fromId)) {
+            return;
+          }
+          await pc.setLocalDescription({ type: 'rollback' });
+        }
         await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
+        flushPendingIceForPeer(fromId, pc);
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
         sendVoiceSignal(fromId, 'ANSWER', { sdp: pc.localDescription });
+        updateVoiceDiagStatus('respuesta enviada');
       } catch (e) {}
       return;
     }
@@ -4785,7 +5227,10 @@ ${trkptsXml}
       const pc = rtcPeers[fromId];
       if (pc) {
         try {
-          await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
+          if (pc.signalingState === 'have-local-offer') {
+            await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
+            flushPendingIceForPeer(fromId, pc);
+          }
         } catch (e) {}
       }
       return;
@@ -4793,10 +5238,13 @@ ${trkptsXml}
 
     if (msg.signalKind === 'ICE' && msg.candidate) {
       const pc = rtcPeers[fromId];
-      if (pc) {
+      if (pc && pc.remoteDescription) {
         try {
           await pc.addIceCandidate(new RTCIceCandidate(msg.candidate));
         } catch (e) {}
+      } else {
+        if (!pendingIceByPeer[fromId]) pendingIceByPeer[fromId] = [];
+        pendingIceByPeer[fromId].push(msg.candidate);
       }
     }
   }
@@ -4813,6 +5261,10 @@ ${trkptsXml}
       if (localVoiceStream) {
         localVoiceStream.getTracks().forEach(t => t.stop());
         localVoiceStream = null;
+      }
+      if (voiceReconcileTimer) {
+        clearInterval(voiceReconcileTimer);
+        voiceReconcileTimer = null;
       }
       stopVoiceDspPipeline();
       updateGroupVoiceUI();
@@ -4840,6 +5292,23 @@ ${trkptsXml}
         });
       } else {
         sendVoiceSignal('*', 'STATE');
+      }
+
+      if (!voiceReconcileTimer) {
+        voiceReconcileTimer = setInterval(() => {
+          if (groupVoiceMode === 'off' || isFamilySpectator) return;
+          Object.keys(peers).forEach(pid => {
+            const pc = rtcPeers[pid];
+            if (!pc || pc.connectionState === 'failed' || pc.connectionState === 'closed' || pc.connectionState === 'disconnected') {
+              if (String(myPeerId) > String(pid)) {
+                initiateVoiceOfferToPeer(pid);
+              } else {
+                sendVoiceSignal(pid, 'READY');
+              }
+            }
+          });
+          updateVoiceDiagStatus();
+        }, 4500);
       }
 
       if (nextMode === 'open') {
