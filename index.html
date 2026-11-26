@@ -10,7 +10,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
   <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
-  <title>TrailSync v14.3 — Mapa Limpio, Pantalla Completa y HUD Optimizado</title>
+  <title>TrailSync v14.5 — Descarga Offline Completa de Alta Capacidad (Hasta ~1 GB)</title>
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
         onerror="this.onerror=null;this.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';" />
@@ -1241,15 +1241,19 @@
 
     <div style="background:#18141a;padding:12px;border-radius:12px;margin-bottom:12px;font-size:13px;">
       <div><strong>Estado almacenamiento:</strong> <span id="offlineStorageInfo">0 teselas</span></div>
+      <div id="offlineQuotaInfo" style="font-size:11.5px;color:#38bdf8;margin-top:3px;">Calculando cuota persistente del dispositivo...</div>
       <div class="progress-bar-wrap"><div class="progress-bar-fill" id="offlineProgressBar"></div></div>
-      <div id="offlineProgressLabel" style="font-size:12px;color:#94a3b8;">Elige capa y descarga toda la Península o tu zona</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:4px;">
+        <div id="offlineProgressLabel" style="font-size:12px;color:#94a3b8;flex:1;">Elige pack completo o descarga por zona sin límites</div>
+        <button type="button" id="btnCancelOfflineDl" onclick="cancelOfflineDownload()" style="display:none;background:#dc2626;color:#fff;border:none;border-radius:8px;padding:5px 10px;font-size:11.5px;font-weight:800;cursor:pointer;">⏹ Detener</button>
+      </div>
     </div>
 
-    <button class="solid-btn" style="background:#f97316;color:#fff;width:100%;padding:14px;font-size:15px;margin-bottom:10px;" id="btnDownloadPeninsula" onclick="downloadIberianPeninsulaOneClick()">
-      ⬇️ Descargar TODA la Península (1 clic)
+    <button class="solid-btn" style="background:#f97316;color:#fff;width:100%;padding:13px;font-size:14px;margin-bottom:8px;" id="btnDownloadPeninsula" onclick="downloadIberianPeninsulaOneClick()">
+      ⬇️ Descarga COMPLETA España + Portugal (Z5–13 + Zona/Ruta Z14–16 · hasta ~1 GB)
     </button>
 
-    <label class="field-label" style="margin-top:6px;">O descarga detalle por zona (Zoom 11–14):</label>
+    <label class="field-label" style="margin-top:6px;">O descarga completa de alta resolución por zona (Zoom 10–16 · Pistas al detalle):</label>
     <div style="display:flex;gap:6px;margin-bottom:10px;">
       <select id="regionSelect" style="flex:1;background:#161b26;color:#fff;border:1px solid #475569;border-radius:10px;padding:9px;font-size:13px;">
         <option value="current">📍 Zona visible en pantalla / Ruta activa</option>
@@ -1368,7 +1372,7 @@
     <h2>Ajustes de ruta y App</h2>
     <div style="background:#18141a;padding:10px 12px;border-radius:12px;margin-bottom:12px;border:1px solid #334155;display:flex;align-items:center;justify-content:space-between;gap:8px;">
       <div>
-        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">14.3.0</span></div>
+        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">14.5.0</span></div>
         <div style="font-size:11px;color:#94a3b8;" id="webVerStatusLabel">Comprobando actualizaciones en la web...</div>
       </div>
       <button class="solid-btn" style="flex:0 0 auto;background:#16a34a;color:#fff;padding:8px 12px;font-size:12px;" onclick="manualCheckForUpdates()">🔄 Buscar / Actualizar</button>
@@ -1400,7 +1404,7 @@
 </div>
 
 <script>
-  const APP_VERSION = '14.3.0';
+  const APP_VERSION = '14.5.0';
   let swWaitingWorker = null;
   let remoteVersionFound = null;
 
@@ -2497,7 +2501,20 @@
     showToast(`📡 ${pending.length} mensajes guardados sin cobertura sincronizados con el grupo`);
   }
 
-  window.addEventListener('online', () => flushOfflineQueue());
+window.addEventListener('offline', () => {
+    showToast('📴 Sin conexión a datos ni Wi-Fi: usando mapa offline en caché');
+    if (map && baseTileLayer) {
+      map.removeLayer(baseTileLayer);
+      baseTileLayer = buildOfflineTileLayer(getActiveLayerObj()).addTo(map);
+    }
+  });
+  window.addEventListener('online', () => {
+    flushOfflineQueue();
+    if (map && baseTileLayer) {
+      map.removeLayer(baseTileLayer);
+      baseTileLayer = buildOfflineTileLayer(getActiveLayerObj()).addTo(map);
+    }
+  });
 
   function connectGroupSync() {
     const baseTopic = `trailsync/e2e/v7/${groupCode}`;
@@ -2514,7 +2531,7 @@
       brokers.forEach((brokerUrl, idx) => {
         try {
           const client = window.mqtt.connect(brokerUrl, {
-            clientId: `ts143_${myPeerId}_${idx}_${Math.floor(Math.random()*999)}`,
+            clientId: `ts145_${myPeerId}_${idx}_${Math.floor(Math.random()*999)}`,
             reconnectPeriod: 3000,
             connectTimeout: 8000
           });
@@ -2788,6 +2805,92 @@
     return c.toDataURL();
   }
 
+  const ALL_TILE_TEMPLATES = [
+    DMD2_TRAIL_TILE_URL,
+    OSM_BASE_TILE_URL,
+    'https://tile.opentopomap.org/{z}/{x}/{y}.png',
+    'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
+    'https://www.ign.es/wmts/pnoa-ma?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=OI.OrthoimageCoverage&STYLE=default&TILEMATRIXSET=GoogleMapsCompatible&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT=image/jpeg'
+  ];
+
+  function createOverscaledFromParentBitmap(bitmap, dz, dx, dy, isPista) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 256;
+    canvas.height = 256;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = isPista ? '#faf8f5' : '#f2efe9';
+    ctx.fillRect(0, 0, 256, 256);
+
+    const scale = Math.pow(2, dz);
+    const srcSize = 256 / scale;
+    const srcX = dx * srcSize;
+    const srcY = dy * srcSize;
+    ctx.drawImage(bitmap, srcX, srcY, srcSize, srcSize, 0, 0, 256, 256);
+    return canvas.toDataURL('image/png');
+  }
+
+  async function findCachedTileResponse(cache, z, x, y, preferredUrl) {
+    if (preferredUrl) {
+      const exact = await cache.match(preferredUrl);
+      if (exact) return exact;
+    }
+    for (const tpl of ALL_TILE_TEMPLATES) {
+      const candidate = tpl.replace('{z}', z).replace('{x}', x).replace('{y}', y);
+      const hit = await cache.match(candidate);
+      if (hit) return hit;
+    }
+    return null;
+  }
+
+  async function resolveOfflineTileDataUrl(cache, coords, modeObj, preferredUrl) {
+    const exactResp = await findCachedTileResponse(cache, coords.z, coords.x, coords.y, preferredUrl);
+    if (exactResp) {
+      const blob = await exactResp.blob();
+      return URL.createObjectURL(blob);
+    }
+
+    // Look up to 5 parent zoom levels up so high-zoom/un-cached tiles still show real cached map imagery offline
+    for (let dz = 1; dz <= 5 && coords.z - dz >= 3; dz++) {
+      const pz = coords.z - dz;
+      const factor = Math.pow(2, dz);
+      const px = Math.floor(coords.x / factor);
+      const py = Math.floor(coords.y / factor);
+      const dx = coords.x - px * factor;
+      const dy = coords.y - py * factor;
+
+      const parentResp = await findCachedTileResponse(cache, pz, px, py, null);
+      if (parentResp) {
+        const pBlob = await parentResp.blob();
+        if (pBlob && pBlob.size > 0) {
+          try {
+            const bitmap = await createImageBitmap(pBlob);
+            const dataUrl = createOverscaledFromParentBitmap(bitmap, dz, dx, dy, modeObj.pistaStyle);
+            if (bitmap.close) bitmap.close();
+            return dataUrl;
+          } catch (e) {
+            const pUrl = URL.createObjectURL(pBlob);
+            const dataUrl = await new Promise(resolve => {
+              const tmpImg = new Image();
+              tmpImg.onload = () => {
+                const out = createOverscaledFromParentBitmap(tmpImg, dz, dx, dy, modeObj.pistaStyle);
+                URL.revokeObjectURL(pUrl);
+                resolve(out);
+              };
+              tmpImg.onerror = () => {
+                URL.revokeObjectURL(pUrl);
+                resolve(null);
+              };
+              tmpImg.src = pUrl;
+            });
+            if (dataUrl) return dataUrl;
+          }
+        }
+      }
+    }
+
+    return createFallbackTopoCanvas(coords, modeObj.pistaStyle);
+  }
+
   function buildOfflineTileLayer(modeObj) {
     const OfflineLayer = L.TileLayer.extend({
       createTile: function(coords, done) {
@@ -2799,62 +2902,72 @@
           ? modeObj.fallbackUrl.replace('{z}', coords.z).replace('{x}', coords.x).replace('{y}', coords.y)
           : null;
 
-        const loadFromNetworkOrFallback = () => {
-          if (modeObj.cacheOnly) {
-            const altCacheUrl = OSM_BASE_TILE_URL.replace('{z}', coords.z).replace('{x}', coords.x).replace('{y}', coords.y);
-            if ('caches' in window) {
-              caches.open(TILE_CACHE_NAME).then(c => c.match(altCacheUrl)).then(altResp => {
-                if (altResp) {
-                  altResp.blob().then(b => {
-                    const u = URL.createObjectURL(b);
-                    tile.onload = () => { URL.revokeObjectURL(u); done(null, tile); };
-                    tile.src = u;
-                  });
-                } else {
-                  tile.onload = () => done(null, tile);
-                  tile.src = createFallbackTopoCanvas(coords, modeObj.pistaStyle);
-                }
-              });
-            } else {
+        const serveOfflineCachedOrFallback = () => {
+          if ('caches' in window) {
+            caches.open(TILE_CACHE_NAME).then(async cache => {
+              const resolvedSrc = await resolveOfflineTileDataUrl(cache, coords, modeObj, url);
+              const isObjectUrl = resolvedSrc.startsWith('blob:');
+              tile.onload = () => {
+                if (isObjectUrl) URL.revokeObjectURL(resolvedSrc);
+                done(null, tile);
+              };
+              tile.onerror = () => {
+                if (isObjectUrl) URL.revokeObjectURL(resolvedSrc);
+                tile.onload = () => done(null, tile);
+                tile.src = createFallbackTopoCanvas(coords, modeObj.pistaStyle);
+              };
+              tile.src = resolvedSrc;
+            }).catch(() => {
               tile.onload = () => done(null, tile);
               tile.src = createFallbackTopoCanvas(coords, modeObj.pistaStyle);
-            }
-            return;
+            });
+          } else {
+            tile.onload = () => done(null, tile);
+            tile.src = createFallbackTopoCanvas(coords, modeObj.pistaStyle);
           }
+        };
+
+        const loadFromNetwork = () => {
           let triedSecondary = false;
           tile.onload = () => {
-            fetch(tile.src, { mode: 'cors' })
-              .then(r => { if (r.ok) caches.open(TILE_CACHE_NAME).then(c => c.put(url, r)); })
-              .catch(() => {});
+            if (navigator.onLine) {
+              fetch(tile.src, { mode: 'cors' })
+                .then(r => { if (r.ok) caches.open(TILE_CACHE_NAME).then(c => c.put(url, r)); })
+                .catch(() => {});
+            }
             done(null, tile);
           };
           tile.onerror = () => {
-            if (!triedSecondary && fallbackUrl) {
+            if (!triedSecondary && fallbackUrl && navigator.onLine) {
               triedSecondary = true;
               tile.src = fallbackUrl;
             } else {
-              tile.onload = () => done(null, tile);
-              tile.src = createFallbackTopoCanvas(coords, modeObj.pistaStyle);
+              serveOfflineCachedOrFallback();
             }
           };
           tile.src = url;
         };
 
+        if (modeObj.cacheOnly || !navigator.onLine) {
+          serveOfflineCachedOrFallback();
+          return tile;
+        }
+
         if ('caches' in window) {
-          caches.open(TILE_CACHE_NAME).then(c => c.match(url)).then(resp => {
-            if (resp) {
-              resp.blob().then(b => {
-                const u = URL.createObjectURL(b);
-                tile.onload = () => { URL.revokeObjectURL(u); done(null, tile); };
-                tile.onerror = () => loadFromNetworkOrFallback();
-                tile.src = u;
-              });
+          caches.open(TILE_CACHE_NAME).then(async cache => {
+            const hit = await findCachedTileResponse(cache, coords.z, coords.x, coords.y, url);
+            if (hit) {
+              const b = await hit.blob();
+              const u = URL.createObjectURL(b);
+              tile.onload = () => { URL.revokeObjectURL(u); done(null, tile); };
+              tile.onerror = () => { URL.revokeObjectURL(u); loadFromNetwork(); };
+              tile.src = u;
             } else {
-              loadFromNetworkOrFallback();
+              loadFromNetwork();
             }
-          }).catch(() => loadFromNetworkOrFallback());
+          }).catch(() => loadFromNetwork());
         } else {
-          loadFromNetworkOrFallback();
+          loadFromNetwork();
         }
         return tile;
       }
@@ -2965,30 +3078,79 @@
     return [...urls];
   }
 
+  let cancelOfflineDownloadFlag = false;
+
+  function cancelOfflineDownload() {
+    cancelOfflineDownloadFlag = true;
+    const cancelBtn = document.getElementById('btnCancelOfflineDl');
+    if (cancelBtn) cancelBtn.textContent = 'Deteniendo...';
+  }
+
+  async function ensurePersistentStorageQuota() {
+    try {
+      if (navigator.storage && navigator.storage.persist) {
+        await navigator.storage.persist();
+      }
+    } catch (e) {}
+  }
+
   async function batchCacheUrls(urlList, labelSuccess) {
     if (!('caches' in window)) return showToast('Tu navegador no soporta almacenamiento offline');
+    await ensurePersistentStorageQuota();
+    cancelOfflineDownloadFlag = false;
+
     const cache = await caches.open(TILE_CACHE_NAME);
     const bar = document.getElementById('offlineProgressBar');
     const lbl = document.getElementById('offlineProgressLabel');
-    let done = 0;
+    const cancelBtn = document.getElementById('btnCancelOfflineDl');
+    if (cancelBtn) {
+      cancelBtn.style.display = 'inline-block';
+      cancelBtn.textContent = '⏹ Detener';
+    }
 
-    for (let i = 0; i < urlList.length; i += 8) {
-      await Promise.all(urlList.slice(i, i + 8).map(async u => {
+    let done = 0;
+    const batchSize = 14;
+
+    for (let i = 0; i < urlList.length; i += batchSize) {
+      if (cancelOfflineDownloadFlag) break;
+      await Promise.all(urlList.slice(i, i + batchSize).map(async u => {
         try {
-          if (!(await cache.match(u))) {
-            const r = await fetch(u, { mode: 'cors' });
-            if (r.ok) await cache.put(u, r);
+          const existing = await cache.match(u);
+          if (!existing) {
+            let r = null;
+            try {
+              r = await fetch(u, { mode: 'cors' });
+            } catch (e1) {
+              r = await fetch(u, { mode: 'no-cors' });
+            }
+            if (r && (r.ok || r.type === 'opaque')) {
+              await cache.put(u, r);
+            }
           }
         } catch (e) {}
         done++;
       }));
+
       const pct = Math.round((done / urlList.length) * 100);
       bar.style.width = pct + '%';
-      lbl.textContent = `Descargando ${done} / ${urlList.length} teselas (${pct}%)`;
+      const estMb = (done * 0.024).toFixed(0);
+      lbl.textContent = `Descargando ${done} / ${urlList.length} teselas (${pct}% · ~${estMb} MB)`;
+      if (done % (batchSize * 14) === 0) {
+        refreshOfflineStats();
+      }
     }
+
+    if (cancelBtn) cancelBtn.style.display = 'none';
     localStorage.setItem('peninsulaOfflineReady', '1');
+    await refreshOfflineStats();
+
+    if (cancelOfflineDownloadFlag) {
+      lbl.textContent = `⏸ Descarga pausada (${done} teselas procesadas; lo guardado queda en caché)`;
+      showToast('⏸ Descarga pausada. Puedes reanudarla cuando quieras.');
+      return;
+    }
+
     lbl.textContent = labelSuccess;
-    refreshOfflineStats();
     showToast(labelSuccess);
     speakAlert('Descarga de mapa offline completada');
   }
@@ -2996,27 +3158,42 @@
   async function downloadIberianPeninsulaOneClick() {
     const btn = document.getElementById('btnDownloadPeninsula');
     btn.disabled = true;
-    btn.textContent = '⏳ Descargando Península Ibérica...';
+    btn.textContent = '⏳ Preparando descarga completa España + Portugal...';
     const templates = getSelectedOfflineTemplates();
-    const peninsulaBaseUrls = buildTileUrlsFromBox(IBERIAN_BOUNDS, 5, 10, templates);
-    const baseBounds = plannedCoords.length > 1 ? plannedLine.getBounds().extend(userPos) : L.latLngBounds([userPos, userPos]);
-    const b = baseBounds.pad(0.18);
-    const corridorBox = { south: b.getSouth(), west: b.getWest(), north: b.getNorth(), east: b.getEast() };
-    const highDetailUrls = buildTileUrlsFromBox(corridorBox, 12, 15, templates).slice(0, 350);
-    const combined = [...new Set([...peninsulaBaseUrls, ...highDetailUrls])];
-    await batchCacheUrls(combined, `✅ Península Ibérica + DMD2 Trail lista offline (${combined.length} teselas)`);
+
+    // Full Iberian Peninsula coverage from overview (Z5) down to detailed roads/trails (Z13)
+    const peninsulaFullUrls = buildTileUrlsFromBox(IBERIAN_BOUNDS, 5, 13, templates).slice(0, 36000);
+
+    // Plus ultra-high detail (Z14–16) around active route or ~65 km radius around rider's region
+    const baseBounds = plannedCoords.length > 1
+      ? plannedLine.getBounds().extend(userPos).pad(0.35)
+      : L.latLngBounds([userPos, userPos]).pad(0.55);
+    const corridorBox = {
+      south: baseBounds.getSouth(),
+      west: baseBounds.getWest(),
+      north: baseBounds.getNorth(),
+      east: baseBounds.getEast()
+    };
+    const ultraDetailUrls = buildTileUrlsFromBox(corridorBox, 14, 16, templates).slice(0, 8000);
+
+    const combined = [...new Set([...peninsulaFullUrls, ...ultraDetailUrls])];
+    btn.textContent = `⏳ Descargando ${combined.length} teselas (~${(combined.length * 0.024).toFixed(0)} MB)...`;
+    await batchCacheUrls(combined, `✅ España + Portugal completos guardados (${combined.length} teselas)`);
     btn.disabled = false;
-    btn.textContent = '✅ Península descargada (Actualizar)';
+    btn.textContent = '✅ España + Portugal descargados (Actualizar)';
   }
 
   async function downloadSelectedRegion() {
     const val = document.getElementById('regionSelect').value;
+    const btn = document.getElementById('btnDownloadRegion');
+    if (btn) btn.disabled = true;
     const templates = getSelectedOfflineTemplates();
     const box = val === 'current'
-      ? { south: map.getBounds().pad(0.15).getSouth(), west: map.getBounds().pad(0.15).getWest(), north: map.getBounds().pad(0.15).getNorth(), east: map.getBounds().pad(0.15).getEast() }
+      ? { south: map.getBounds().pad(0.35).getSouth(), west: map.getBounds().pad(0.35).getWest(), north: map.getBounds().pad(0.35).getNorth(), east: map.getBounds().pad(0.35).getEast() }
       : REGION_BOXES[val];
-    const urls = buildTileUrlsFromBox(box, 11, 14, templates).slice(0, 550);
-    await batchCacheUrls(urls, `✅ Zona regional descargada offline (${urls.length} teselas)`);
+    const urls = buildTileUrlsFromBox(box, 10, 16, templates).slice(0, 22000);
+    await batchCacheUrls(urls, `✅ Zona completa al detalle descargada (${urls.length} teselas)`);
+    if (btn) btn.disabled = false;
   }
 
   async function clearOfflineMapCache() {
@@ -3037,7 +3214,22 @@
     const ready = localStorage.getItem('peninsulaOfflineReady') === '1' || keys.length > 200;
     const pb = document.getElementById('peninsulaBadge'); if (pb) pb.textContent = ready ? `Lista (${keys.length} teselas)` : `${keys.length} teselas`;
     const el = document.getElementById('offlineStorageInfo');
-    if (el) el.textContent = `${keys.length} teselas (~${(keys.length * 0.025).toFixed(1)} MB) · ${ready ? 'Offline activo' : 'Pendiente'}`;
+    const qEl = document.getElementById('offlineQuotaInfo');
+
+    let usedMbText = `~${(keys.length * 0.024).toFixed(1)} MB`;
+    if (navigator.storage && navigator.storage.estimate) {
+      try {
+        const est = await navigator.storage.estimate();
+        const usedMb = ((est.usage || 0) / (1024 * 1024)).toFixed(1);
+        const quotaMb = ((est.quota || 0) / (1024 * 1024)).toFixed(0);
+        const isPersisted = (navigator.storage.persisted && await navigator.storage.persisted());
+        if (est.usage && est.usage > 0) usedMbText = `${usedMb} MB`;
+        if (qEl) {
+          qEl.textContent = `Espacio disponible en navegador: ${quotaMb} MB · Almacenamiento fijo: ${isPersisted ? 'Activo ✅' : 'Listo'}`;
+        }
+      } catch (e) {}
+    }
+    if (el) el.textContent = `${keys.length} teselas (${usedMbText}) · ${ready ? 'Offline activo' : 'Pendiente'}`;
   }
 
   function openOfflineModal() { refreshOfflineStats(); openModal('offlineModal'); }
