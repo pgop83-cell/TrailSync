@@ -10,7 +10,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
   <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
-  <title>TrailSync v14.2 — Exploración Libre en Parado y Rutas Largas de Alta Precisión</title>
+  <title>TrailSync v14.3 — Mapa Limpio, Pantalla Completa y HUD Optimizado</title>
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
         onerror="this.onerror=null;this.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';" />
@@ -146,43 +146,91 @@
       filter: invert(0.9) hue-rotate(180deg) contrast(1.12) brightness(0.88);
     }
 
-    /* ACTIVE SHARED GROUP ROUTE BANNER */
-    #sharedRouteBanner {
-      display: none;
-      position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
-      z-index: 960;
-      background: rgba(15, 23, 42, 0.94);
-      border: 1.5px solid #f97316;
-      border-radius: 14px;
-      padding: 7px 12px;
-      box-shadow: 0 6px 18px rgba(0,0,0,0.4);
-      width: calc(100% - 24px); max-width: 430px;
-      align-items: center; justify-content: space-between; gap: 8px;
+    /* FULLSCREEN IMMERSIVE MODE */
+    #app.map-fullscreen header {
+      display: none !important;
     }
-    #sharedRouteBanner.visible { display: flex; }
+    #app.map-fullscreen {
+      position: fixed;
+      inset: 0;
+      height: 100vh;
+      height: 100dvh;
+      width: 100vw;
+      z-index: 3000;
+    }
+
+    /* ACTIVE SHARED GROUP ROUTE CARD (EMBEDDED INSIDE LEFT MENU POPOVER) */
+    #sharedRouteMenuCard {
+      display: none;
+      flex-direction: column;
+      gap: 6px;
+      background: rgba(15, 23, 42, 0.96);
+      border: 1.5px solid #f97316;
+      border-radius: 12px;
+      padding: 8px 10px;
+    }
+    #sharedRouteMenuCard.visible { display: flex; }
     .route-banner-info { min-width: 0; }
     .route-banner-title {
-      font-size: 12.5px; font-weight: 800; color: #fb923c;
+      font-size: 12px; font-weight: 800; color: #fb923c;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     .route-banner-sub {
-      font-size: 11px; color: #cbd5e1; margin-top: 1px;
+      font-size: 10.5px; color: #cbd5e1; margin-top: 2px;
     }
-    .route-banner-actions { display: flex; gap: 5px; flex-shrink: 0; }
+    .route-banner-actions { display: flex; gap: 5px; margin-top: 2px; }
     .mini-pill-btn {
+      flex: 1;
       background: #1e293b; color: #f8fafc; border: 1px solid #475569;
-      border-radius: 8px; padding: 5px 8px; font-size: 11px; font-weight: 700; cursor: pointer;
+      border-radius: 8px; padding: 5px 7px; font-size: 11px; font-weight: 700; cursor: pointer;
+      text-align: center;
     }
 
-    /* TOP FLOATING PILLS */
+    /* TOP-LEFT FLOATING CONTROLS (FULLSCREEN TOGGLE + UPDATE) */
     .top-pills {
-      position: absolute; top: 10px; left: 10px; z-index: 900;
-      display: flex; flex-direction: column; gap: 5px; align-items: flex-start;
+      position: absolute; top: 10px; left: 10px; z-index: 950;
+      display: flex; flex-direction: column; gap: 6px; align-items: flex-start;
       pointer-events: none;
-      transition: top 0.2s ease;
     }
-    .top-pills.shifted { top: 64px; }
     .top-pills > * { pointer-events: auto; }
+    .fullscreen-pill-btn {
+      background: rgba(22, 27, 38, 0.92);
+      color: #f8fafc;
+      border: 1.5px solid #38bdf8;
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 11.5px;
+      font-weight: 800;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.35);
+      transition: transform 0.12s ease, background 0.15s ease;
+    }
+    .fullscreen-pill-btn:active { transform: scale(0.95); }
+    .fullscreen-pill-btn.active-fs {
+      background: rgba(2, 132, 199, 0.92);
+      border-color: #bae6fd;
+      color: #ffffff;
+    }
+
+    /* TOP-CENTER GROUP MEMBER BUBBLES BAR */
+    .top-center-members {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 920;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+      gap: 6px;
+      max-width: calc(100vw - 245px);
+      pointer-events: none;
+    }
+    .top-center-members > * { pointer-events: auto; }
     .live-pill {
       background: #43a047; color: #fff; font-weight: 800; font-size: 11px;
       padding: 5px 12px; border-radius: 999px; letter-spacing: 0.4px;
@@ -220,23 +268,23 @@
       cursor: pointer;
     }
 
-    /* LIVE TELEMETRY STRIP */
+    /* LIVE TELEMETRY STRIP (CLEAR IN CENTER BETWEEN 3+3 BOTTOM ICON CLUSTERS) */
     .telemetry-bar {
-      position: absolute; bottom: 72px; left: 50%; transform: translateX(-50%);
-      z-index: 910;
-      background: rgba(15, 23, 42, 0.90);
+      position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%);
+      z-index: 940;
+      background: rgba(15, 23, 42, 0.92);
       border: 1px solid rgba(148, 163, 184, 0.35);
       border-radius: 14px;
-      padding: 5px 11px;
-      display: flex; align-items: center; gap: 11px;
-      box-shadow: 0 4px 14px rgba(0,0,0,0.38);
+      padding: 5px 10px;
+      display: flex; align-items: center; gap: 8px;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.42);
       pointer-events: auto;
       backdrop-filter: blur(4px);
     }
-    .telem-cell { display: flex; flex-direction: column; align-items: center; min-width: 44px; }
-    .telem-val { font-size: 13px; font-weight: 900; color: #f8fafc; line-height: 1.15; }
-    .telem-lbl { font-size: 9px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.3px; }
-    .telem-sep { width: 1px; height: 22px; background: rgba(148,163,184,0.25); }
+    .telem-cell { display: flex; flex-direction: column; align-items: center; min-width: 38px; }
+    .telem-val { font-size: 12.5px; font-weight: 900; color: #f8fafc; line-height: 1.15; }
+    .telem-lbl { font-size: 8.5px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.3px; }
+    .telem-sep { width: 1px; height: 20px; background: rgba(148,163,184,0.25); }
 
     /* TOP-RIGHT SCALE + GOOGLE MAPS STYLE COMPASS BUTTON */
     .top-right-stack {
@@ -296,15 +344,13 @@
     .display-mode-btn span { font-size: 8px; color: #cbd5e1; margin-top: 2px; }
 
 
-    /* TOP-RIGHT GROUP MEMBER BUBBLES (SAME PILL STYLE, CLICK TO JUMP TO MEMBER) */
+    /* TOP-CENTER GROUP MEMBER BUBBLES (SAME PILL STYLE, CLICK TO JUMP TO MEMBER) */
     #groupMembersBubbles {
       display: flex;
-      flex-direction: column;
-      align-items: flex-end;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
       gap: 6px;
-      margin-top: 2px;
-      max-height: 36vh;
-      overflow-y: auto;
       pointer-events: auto;
     }
     .member-jump-pill {
@@ -339,6 +385,23 @@
     }
 
 
+
+    @media (max-width: 480px) {
+      .telemetry-bar {
+        bottom: 66px;
+      }
+      .left-menu-wrapper {
+        bottom: 66px;
+      }
+      .zoom-box {
+        bottom: 66px;
+      }
+      .top-center-members {
+        top: 46px;
+        max-width: calc(100vw - 140px);
+      }
+    }
+
     /* LANDSCAPE / HORIZONTAL HANDLEBAR LAYOUT SUPPORT */
     @media (orientation: landscape) and (max-height: 540px) {
       header {
@@ -348,48 +411,45 @@
       .header-title { max-width: 150px; font-size: 14px; }
       .top-icon-btn { width: 30px; height: 30px; }
       .telemetry-bar {
-        bottom: 12px;
+        bottom: 10px;
         left: 50%;
         transform: translateX(-50%);
-        padding: 4px 10px;
-        gap: 9px;
+        padding: 4px 9px;
+        gap: 7px;
       }
-      .telem-cell { min-width: 38px; }
-      .telem-val { font-size: 12px; }
+      .telem-cell { min-width: 34px; }
+      .telem-val { font-size: 11.5px; }
       .bottom-actions {
         left: 10px;
         right: 10px;
         bottom: 10px;
-        justify-content: space-between;
       }
+      .bottom-cluster { gap: 5px; }
       .circle-action {
-        width: 42px;
-        height: 42px;
-        min-width: 42px;
-        min-height: 42px;
+        width: 40px;
+        height: 40px;
+        min-width: 40px;
+        min-height: 40px;
       }
-      .circle-action svg { width: 20px; height: 20px; }
+      .circle-action svg { width: 19px; height: 19px; }
       .left-menu-wrapper {
         left: 10px;
-        bottom: 62px;
+        bottom: 58px;
       }
       .btn-single-menu {
-        padding: 7px 12px;
-        font-size: 13px;
+        width: 40px;
+        height: 40px;
       }
       .zoom-box {
         right: 10px;
-        bottom: 62px;
+        bottom: 58px;
       }
       .zoom-btn {
         width: 38px;
         height: 36px;
       }
-      #groupMembersBubbles {
-        max-height: 30vh;
-      }
       .menu-popover-card {
-        max-height: 62vh;
+        max-height: 66vh;
         overflow-y: auto;
       }
     }
@@ -405,22 +465,22 @@
     .legend-row { display: flex; align-items: center; gap: 7px; }
     .legend-swatch { width: 16px; height: 4px; border-radius: 2px; display: inline-block; }
 
-    /* SINGLE FLOATING "MENÚ" BUTTON + EXPANDABLE POPOVER */
+    /* SINGLE FLOATING 3-LINE MENU BUTTON DIRECTLY ABOVE MICROPHONE */
     .left-menu-wrapper {
-      position: absolute; left: 12px; bottom: 122px; z-index: 950;
+      position: absolute; left: 10px; bottom: 72px; z-index: 955;
       display: flex; flex-direction: column; align-items: flex-start; gap: 8px;
     }
     .btn-single-menu {
-      background: #161b26;
+      background: rgba(22, 27, 38, 0.92);
       color: #f8fafc;
-      border: 2px solid #f97316;
-      border-radius: 16px;
-      padding: 10px 15px;
-      font-size: 14px;
-      font-weight: 800;
+      border: 2.5px solid #f97316;
+      border-radius: 50%;
+      width: 48px;
+      height: 48px;
+      padding: 0;
       display: inline-flex;
       align-items: center;
-      gap: 8px;
+      justify-content: center;
       box-shadow: 0 6px 18px rgba(0,0,0,0.45);
       cursor: pointer;
       transition: transform 0.12s ease, background 0.15s ease;
@@ -476,16 +536,22 @@
     }
     .zoom-btn:first-child { border-bottom: 1px solid rgba(255,255,255,0.12); }
 
-    /* BOTTOM ROW: 6 UNIFORM CIRCULAR TRANSPARENT COLORED ICONS */
+    /* BOTTOM ROW: 3 COMPACT ICONS LEFT + 3 COMPACT ICONS RIGHT (LEAVING CENTER TELEMETRY CLEAR) */
     .bottom-actions {
-      position: absolute; left: 8px; right: 8px; bottom: 14px; z-index: 950;
+      position: absolute; left: 10px; right: 10px; bottom: 14px; z-index: 950;
       display: flex; align-items: center; justify-content: space-between;
+      pointer-events: none;
+    }
+    .bottom-cluster {
+      display: flex;
+      align-items: center;
+      gap: 6px;
       pointer-events: none;
     }
     .circle-action {
       pointer-events: auto;
-      width: 48px; height: 48px; min-width: 48px; min-height: 48px;
-      border-radius: 50%; background: rgba(15, 23, 42, 0.72);
+      width: 44px; height: 44px; min-width: 44px; min-height: 44px;
+      border-radius: 50%; background: rgba(15, 23, 42, 0.78);
       display: flex; align-items: center; justify-content: center;
       cursor: pointer; transition: transform 0.12s ease, background 0.15s ease;
     }
@@ -859,23 +925,23 @@
     </div>
     <div id="toast" class="toast"></div>
 
-    <!-- ACTIVE SHARED ROUTE BANNER -->
-    <div id="sharedRouteBanner">
-      <div class="route-banner-info">
-        <div class="route-banner-title" id="sharedRouteTitle">🧭 Ruta compartida del grupo</div>
-        <div class="route-banner-sub" id="sharedRouteStats">Calculando distancia...</div>
-      </div>
-      <div class="route-banner-actions">
-        <button class="mini-pill-btn" onclick="fitSharedRouteBounds()" title="Encuadrar ruta">Ver</button>
-        <button class="mini-pill-btn" onclick="exportPlannedRouteAsGPX()" title="Guardar GPX de esta ruta">GPX</button>
-        <button class="mini-pill-btn" style="color:#f87171;" onclick="clearSharedRoute()" title="Quitar ruta">✕</button>
-      </div>
-    </div>
-
+    <!-- TOP-LEFT: FULLSCREEN BUTTON + APP UPDATE -->
     <div class="top-pills" id="topPillsStack">
+      <button type="button" class="fullscreen-pill-btn" id="btnFullscreenToggle" onclick="toggleMapFullscreen()" title="Alternar pantalla completa del mapa">
+        <svg id="fullscreenIconSvg" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24">
+          <path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3"/>
+        </svg>
+        <span id="fullscreenBtnLabel">Pantalla completa</span>
+      </button>
+
       <button id="updateAppBannerBtn" onclick="applyAppUpdate()">
         🔄 Actualizar app <span id="newVersionBadge"></span>
       </button>
+    </div>
+
+    <!-- TOP-CENTER: GROUP MEMBER BUBBLES -->
+    <div class="top-center-members">
+      <div id="groupMembersBubbles" aria-label="Miembros del grupo"></div>
     </div>
 
     <!-- TOP-RIGHT: SCALE + GOOGLE MAPS COMPASS + DISPLAY CONTRAST -->
@@ -897,8 +963,6 @@
         <span id="displayModeLabel">NORMAL</span>
       </button>
 
-      <div id="groupMembersBubbles" aria-label="Miembros del grupo"></div>
-
       <!-- FLOATING LEGEND -->
       <div id="mapLegendBox">
         <div style="font-weight:800;margin-bottom:4px;color:#fb923c;">Leyenda del mapa</div>
@@ -909,9 +973,22 @@
       </div>
     </div>
 
-    <!-- SINGLE FLOATING "MENÚ" BUTTON WITH ACTIONS INSIDE -->
+    <!-- SINGLE FLOATING 3-LINE MENU BUTTON DIRECTLY ABOVE MICROPHONE -->
     <div class="left-menu-wrapper" id="leftMenuWrapper">
       <div class="menu-popover-card" id="quickMenuPopover">
+        <!-- ACTIVE SHARED ROUTE CARD INSIDE MENU -->
+        <div id="sharedRouteMenuCard">
+          <div class="route-banner-info">
+            <div class="route-banner-title" id="sharedRouteTitle">🧭 Ruta compartida del grupo</div>
+            <div class="route-banner-sub" id="sharedRouteStats">Calculando distancia...</div>
+          </div>
+          <div class="route-banner-actions">
+            <button class="mini-pill-btn" onclick="closeQuickMenu();fitSharedRouteBounds()" title="Encuadrar ruta">Ver ruta</button>
+            <button class="mini-pill-btn" onclick="closeQuickMenu();exportPlannedRouteAsGPX()" title="Guardar GPX de esta ruta">GPX</button>
+            <button class="mini-pill-btn" style="color:#f87171;" onclick="closeQuickMenu();clearSharedRoute()" title="Quitar ruta">✕</button>
+          </div>
+        </div>
+
         <button class="menu-item-btn mi-route" onclick="closeQuickMenu();openRoutePlannerForCenter()">
           <span>🧭</span> <span>Crear ruta a punto</span>
         </button>
@@ -934,11 +1011,10 @@
         </label>
       </div>
 
-      <button class="btn-single-menu" id="btnMainMenu" onclick="toggleQuickMenu(event)">
-        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.6" viewBox="0 0 24 24">
+      <button class="btn-single-menu" id="btnMainMenu" onclick="toggleQuickMenu(event)" title="Menú de ruta y grupo" aria-label="Menú">
+        <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.6" viewBox="0 0 24 24">
           <path d="M4 7h16M4 12h16M4 17h16"/>
         </svg>
-        <span>Menú</span>
       </button>
     </div>
 
@@ -971,41 +1047,45 @@
       </div>
     </div>
 
-    <!-- BOTTOM 6 UNIFORM CIRCULAR TRANSPARENT COLORED ICONS -->
+    <!-- BOTTOM 6 UNIFORM CIRCULAR TRANSPARENT COLORED ICONS (3 LEFT + 3 RIGHT) -->
     <div class="bottom-actions">
-      <button class="circle-action act-voice" id="btnVoice" onclick="toggleWalkie()" title="Walkie-Talkie PTT">
-        <svg fill="none" stroke="currentColor" stroke-width="2.3" viewBox="0 0 24 24">
-          <rect x="9" y="2" width="6" height="11" rx="3"/><path d="M5 10a7 7 0 0014 0M12 19v3M8 22h8"/>
-        </svg>
-      </button>
+      <div class="bottom-cluster">
+        <button class="circle-action act-voice" id="btnVoice" onclick="toggleWalkie()" title="Walkie-Talkie PTT">
+          <svg fill="none" stroke="currentColor" stroke-width="2.3" viewBox="0 0 24 24">
+            <rect x="9" y="2" width="6" height="11" rx="3"/><path d="M5 10a7 7 0 0014 0M12 19v3M8 22h8"/>
+          </svg>
+        </button>
 
-      <button class="circle-action act-stop" onclick="openModal('stopModal')" title="Pedir parada">
-        <svg fill="currentColor" viewBox="0 0 24 24">
-          <path d="M18 8.5V6a1.5 1.5 0 00-3 0v2.5h-1V4.5a1.5 1.5 0 00-3 0v4h-1V5.5a1.5 1.5 0 00-3 0v6.2l-1.9-1.9a1.5 1.5 0 00-2.1 2.1l4.8 4.8A5 5 0 0011.3 18H15a4 4 0 004-4V8.5a1 1 0 00-1 0z"/>
-        </svg>
-      </button>
+        <button class="circle-action act-stop" onclick="openModal('stopModal')" title="Pedir parada">
+          <svg fill="currentColor" viewBox="0 0 24 24">
+            <path d="M18 8.5V6a1.5 1.5 0 00-3 0v2.5h-1V4.5a1.5 1.5 0 00-3 0v4h-1V5.5a1.5 1.5 0 00-3 0v6.2l-1.9-1.9a1.5 1.5 0 00-2.1 2.1l4.8 4.8A5 5 0 0011.3 18H15a4 4 0 004-4V8.5a1 1 0 00-1 0z"/>
+          </svg>
+        </button>
 
-      <button class="circle-action act-sos" onclick="triggerSOS()" title="Emergencia SOS">SOS</button>
+        <button class="circle-action act-sos" onclick="triggerSOS()" title="Emergencia SOS">SOS</button>
+      </div>
 
-      <button class="circle-action act-comp" id="btnCompass" onclick="toggleBacktrack()" title="Volver por rastro (Backtrack)">
-        <svg fill="none" stroke="currentColor" stroke-width="2.3" viewBox="0 0 24 24">
-          <circle cx="12" cy="12" r="9"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" fill="currentColor"/>
-        </svg>
-      </button>
+      <div class="bottom-cluster">
+        <button class="circle-action act-comp" id="btnCompass" onclick="toggleBacktrack()" title="Volver por rastro (Backtrack)">
+          <svg fill="none" stroke="currentColor" stroke-width="2.3" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="9"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" fill="currentColor"/>
+          </svg>
+        </button>
 
-      <button class="circle-action act-group" onclick="openGroupModal()" title="Miembros del grupo">
-        <svg fill="currentColor" viewBox="0 0 24 24">
-          <circle cx="12" cy="7" r="2.5"/><circle cx="6" cy="9" r="2"/><circle cx="18" cy="9" r="2"/>
-          <path d="M9 14a3 3 0 016 0v5H9v-5zm-6 1a2.5 2.5 0 015 0v4H3v-4zm13 0a2.5 2.5 0 015 0v4h-5v-4z"/>
-        </svg>
-      </button>
+        <button class="circle-action act-group" onclick="openGroupModal()" title="Miembros del grupo">
+          <svg fill="currentColor" viewBox="0 0 24 24">
+            <circle cx="12" cy="7" r="2.5"/><circle cx="6" cy="9" r="2"/><circle cx="18" cy="9" r="2"/>
+            <path d="M9 14a3 3 0 016 0v5H9v-5zm-6 1a2.5 2.5 0 015 0v4H3v-4zm13 0a2.5 2.5 0 015 0v4h-5v-4z"/>
+          </svg>
+        </button>
 
-      <button class="circle-action act-center" onclick="recenterUser()" title="Centrar posición / Ver grupo">
-        <svg fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24">
-          <path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3"/>
-          <circle cx="12" cy="12" r="2" fill="currentColor"/>
-        </svg>
-      </button>
+        <button class="circle-action act-center" onclick="recenterUser()" title="Centrar posición / Ver grupo">
+          <svg fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24">
+            <path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3"/>
+            <circle cx="12" cy="12" r="2" fill="currentColor"/>
+          </svg>
+        </button>
+      </div>
     </div>
   </div>
 </div>
@@ -1288,7 +1368,7 @@
     <h2>Ajustes de ruta y App</h2>
     <div style="background:#18141a;padding:10px 12px;border-radius:12px;margin-bottom:12px;border:1px solid #334155;display:flex;align-items:center;justify-content:space-between;gap:8px;">
       <div>
-        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">14.2.0</span></div>
+        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">14.3.0</span></div>
         <div style="font-size:11px;color:#94a3b8;" id="webVerStatusLabel">Comprobando actualizaciones en la web...</div>
       </div>
       <button class="solid-btn" style="flex:0 0 auto;background:#16a34a;color:#fff;padding:8px 12px;font-size:12px;" onclick="manualCheckForUpdates()">🔄 Buscar / Actualizar</button>
@@ -1320,7 +1400,7 @@
 </div>
 
 <script>
-  const APP_VERSION = '14.2.0';
+  const APP_VERSION = '14.3.0';
   let swWaitingWorker = null;
   let remoteVersionFound = null;
 
@@ -1934,11 +2014,9 @@
     placeDestinationPin(endPt[0], endPt[1], false);
 
     const distKm = routeObj.distanceKm || computeTotalDistanceKm(plannedCoords);
-    document.getElementById('sharedRouteTitle').textContent = `🧭 ${routeObj.title} (por ${routeObj.author})`;
-    document.getElementById('sharedRouteStats').textContent = `${distKm.toFixed(1)} km · Rutable para todo el grupo`;
-    document.getElementById('sharedRouteBanner').classList.add('visible');
-    document.getElementById('topPillsStack').classList.add('shifted');
-    document.getElementById('topRightStack').classList.add('shifted');
+    document.getElementById('sharedRouteTitle').textContent = `🧭 ${routeObj.title} (${routeObj.author})`;
+    document.getElementById('sharedRouteStats').textContent = `${distKm.toFixed(1)} km · Activa en mapa`;
+    document.getElementById('sharedRouteMenuCard').classList.add('visible');
 
     if (broadcastToGroup) publishGroupRoute(routeObj);
   }
@@ -1954,11 +2032,67 @@
     plannedCoords = [];
     plannedLine.setLatLngs([]);
     if (destMarker) { map.removeLayer(destMarker); destMarker = null; }
-    document.getElementById('sharedRouteBanner').classList.remove('visible');
-    document.getElementById('topPillsStack').classList.remove('shifted');
-    document.getElementById('topRightStack').classList.remove('shifted');
+    document.getElementById('sharedRouteMenuCard').classList.remove('visible');
     showToast('🗑️ Ruta retirada del mapa');
   }
+
+  // --- IMMERSIVE FULLSCREEN TOGGLE ("Pantalla completa" <-> "Volver") ---
+  let isMapFullscreen = false;
+
+  function syncFullscreenButtonUI() {
+    const appEl = document.getElementById('app');
+    const btn = document.getElementById('btnFullscreenToggle');
+    const lbl = document.getElementById('fullscreenBtnLabel');
+    const svg = document.getElementById('fullscreenIconSvg');
+    if (!appEl || !btn || !lbl) return;
+
+    if (isMapFullscreen) {
+      appEl.classList.add('map-fullscreen');
+      btn.classList.add('active-fs');
+      lbl.textContent = 'Volver';
+      if (svg) {
+        svg.innerHTML = '<path d="M9 14L4 9l5-5"/><path d="M4 9h11a4 4 0 010 8h-1"/>';
+      }
+    } else {
+      appEl.classList.remove('map-fullscreen');
+      btn.classList.remove('active-fs');
+      lbl.textContent = 'Pantalla completa';
+      if (svg) {
+        svg.innerHTML = '<path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3"/>';
+      }
+    }
+    setTimeout(() => { if (map) map.invalidateSize(true); }, 160);
+  }
+
+  async function toggleMapFullscreen() {
+    isMapFullscreen = !isMapFullscreen;
+    if (isMapFullscreen) {
+      try {
+        const docEl = document.documentElement;
+        if (!document.fullscreenElement && docEl.requestFullscreen) {
+          await docEl.requestFullscreen({ navigationUI: 'hide' });
+        } else if (!document.webkitFullscreenElement && docEl.webkitRequestFullscreen) {
+          docEl.webkitRequestFullscreen();
+        }
+      } catch (e) {}
+    } else {
+      try {
+        if (document.fullscreenElement && document.exitFullscreen) {
+          await document.exitFullscreen();
+        } else if (document.webkitFullscreenElement && document.webkitExitFullscreen) {
+          document.webkitExitFullscreen();
+        }
+      } catch (e) {}
+    }
+    syncFullscreenButtonUI();
+  }
+
+  document.addEventListener('fullscreenchange', () => {
+    if (!document.fullscreenElement && isMapFullscreen) {
+      isMapFullscreen = false;
+      syncFullscreenButtonUI();
+    }
+  });
 
   function placeDestinationPin(lat, lon, openSheet = true) {
     pendingDestCoords = [lat, lon];
@@ -2380,7 +2514,7 @@
       brokers.forEach((brokerUrl, idx) => {
         try {
           const client = window.mqtt.connect(brokerUrl, {
-            clientId: `ts142_${myPeerId}_${idx}_${Math.floor(Math.random()*999)}`,
+            clientId: `ts143_${myPeerId}_${idx}_${Math.floor(Math.random()*999)}`,
             reconnectPeriod: 3000,
             connectTimeout: 8000
           });
