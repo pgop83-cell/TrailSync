@@ -1,11 +1,11 @@
-const APP_CACHE = 'trailsync-app-shell-v12-0-1';
+const APP_CACHE = 'trailsync-app-shell-v12-0-2';
 const TILE_CACHE = 'trailsync-peninsula-tiles-v2';
 const APP_ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/icon-192.png',
-  '/icon-512.png'
+  './',
+  './index.html',
+  './manifest.json',
+  './icon-192.png',
+  './icon-512.png'
 ];
 
 self.addEventListener('install', event => {
@@ -33,7 +33,7 @@ self.addEventListener('fetch', event => {
 
   if (url.includes('manifest.json')) {
     event.respondWith(
-      fetch(event.request, { cache: 'no-store' }).catch(() => caches.match('/manifest.json'))
+      fetch(event.request, { cache: 'no-store' }).catch(() => caches.match('./manifest.json'))
     );
     return;
   }
