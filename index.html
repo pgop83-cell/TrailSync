@@ -10,7 +10,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
   <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
-  <title>TrailSync v14.1 — Rotación Horizontal/Vertical y Zoom Dinámico por Velocidad</title>
+  <title>TrailSync v14.2 — Exploración Libre en Parado y Rutas Largas de Alta Precisión</title>
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
         onerror="this.onerror=null;this.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';" />
@@ -1288,7 +1288,7 @@
     <h2>Ajustes de ruta y App</h2>
     <div style="background:#18141a;padding:10px 12px;border-radius:12px;margin-bottom:12px;border:1px solid #334155;display:flex;align-items:center;justify-content:space-between;gap:8px;">
       <div>
-        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">14.1.0</span></div>
+        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">14.2.0</span></div>
         <div style="font-size:11px;color:#94a3b8;" id="webVerStatusLabel">Comprobando actualizaciones en la web...</div>
       </div>
       <button class="solid-btn" style="flex:0 0 auto;background:#16a34a;color:#fff;padding:8px 12px;font-size:12px;" onclick="manualCheckForUpdates()">🔄 Buscar / Actualizar</button>
@@ -1320,7 +1320,7 @@
 </div>
 
 <script>
-  const APP_VERSION = '14.1.0';
+  const APP_VERSION = '14.2.0';
   let swWaitingWorker = null;
   let remoteVersionFound = null;
 
@@ -1366,12 +1366,13 @@
     if (map) map.invalidateSize(true);
   });
 
-  // --- DMD2 / GOOGLE MAPS STYLE SPEED-BASED DYNAMIC ZOOM ---
+  // --- DMD2 / GOOGLE MAPS STYLE SPEED-BASED DYNAMIC ZOOM + FREE PAN WHEN STOPPED ---
   let dynamicSpeedZoomEnabled = localStorage.getItem('trailsync_dynamic_zoom') !== '0';
   let smoothedSpeedKmh = 0;
   let lastDynamicZoomApplied = null;
   let lastDynamicZoomTimestamp = 0;
   let manualZoomOverrideUntil = 0;
+  let userExploringMap = false;
 
   function toggleDynamicSpeedZoom(enabled) {
     dynamicSpeedZoomEnabled = !!enabled;
@@ -1386,8 +1387,13 @@
   }
 
   function registerManualZoomOverride() {
-    // Pause auto-zoom for 12s if rider manually taps +/- or pinches
-    manualZoomOverrideUntil = Date.now() + 12000;
+    // Pause auto-zoom for 15s if rider manually taps +/- or pinches
+    manualZoomOverrideUntil = Date.now() + 15000;
+  }
+
+  function registerManualMapExplore() {
+    userExploringMap = true;
+    registerManualZoomOverride();
   }
 
   function getTargetZoomForSpeed(speedKmh) {
@@ -1408,7 +1414,12 @@
 
   function applyDynamicSpeedZoom(rawSpeedKmh, forceImmediate = false) {
     if (!map || !dynamicSpeedZoomEnabled) return;
-    if (!forceImmediate && Date.now() < manualZoomOverrideUntil) return;
+    if (!forceImmediate) {
+      if (Date.now() < manualZoomOverrideUntil) return;
+      // When stopped (< 4 km/h), never hijack the camera or zoom level
+      if (rawSpeedKmh < 4) return;
+      if (userExploringMap) return;
+    }
 
     // Exponential moving average smoothing to avoid jitter from GPS speed spikes
     smoothedSpeedKmh = smoothedSpeedKmh === 0
@@ -1419,8 +1430,8 @@
     const currentZoom = map.getZoom();
     const now = Date.now();
 
-    // Hysteresis: only change zoom when delta >= 0.5 and at least 1.8s elapsed (unless forced)
-    if (forceImmediate || (Math.abs(targetZoom - currentZoom) >= 0.5 && (now - lastDynamicZoomTimestamp) > 1800)) {
+    // Hysteresis: only change zoom when delta >= 0.5 and at least 2.2s elapsed (unless forced)
+    if (forceImmediate || (Math.abs(targetZoom - currentZoom) >= 0.5 && (now - lastDynamicZoomTimestamp) > 2200)) {
       lastDynamicZoomApplied = targetZoom;
       lastDynamicZoomTimestamp = now;
       map.setView(userPos, targetZoom, { animate: true, duration: 0.65 });
@@ -1845,17 +1856,54 @@
     }
   }
 
-  function downsampleCoords(coords, maxPts = 280) {
-    if (!Array.isArray(coords) || coords.length <= maxPts) return coords;
-    const step = (coords.length - 1) / (maxPts - 1);
-    const out = [];
-    for (let i = 0; i < maxPts - 1; i++) {
-      const idx = Math.round(i * step);
-      out.push([Number(coords[idx][0].toFixed(5)), Number(coords[idx][1].toFixed(5))]);
+  // Perpendicular distance (degrees) for Douglas-Peucker geometry simplification
+  function perpendicularDistDeg(pt, lineStart, lineEnd) {
+    const x = pt[1], y = pt[0];
+    const x1 = lineStart[1], y1 = lineStart[0];
+    const x2 = lineEnd[1], y2 = lineEnd[0];
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    if (dx === 0 && dy === 0) return Math.hypot(x - x1, y - y1);
+    const t = ((x - x1) * dx + (y - y1) * dy) / (dx * dx + dy * dy);
+    const projX = x1 + t * dx;
+    const projY = y1 + t * dy;
+    return Math.hypot(x - projX, y - projY);
+  }
+
+  function douglasPeucker(pts, epsilon) {
+    if (pts.length <= 2) return pts;
+    let maxDist = 0;
+    let index = 0;
+    const end = pts.length - 1;
+    for (let i = 1; i < end; i++) {
+      const d = perpendicularDistDeg(pts[i], pts[0], pts[end]);
+      if (d > maxDist) {
+        index = i;
+        maxDist = d;
+      }
     }
-    const last = coords[coords.length - 1];
-    out.push([Number(last[0].toFixed(5)), Number(last[1].toFixed(5))]);
-    return out;
+    if (maxDist > epsilon) {
+      const left = douglasPeucker(pts.slice(0, index + 1), epsilon);
+      const right = douglasPeucker(pts.slice(index), epsilon);
+      return left.slice(0, -1).concat(right);
+    }
+    return [pts[0], pts[end]];
+  }
+
+  function simplifyRoutePreservingTurns(coords, maxPts = 4500) {
+    if (!Array.isArray(coords) || coords.length <= 2) return coords || [];
+    // Round to 6 decimals (~11 cm precision) without discarding vertices on normal routes
+    let cleaned = coords.map(p => [Number(p[0].toFixed(6)), Number(p[1].toFixed(6))]);
+    if (cleaned.length <= maxPts) return cleaned;
+
+    // Adaptive Douglas-Peucker tolerance starting at ~3.5 meters (0.000032 deg) so every hairpin/junction is kept
+    let eps = 0.000032;
+    let simplified = douglasPeucker(cleaned, eps);
+    while (simplified.length > maxPts && eps < 0.0005) {
+      eps *= 1.35;
+      simplified = douglasPeucker(cleaned, eps);
+    }
+    return simplified;
   }
 
   function computeTotalDistanceKm(coords) {
@@ -2018,7 +2066,7 @@
     }
 
     if (!distKm) distKm = computeTotalDistanceKm(routeCoords);
-    const compactCoords = downsampleCoords(routeCoords, 280);
+    const compactCoords = simplifyRoutePreservingTurns(routeCoords, 4500);
 
     const routeObj = {
       id: 'rt_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
@@ -2095,6 +2143,7 @@
 
   function toggleNavigationHeadingMode() {
     courseUpMode = !courseUpMode;
+    userExploringMap = false;
     if (courseUpMode && currentHeadingDeg === 0 && plannedCoords.length > 1) {
       currentHeadingDeg = computeBearing(plannedCoords[0][0], plannedCoords[0][1], plannedCoords[1][0], plannedCoords[1][1]);
     }
@@ -2331,7 +2380,7 @@
       brokers.forEach((brokerUrl, idx) => {
         try {
           const client = window.mqtt.connect(brokerUrl, {
-            clientId: `ts141_${myPeerId}_${idx}_${Math.floor(Math.random()*999)}`,
+            clientId: `ts142_${myPeerId}_${idx}_${Math.floor(Math.random()*999)}`,
             reconnectPeriod: 3000,
             connectTimeout: 8000
           });
@@ -2710,8 +2759,11 @@
     const dzCb = document.getElementById('dynamicSpeedZoomToggle');
     if (dzCb) dzCb.checked = dynamicSpeedZoomEnabled;
     map = L.map('map', { zoomControl: false, zoomSnap: 0.5, zoomDelta: 0.5 }).setView(userPos, 16.5);
+    map.on('dragstart', () => {
+      registerManualMapExplore();
+    });
     map.on('zoomstart', (ev) => {
-      if (ev && ev.originalEvent) registerManualZoomOverride();
+      if (ev && ev.originalEvent) registerManualMapExplore();
     });
     baseTileLayer = buildOfflineTileLayer(startMode).addTo(map);
     const lp2 = document.getElementById('layerNamePill'); if (lp2) lp2.textContent = `🗺️ Capa: ${startMode.title} ▾`;
@@ -3033,6 +3085,7 @@ ${trkptsXml}
   }
 
   function recenterUser() {
+    userExploringMap = false;
     manualZoomOverrideUntil = 0;
     if (courseUpMode) {
       const targetZ = dynamicSpeedZoomEnabled ? getTargetZoomForSpeed(smoothedSpeedKmh) : Math.max(map.getZoom(), 16);
@@ -3100,7 +3153,7 @@ ${trkptsXml}
       ]).filter(p => !isNaN(p[0]) && !isNaN(p[1]));
       if (pts.length > 1) {
         const distKm = computeTotalDistanceKm(pts);
-        const compactCoords = downsampleCoords(pts, 280);
+        const compactCoords = simplifyRoutePreservingTurns(pts, 4500);
         const routeObj = {
           id: 'gpx_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
           title: file.name.replace(/\.gpx$/i, ''),
@@ -3133,16 +3186,27 @@ ${trkptsXml}
       realGpsActive = true;
       const newPos = [pos.coords.latitude, pos.coords.longitude];
 
+      const movedMeters = prevUserPos ? haversineKm(prevUserPos[0], prevUserPos[1], newPos[0], newPos[1]) * 1000 : 999;
       if (typeof pos.coords.speed === 'number' && !isNaN(pos.coords.speed) && pos.coords.speed >= 0) {
-        currentSpeedKmh = pos.coords.speed * 3.6;
+        currentSpeedKmh = pos.coords.speed < 1.1 ? 0 : pos.coords.speed * 3.6;
       } else if (prevUserPos) {
-        const dtHours = 2.5 / 3600;
-        currentSpeedKmh = haversineKm(prevUserPos[0], prevUserPos[1], newPos[0], newPos[1]) / dtHours;
+        if (movedMeters < 5) {
+          currentSpeedKmh = 0;
+        } else {
+          const dtHours = 2.5 / 3600;
+          currentSpeedKmh = (movedMeters / 1000) / dtHours;
+        }
       }
 
-      if (typeof pos.coords.heading === 'number' && !isNaN(pos.coords.heading) && (pos.coords.speed || 0) > 0.8) {
+      const isMoving = currentSpeedKmh >= 4.5 && movedMeters >= 4;
+      if (isMoving) {
+        // Once riding again (> 4.5 km/h), automatically resume auto-follow
+        userExploringMap = false;
+      }
+
+      if (typeof pos.coords.heading === 'number' && !isNaN(pos.coords.heading) && (pos.coords.speed || 0) > 1.2) {
         currentHeadingDeg = Math.round(pos.coords.heading);
-      } else if (prevUserPos && (Math.abs(newPos[0] - prevUserPos[0]) > 0.00003 || Math.abs(newPos[1] - prevUserPos[1]) > 0.00003)) {
+      } else if (prevUserPos && movedMeters >= 5) {
         currentHeadingDeg = Math.round(computeBearing(prevUserPos[0], prevUserPos[1], newPos[0], newPos[1]));
       }
       prevUserPos = newPos;
@@ -3154,10 +3218,12 @@ ${trkptsXml}
       if (firstFix) {
         const initZ = dynamicSpeedZoomEnabled ? getTargetZoomForSpeed(currentSpeedKmh) : Math.max(map.getZoom(), 16);
         map.setView(userPos, initZ);
-      } else if (dynamicSpeedZoomEnabled && Date.now() >= manualZoomOverrideUntil) {
-        applyDynamicSpeedZoom(currentSpeedKmh, false);
-      } else if (courseUpMode) {
-        map.panTo(userPos, { animate: true, duration: 0.45 });
+      } else if (isMoving && !userExploringMap) {
+        if (dynamicSpeedZoomEnabled && Date.now() >= manualZoomOverrideUntil) {
+          applyDynamicSpeedZoom(currentSpeedKmh, false);
+        } else {
+          map.panTo(userPos, { animate: true, duration: 0.45 });
+        }
       }
       if (courseUpMode) applyMapOrientation();
 
