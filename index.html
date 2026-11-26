@@ -10,7 +10,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
   <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
-  <title>TrailSync v14 — Grupo, Telemetría, Waypoints, Alertas y Bloqueo Lluvia</title>
+  <title>TrailSync v14.1 — Rotación Horizontal/Vertical y Zoom Dinámico por Velocidad</title>
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
         onerror="this.onerror=null;this.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';" />
@@ -336,6 +336,62 @@
       height: 9px;
       border-radius: 50%;
       flex-shrink: 0;
+    }
+
+
+    /* LANDSCAPE / HORIZONTAL HANDLEBAR LAYOUT SUPPORT */
+    @media (orientation: landscape) and (max-height: 540px) {
+      header {
+        height: 44px;
+        padding: 0 8px;
+      }
+      .header-title { max-width: 150px; font-size: 14px; }
+      .top-icon-btn { width: 30px; height: 30px; }
+      .telemetry-bar {
+        bottom: 12px;
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 4px 10px;
+        gap: 9px;
+      }
+      .telem-cell { min-width: 38px; }
+      .telem-val { font-size: 12px; }
+      .bottom-actions {
+        left: 10px;
+        right: 10px;
+        bottom: 10px;
+        justify-content: space-between;
+      }
+      .circle-action {
+        width: 42px;
+        height: 42px;
+        min-width: 42px;
+        min-height: 42px;
+      }
+      .circle-action svg { width: 20px; height: 20px; }
+      .left-menu-wrapper {
+        left: 10px;
+        bottom: 62px;
+      }
+      .btn-single-menu {
+        padding: 7px 12px;
+        font-size: 13px;
+      }
+      .zoom-box {
+        right: 10px;
+        bottom: 62px;
+      }
+      .zoom-btn {
+        width: 38px;
+        height: 36px;
+      }
+      #groupMembersBubbles {
+        max-height: 30vh;
+      }
+      .menu-popover-card {
+        max-height: 62vh;
+        overflow-y: auto;
+      }
     }
 
     /* FLOATING LEGEND BOX */
@@ -888,8 +944,8 @@
 
     <!-- ZOOM +/- -->
     <div class="zoom-box">
-      <button class="zoom-btn" onclick="map.zoomIn()">+</button>
-      <button class="zoom-btn" onclick="map.zoomOut()">−</button>
+      <button class="zoom-btn" onclick="registerManualZoomOverride();map.zoomIn()">+</button>
+      <button class="zoom-btn" onclick="registerManualZoomOverride();map.zoomOut()">−</button>
     </div>
 
     <!-- LIVE TELEMETRY BAR -->
@@ -1232,7 +1288,7 @@
     <h2>Ajustes de ruta y App</h2>
     <div style="background:#18141a;padding:10px 12px;border-radius:12px;margin-bottom:12px;border:1px solid #334155;display:flex;align-items:center;justify-content:space-between;gap:8px;">
       <div>
-        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">14.0.0</span></div>
+        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">14.1.0</span></div>
         <div style="font-size:11px;color:#94a3b8;" id="webVerStatusLabel">Comprobando actualizaciones en la web...</div>
       </div>
       <button class="solid-btn" style="flex:0 0 auto;background:#16a34a;color:#fff;padding:8px 12px;font-size:12px;" onclick="manualCheckForUpdates()">🔄 Buscar / Actualizar</button>
@@ -1249,6 +1305,10 @@
       <input type="checkbox" id="groupSeparationAlertToggle" checked /> 🚨 Alertar si un compañero se retrasa (&gt;2 min o &gt;1.5 km)
     </label>
 
+    <label style="display:flex;align-items:center;gap:8px;font-size:13.5px;margin-bottom:10px;cursor:pointer;">
+      <input type="checkbox" id="dynamicSpeedZoomToggle" checked onchange="toggleDynamicSpeedZoom(this.checked)" /> 🔍 Zoom dinámico según velocidad (estilo DMD2 / Maps)
+    </label>
+
     <label style="display:flex;align-items:center;gap:8px;font-size:13.5px;margin-bottom:12px;cursor:pointer;">
       <input type="checkbox" id="autoWakeLockToggle" checked onchange="if(this.checked)toggleWakeLock(false)" /> ☀️ Mantener pantalla siempre encendida en ruta
     </label>
@@ -1260,7 +1320,7 @@
 </div>
 
 <script>
-  const APP_VERSION = '14.0.0';
+  const APP_VERSION = '14.1.0';
   let swWaitingWorker = null;
   let remoteVersionFound = null;
 
@@ -1287,6 +1347,84 @@
       catch (e) { try { await loadScript('https://unpkg.com/mqtt@5.10.1/dist/mqtt.min.js'); } catch (e2) {} }
     }
     initApp();
+  }
+
+
+  // --- ORIENTATION (PORTRAIT / LANDSCAPE AUTO) + MAP RESIZE ---
+  function unlockDeviceOrientation() {
+    try {
+      if (screen.orientation && typeof screen.orientation.unlock === 'function') {
+        screen.orientation.unlock();
+      }
+    } catch (e) {}
+  }
+
+  window.addEventListener('orientationchange', () => {
+    setTimeout(() => { if (map) map.invalidateSize(true); }, 180);
+  });
+  window.addEventListener('resize', () => {
+    if (map) map.invalidateSize(true);
+  });
+
+  // --- DMD2 / GOOGLE MAPS STYLE SPEED-BASED DYNAMIC ZOOM ---
+  let dynamicSpeedZoomEnabled = localStorage.getItem('trailsync_dynamic_zoom') !== '0';
+  let smoothedSpeedKmh = 0;
+  let lastDynamicZoomApplied = null;
+  let lastDynamicZoomTimestamp = 0;
+  let manualZoomOverrideUntil = 0;
+
+  function toggleDynamicSpeedZoom(enabled) {
+    dynamicSpeedZoomEnabled = !!enabled;
+    localStorage.setItem('trailsync_dynamic_zoom', dynamicSpeedZoomEnabled ? '1' : '0');
+    lastDynamicZoomApplied = null;
+    if (dynamicSpeedZoomEnabled) {
+      manualZoomOverrideUntil = 0;
+      showToast('🔍 Zoom dinámico por velocidad activado');
+    } else {
+      showToast('🔍 Zoom dinámico desactivado (zoom manual)');
+    }
+  }
+
+  function registerManualZoomOverride() {
+    // Pause auto-zoom for 12s if rider manually taps +/- or pinches
+    manualZoomOverrideUntil = Date.now() + 12000;
+  }
+
+  function getTargetZoomForSpeed(speedKmh) {
+    // DMD2 / Google Maps curve:
+    // Stopped / technical slow trail (< 12 km/h) -> Zoom 17.5 (close detail on junctions)
+    // Slow off-road trail (12 - 28 km/h) -> Zoom 16.5
+    // Medium pista / secondary road (28 - 50 km/h) -> Zoom 15.5
+    // Fast secondary road (50 - 75 km/h) -> Zoom 14.5
+    // Highway / fast liaison (75 - 100 km/h) -> Zoom 13.5
+    // High speed (> 100 km/h) -> Zoom 12.5 (wide horizon preview)
+    if (speedKmh < 12) return 17.5;
+    if (speedKmh < 28) return 16.5;
+    if (speedKmh < 50) return 15.5;
+    if (speedKmh < 75) return 14.5;
+    if (speedKmh < 100) return 13.5;
+    return 12.5;
+  }
+
+  function applyDynamicSpeedZoom(rawSpeedKmh, forceImmediate = false) {
+    if (!map || !dynamicSpeedZoomEnabled) return;
+    if (!forceImmediate && Date.now() < manualZoomOverrideUntil) return;
+
+    // Exponential moving average smoothing to avoid jitter from GPS speed spikes
+    smoothedSpeedKmh = smoothedSpeedKmh === 0
+      ? rawSpeedKmh
+      : (smoothedSpeedKmh * 0.65 + rawSpeedKmh * 0.35);
+
+    const targetZoom = getTargetZoomForSpeed(smoothedSpeedKmh);
+    const currentZoom = map.getZoom();
+    const now = Date.now();
+
+    // Hysteresis: only change zoom when delta >= 0.5 and at least 1.8s elapsed (unless forced)
+    if (forceImmediate || (Math.abs(targetZoom - currentZoom) >= 0.5 && (now - lastDynamicZoomTimestamp) > 1800)) {
+      lastDynamicZoomApplied = targetZoom;
+      lastDynamicZoomTimestamp = now;
+      map.setView(userPos, targetZoom, { animate: true, duration: 0.65 });
+    }
   }
 
   // --- WAKE LOCK (KEEP SCREEN AWAKE WHILE RIDING) ---
@@ -1962,7 +2100,8 @@
     }
     applyMapOrientation();
     if (courseUpMode) {
-      map.setView(userPos, Math.max(map.getZoom(), 16));
+      const targetZ = dynamicSpeedZoomEnabled ? getTargetZoomForSpeed(smoothedSpeedKmh) : Math.max(map.getZoom(), 16);
+      map.setView(userPos, targetZ);
       showToast('🧭 Orientación: Sentido de navegación (Rumbo arriba)');
       speakAlert('Mapa orientado en el sentido de la marcha');
     } else {
@@ -2192,7 +2331,7 @@
       brokers.forEach((brokerUrl, idx) => {
         try {
           const client = window.mqtt.connect(brokerUrl, {
-            clientId: `ts14_${myPeerId}_${idx}_${Math.floor(Math.random()*999)}`,
+            clientId: `ts141_${myPeerId}_${idx}_${Math.floor(Math.random()*999)}`,
             reconnectPeriod: 3000,
             connectTimeout: 8000
           });
@@ -2567,7 +2706,13 @@
     updateOfflineQueueBadge();
 
     const startMode = getActiveLayerObj();
-    map = L.map('map', { zoomControl: false }).setView(userPos, 15);
+    unlockDeviceOrientation();
+    const dzCb = document.getElementById('dynamicSpeedZoomToggle');
+    if (dzCb) dzCb.checked = dynamicSpeedZoomEnabled;
+    map = L.map('map', { zoomControl: false, zoomSnap: 0.5, zoomDelta: 0.5 }).setView(userPos, 16.5);
+    map.on('zoomstart', (ev) => {
+      if (ev && ev.originalEvent) registerManualZoomOverride();
+    });
     baseTileLayer = buildOfflineTileLayer(startMode).addTo(map);
     const lp2 = document.getElementById('layerNamePill'); if (lp2) lp2.textContent = `🗺️ Capa: ${startMode.title} ▾`;
     if (startMode.pistaStyle) document.getElementById('map').classList.add('offline-pista-mode');
@@ -2888,13 +3033,16 @@ ${trkptsXml}
   }
 
   function recenterUser() {
+    manualZoomOverrideUntil = 0;
     if (courseUpMode) {
-      map.setView(userPos, Math.max(map.getZoom(), 16));
+      const targetZ = dynamicSpeedZoomEnabled ? getTargetZoomForSpeed(smoothedSpeedKmh) : Math.max(map.getZoom(), 16);
+      map.setView(userPos, targetZ, { animate: true });
       showToast('🧭 Centrado en rumbo de navegación');
     } else if (Object.keys(peers).length > 0) {
       fitAllGroupMembers();
     } else {
-      map.setView(userPos, 16);
+      const targetZ = dynamicSpeedZoomEnabled ? getTargetZoomForSpeed(smoothedSpeedKmh) : 16;
+      map.setView(userPos, targetZ, { animate: true });
     }
   }
 
@@ -3003,8 +3151,13 @@ ${trkptsXml}
       userMarker.setLatLng(userPos);
       userMarker.setIcon(createRiderIcon(userNick + ' (tú)', '#f59e0b', true));
 
-      if (firstFix || courseUpMode) {
-        map.setView(userPos, Math.max(map.getZoom(), 16));
+      if (firstFix) {
+        const initZ = dynamicSpeedZoomEnabled ? getTargetZoomForSpeed(currentSpeedKmh) : Math.max(map.getZoom(), 16);
+        map.setView(userPos, initZ);
+      } else if (dynamicSpeedZoomEnabled && Date.now() >= manualZoomOverrideUntil) {
+        applyDynamicSpeedZoom(currentSpeedKmh, false);
+      } else if (courseUpMode) {
+        map.panTo(userPos, { animate: true, duration: 0.45 });
       }
       if (courseUpMode) applyMapOrientation();
 
