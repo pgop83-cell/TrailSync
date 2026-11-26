@@ -10,7 +10,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
   <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
-  <title>TrailSync v14.10 — Recálculo Legal Automático + Navegación Libre</title>
+  <title>TrailSync v14.11 — Unión y Compartición de Grupo por Código QR</title>
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
         onerror="this.onerror=null;this.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';" />
@@ -762,6 +762,53 @@
     .legal-seg-item.seg-amber { border-left-color: #f59e0b; }
     .legal-seg-item.seg-green { border-left-color: #22c55e; }
 
+
+    /* QR CODE JOIN SCANNER & SHARE MODAL */
+    .qr-camera-box {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      max-height: 290px;
+      background: #020617;
+      border: 2px solid #38bdf8;
+      border-radius: 14px;
+      overflow: hidden;
+      margin: 10px 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .qr-camera-box video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .qr-reticle {
+      position: absolute;
+      width: 68%;
+      height: 68%;
+      border: 2.5px solid #22c55e;
+      border-radius: 16px;
+      box-shadow: 0 0 0 9999px rgba(2, 6, 23, 0.45);
+      pointer-events: none;
+    }
+    .qr-display-card {
+      background: #ffffff;
+      padding: 14px;
+      border-radius: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      margin: 10px auto;
+      width: fit-content;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+    }
+    .menu-item-btn.mi-qr {
+      border-color: rgba(16, 185, 129, 0.55);
+      color: #6ee7b7;
+    }
+
     /* TRANSPARENT RAIN-LOCK SHIELD (SCREEN REMAINS 100% VISIBLE, ALL TOUCHES BLOCKED EXCEPT 3S HOLD ON RED PADLOCK AT BOTTOM) */
     #rain-lock-shield {
       display: none;
@@ -1054,6 +1101,9 @@
         <input type="text" id="lobbyJoinCodeInput" class="text-input" style="margin-bottom:0;text-transform:uppercase;letter-spacing:2px;" maxlength="8" placeholder="EJ. BS482X" />
         <button class="secondary-cta" style="width:auto;padding:0 20px;" onclick="joinExistingGroup()">Unirse</button>
       </div>
+      <button type="button" class="secondary-cta" style="margin-top:10px;background:#0f172a;border:1.5px solid #38bdf8;color:#38bdf8;display:flex;align-items:center;justify-content:center;gap:8px;" onclick="openQrScannerModal()">
+        <span>📷</span> <span>Unirse escaneando QR con cámara</span>
+      </button>
     </div>
   </div>
 
@@ -1200,6 +1250,10 @@
 
         <button class="menu-item-btn mi-invite" onclick="closeQuickMenu();shareGroupInvite()">
           <span>📲</span> <span>Invitar amigos (<span id="floatCodeText">BS482X</span>)</span>
+        </button>
+
+        <button class="menu-item-btn mi-qr" onclick="closeQuickMenu();openGroupQrShareModal()">
+          <span>🏁</span> <span>QR del grupo (escanear)</span>
         </button>
 
         <button class="menu-item-btn mi-offline" onclick="closeQuickMenu();openOfflineModal()">
@@ -1671,13 +1725,60 @@
   </div>
 </div>
 
+<!-- MODAL: SCAN GROUP QR WITH CAMERA -->
+<div class="modal-backdrop" id="qrScannerModal">
+  <div class="modal-card">
+    <h2>📷 Escanear QR del grupo</h2>
+    <p id="qrScannerStatusText" style="font-size:12.5px;color:#cbd5e1;margin-bottom:6px;">
+      Apunta la cámara al código QR de TrailSync de tu compañero.
+    </p>
+
+    <div class="qr-camera-box">
+      <video id="qrScannerVideo" autoplay playsinline muted></video>
+      <div class="qr-reticle"></div>
+    </div>
+    <canvas id="qrScannerCanvas" style="display:none;"></canvas>
+
+    <div style="display:flex;gap:8px;margin-top:8px;">
+      <label class="solid-btn" style="flex:1;background:#1e293b;color:#38bdf8;border:1px solid #38bdf8;text-align:center;cursor:pointer;font-size:12px;">
+        🖼️ Subir foto de QR
+        <input type="file" accept="image/*" style="display:none;" onchange="decodeQrFromImageFile(event)" />
+      </label>
+      <button type="button" class="solid-btn" style="flex:0 0 auto;background:#334155;color:#fff;padding:0 16px;" onclick="closeQrScannerModal()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: DISPLAY GROUP QR CODE FOR OTHERS TO SCAN -->
+<div class="modal-backdrop" id="groupQrShareModal">
+  <div class="modal-card" style="text-align:center;">
+    <h2>🏁 QR del grupo</h2>
+    <p id="groupQrShareSubtitle" style="font-size:12.5px;color:#cbd5e1;margin-bottom:6px;">
+      Tus compañeros pueden escanear este QR desde TrailSync o con la cámara de su móvil para entrar al instante.
+    </p>
+
+    <div class="qr-display-card" id="groupQrCanvasBox">
+      <div style="color:#0f172a;font-size:12px;font-weight:700;padding:24px;">Generando código QR...</div>
+    </div>
+
+    <div style="font-size:15px;font-weight:900;letter-spacing:2px;color:#38bdf8;margin-bottom:10px;" id="groupQrCodeBadge">
+      #------
+    </div>
+
+    <div class="btn-row">
+      <button type="button" class="solid-btn" style="background:#0284c7;color:#fff;" onclick="copyInviteLink()">📋 Copiar enlace</button>
+      <button type="button" class="solid-btn" style="background:#334155;color:#fff;" onclick="closeModal('groupQrShareModal')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: SETTINGS + APP UPDATE CHECK + GROUP ALERTS -->
 <div class="modal-backdrop" id="settingsModal">
   <div class="modal-card">
     <h2>Ajustes de ruta y App</h2>
     <div style="background:#18141a;padding:10px 12px;border-radius:12px;margin-bottom:12px;border:1px solid #334155;display:flex;align-items:center;justify-content:space-between;gap:8px;">
       <div>
-        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">14.10.0</span></div>
+        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">14.11.0</span></div>
         <div style="font-size:11px;color:#94a3b8;" id="webVerStatusLabel">Comprobando actualizaciones en la web...</div>
       </div>
       <button class="solid-btn" style="flex:0 0 auto;background:#16a34a;color:#fff;padding:8px 12px;font-size:12px;" onclick="manualCheckForUpdates()">🔄 Buscar / Actualizar</button>
@@ -1709,7 +1810,7 @@
 </div>
 
 <script>
-  const APP_VERSION = '14.10.0';
+  const APP_VERSION = '14.11.0';
   let swWaitingWorker = null;
   let remoteVersionFound = null;
 
@@ -3393,7 +3494,7 @@ window.addEventListener('offline', () => {
       brokers.forEach((brokerUrl, idx) => {
         try {
           const client = window.mqtt.connect(brokerUrl, {
-            clientId: `ts1410_${myPeerId}_${idx}_${Math.floor(Math.random()*999)}`,
+            clientId: `ts1411_${myPeerId}_${idx}_${Math.floor(Math.random()*999)}`,
             reconnectPeriod: 3000,
             connectTimeout: 8000
           });
@@ -4778,6 +4879,251 @@ ${trkptsXml}
     } else {
       const targetZ = dynamicSpeedZoomEnabled ? getTargetZoomForSpeed(smoothedSpeedKmh) : 16;
       map.setView(userPos, targetZ, { animate: true });
+    }
+  }
+
+// --- QR CODE GENERATOR & CAMERA SCANNER (LOBBY JOIN + IN-GROUP SHARE) ---
+  let qrCameraStream = null;
+  let qrScanRafId = null;
+  let qrScannerActive = false;
+
+  async function ensureQrLibraries() {
+    if (!window.QRCode) {
+      try { await loadScript('https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js'); }
+      catch (e) { try { await loadScript('https://unpkg.com/qrcode@1.5.3/build/qrcode.min.js'); } catch (e2) {} }
+    }
+    if (!('BarcodeDetector' in window) && !window.jsQR) {
+      try { await loadScript('https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js'); }
+      catch (e) { try { await loadScript('https://unpkg.com/jsqr@1.4.0/dist/jsQR.min.js'); } catch (e2) {} }
+    }
+  }
+
+  function parseGroupPayloadFromQrText(rawText) {
+    const txt = String(rawText || '').trim();
+    if (!txt) return null;
+
+    // 1. Full TrailSync invite URL (?grupo=CODE&nombre=NAME)
+    try {
+      const u = new URL(txt);
+      const g = u.searchParams.get('grupo');
+      const n = u.searchParams.get('nombre');
+      if (g && g.trim().length >= 4) {
+        return {
+          code: g.trim().toUpperCase(),
+          name: n ? decodeURIComponent(n).trim() : ''
+        };
+      }
+    } catch (e) {}
+
+    // 2. JSON payload {"grupo":"...","nombre":"..."}
+    if (txt.startsWith('{') && txt.endsWith('}')) {
+      try {
+        const obj = JSON.parse(txt);
+        const c = obj.grupo || obj.code || obj.groupCode;
+        if (c && String(c).trim().length >= 4) {
+          return {
+            code: String(c).trim().toUpperCase(),
+            name: String(obj.nombre || obj.name || '').trim()
+          };
+        }
+      } catch (e) {}
+    }
+
+    // 3. Plain group code (4–8 alphanumeric chars)
+    const cleanCode = txt.replace(/^#/, '').toUpperCase();
+    if (/^[A-Z0-9]{4,8}$/.test(cleanCode)) {
+      return { code: cleanCode, name: '' };
+    }
+
+    return null;
+  }
+
+  function applyScannedGroupQr(parsed) {
+    if (!parsed || !parsed.code) return false;
+    closeQrScannerModal();
+
+    const nickInput = document.getElementById('lobbyNickInput');
+    let nickVal = (nickInput && nickInput.value || '').trim();
+    if (!nickVal) {
+      nickVal = getDefaultDeviceNick();
+      if (nickInput) nickInput.value = nickVal;
+    }
+
+    const codeInput = document.getElementById('lobbyJoinCodeInput');
+    if (codeInput) codeInput.value = parsed.code;
+
+    userNick = nickVal;
+    groupCode = parsed.code;
+    groupName = parsed.name || ('Grupo ' + parsed.code);
+    isFamilySpectator = false;
+    saveActiveGroupSession();
+    showToast(`✅ QR leído: entrando en ${groupName} (#${groupCode})`);
+    enterTracker(false);
+    return true;
+  }
+
+  async function openQrScannerModal() {
+    const nickInput = document.getElementById('lobbyNickInput');
+    if (nickInput && !nickInput.value.trim()) {
+      nickInput.focus();
+      showToast('Escribe primero tu nombre o indicativo antes de escanear');
+      return;
+    }
+
+    openModal('qrScannerModal');
+    const statusEl = document.getElementById('qrScannerStatusText');
+    const videoEl = document.getElementById('qrScannerVideo');
+    if (statusEl) statusEl.textContent = '⏳ Abriendo cámara para leer código QR...';
+
+    await ensureQrLibraries();
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      if (statusEl) statusEl.textContent = '⚠️ Este navegador no permite acceso directo a la cámara. Usa «Subir foto de QR».';
+      return;
+    }
+
+    try {
+      qrCameraStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' }, width: { ideal: 720 }, height: { ideal: 720 } },
+        audio: false
+      });
+      videoEl.srcObject = qrCameraStream;
+      await videoEl.play();
+      qrScannerActive = true;
+      if (statusEl) statusEl.textContent = '📷 Apunta al código QR del grupo de TrailSync...';
+      startQrDetectionLoop(videoEl);
+    } catch (err) {
+      if (statusEl) statusEl.textContent = '⚠️ Permiso de cámara denegado o no disponible. Puedes usar «Subir foto de QR».';
+    }
+  }
+
+  function closeQrScannerModal() {
+    qrScannerActive = false;
+    if (qrScanRafId) {
+      cancelAnimationFrame(qrScanRafId);
+      qrScanRafId = null;
+    }
+    if (qrCameraStream) {
+      qrCameraStream.getTracks().forEach(t => t.stop());
+      qrCameraStream = null;
+    }
+    const videoEl = document.getElementById('qrScannerVideo');
+    if (videoEl) videoEl.srcObject = null;
+    closeModal('qrScannerModal');
+  }
+
+  async function startQrDetectionLoop(videoEl) {
+    let detector = null;
+    if ('BarcodeDetector' in window) {
+      try {
+        detector = new window.BarcodeDetector({ formats: ['qr_code'] });
+      } catch (e) { detector = null; }
+    }
+
+    const canvas = document.getElementById('qrScannerCanvas');
+    const ctx = canvas ? canvas.getContext('2d', { willReadFrequently: true }) : null;
+
+    const scanFrame = async () => {
+      if (!qrScannerActive) return;
+      if (videoEl.readyState >= videoEl.HAVE_ENOUGH_DATA) {
+        try {
+          if (detector) {
+            const codes = await detector.detect(videoEl);
+            if (codes && codes.length > 0 && codes[0].rawValue) {
+              const parsed = parseGroupPayloadFromQrText(codes[0].rawValue);
+              if (parsed && applyScannedGroupQr(parsed)) return;
+            }
+          } else if (window.jsQR && canvas && ctx) {
+            const w = videoEl.videoWidth || 480;
+            const h = videoEl.videoHeight || 480;
+            if (w > 0 && h > 0) {
+              canvas.width = w;
+              canvas.height = h;
+              ctx.drawImage(videoEl, 0, 0, w, h);
+              const imgData = ctx.getImageData(0, 0, w, h);
+              const code = window.jsQR(imgData.data, w, h, { inversionAttempts: 'dontInvert' });
+              if (code && code.data) {
+                const parsed = parseGroupPayloadFromQrText(code.data);
+                if (parsed && applyScannedGroupQr(parsed)) return;
+              }
+            }
+          }
+        } catch (e) {}
+      }
+      qrScanRafId = requestAnimationFrame(scanFrame);
+    };
+
+    qrScanRafId = requestAnimationFrame(scanFrame);
+  }
+
+  async function decodeQrFromImageFile(ev) {
+    const file = ev.target.files && ev.target.files[0];
+    if (!file) return;
+    await ensureQrLibraries();
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = async () => {
+      try {
+        let rawVal = null;
+        if ('BarcodeDetector' in window) {
+          try {
+            const det = new window.BarcodeDetector({ formats: ['qr_code'] });
+            const res = await det.detect(img);
+            if (res && res[0]) rawVal = res[0].rawValue;
+          } catch (e) {}
+        }
+        if (!rawVal && window.jsQR) {
+          const canvas = document.getElementById('qrScannerCanvas');
+          const ctx = canvas.getContext('2d');
+          canvas.width = img.naturalWidth || 500;
+          canvas.height = img.naturalHeight || 500;
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const found = window.jsQR(data.data, canvas.width, canvas.height);
+          if (found) rawVal = found.data;
+        }
+        URL.revokeObjectURL(url);
+        const parsed = parseGroupPayloadFromQrText(rawVal);
+        if (!parsed || !applyScannedGroupQr(parsed)) {
+          showToast('⚠️ No se detectó un código QR válido de TrailSync en esa imagen');
+        }
+      } catch (e) {
+        URL.revokeObjectURL(url);
+        showToast('⚠️ No se pudo leer el QR de la imagen');
+      }
+    };
+    img.src = url;
+  }
+
+  async function openGroupQrShareModal() {
+    openModal('groupQrShareModal');
+    const box = document.getElementById('groupQrCanvasBox');
+    const badge = document.getElementById('groupQrCodeBadge');
+    const sub = document.getElementById('groupQrShareSubtitle');
+    if (badge) badge.textContent = `${groupName} · #${groupCode}`;
+    if (sub) sub.textContent = `Escanea este QR desde otro móvil para entrar al grupo "${groupName}" automáticamente.`;
+
+    const inviteUrl = buildInviteUrl();
+    await ensureQrLibraries();
+
+    if (window.QRCode && box) {
+      box.innerHTML = '';
+      const canvas = document.createElement('canvas');
+      try {
+        await window.QRCode.toCanvas(canvas, inviteUrl, {
+          width: 230,
+          margin: 1,
+          color: { dark: '#0f172a', light: '#ffffff' }
+        });
+        box.appendChild(canvas);
+        return;
+      } catch (e) {}
+    }
+
+    // Fallback image QR generator if offline/CDN blocked
+    if (box) {
+      const qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=230x230&data=${encodeURIComponent(inviteUrl)}`;
+      box.innerHTML = `<img src="${qrImgUrl}" alt="QR Grupo ${groupCode}" style="width:230px;height:230px;display:block;border-radius:8px;" />`;
     }
   }
 
