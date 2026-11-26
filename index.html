@@ -1,0 +1,2466 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#161b26" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="TrailSync" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
+  <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
+  <title>TrailSync v12 — Grupo, BRouter, DMD2 Trail y Actualización PWA</title>
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
+        onerror="this.onerror=null;this.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';" />
+
+  <style>
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body {
+      margin: 0; padding: 0; width: 100%; height: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #161b26; color: #f8fafc; overflow: hidden;
+    }
+
+    /* LOBBY SCREEN */
+    #lobby-screen {
+      position: fixed; inset: 0; z-index: 4000;
+      background: linear-gradient(180deg, #111622 0%, #1a2234 100%);
+      display: flex; flex-direction: column; justify-content: space-between;
+      padding: 22px 18px; overflow-y: auto;
+    }
+    .lobby-card {
+      background: #1e2638; border: 1px solid #2e3a54; border-radius: 20px;
+      padding: 18px; margin-bottom: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+    }
+    .lobby-title { font-size: 23px; font-weight: 900; margin: 0 0 4px; display: flex; align-items: center; gap: 10px; }
+    .free-pill {
+      background: rgba(34,197,94,0.18); color: #4ade80; border: 1px solid rgba(34,197,94,0.4);
+      font-size: 11px; font-weight: 800; padding: 3px 9px; border-radius: 999px;
+    }
+    .field-label { display: block; font-size: 11.5px; font-weight: 700; color: #94a3b8; margin-bottom: 5px; text-transform: uppercase; }
+    .text-input {
+      width: 100%; background: #131824; border: 1.5px solid #334155; color: #fff;
+      border-radius: 12px; padding: 11px 13px; font-size: 15px; font-weight: 600;
+      outline: none; margin-bottom: 10px;
+    }
+    .text-input:focus { border-color: #f97316; }
+    .primary-cta {
+      width: 100%; background: #f97316; color: #fff; border: none; border-radius: 14px;
+      padding: 13px; font-size: 15.5px; font-weight: 800; cursor: pointer;
+      box-shadow: 0 6px 18px rgba(249,115,22,0.35);
+    }
+    .secondary-cta {
+      width: 100%; background: #0284c7; color: #fff; border: none; border-radius: 14px;
+      padding: 12px; font-size: 14.5px; font-weight: 800; cursor: pointer;
+    }
+    .invite-banner {
+      display: none; background: rgba(249,115,22,0.15); border: 1.5px solid #f97316;
+      border-radius: 14px; padding: 12px; margin-bottom: 12px; font-size: 13px; color: #fed7aa;
+    }
+
+    /* MAIN APP */
+    #app { display: none; flex-direction: column; height: 100dvh; width: 100%; }
+    #app.active { display: flex; }
+
+    /* TOP BAR */
+    header {
+      background: #161b26; height: 54px; padding: 0 10px;
+      display: flex; align-items: center; justify-content: space-between;
+      border-bottom: 1px solid #262f40; z-index: 1200; flex-shrink: 0;
+    }
+    .header-left { display: flex; align-items: center; gap: 6px; min-width: 0; }
+    .header-title {
+      font-size: 15px; font-weight: 800; color: #f1f5f9;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 110px;
+    }
+    .code-chip {
+      background: #252e42; color: #fb923c; font-size: 11px; font-weight: 800;
+      padding: 3px 7px; border-radius: 7px; cursor: pointer; border: 1px solid #3b4763;
+    }
+    .header-icons { display: flex; align-items: center; gap: 2px; }
+    .top-icon-btn {
+      width: 35px; height: 35px; border-radius: 10px; border: none;
+      background: transparent; color: #cbd5e1;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; position: relative;
+    }
+    .top-icon-btn:active { background: rgba(255,255,255,0.1); }
+    .rec-square { width: 14px; height: 14px; background: #ef4444; border-radius: 3px; }
+    .rec-play {
+      width: 0; height: 0; border-top: 7px solid transparent;
+      border-bottom: 7px solid transparent; border-left: 12px solid #22c55e;
+    }
+
+    /* NEW APP VERSION UPDATE BUTTON (SHOWN WHEN NEW WEB VERSION IS DETECTED) */
+    #updateAppBannerBtn {
+      display: none;
+      background: linear-gradient(90deg, #16a34a, #059669);
+      color: #ffffff;
+      border: 1.5px solid #86efac;
+      border-radius: 999px;
+      padding: 6px 13px;
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(22, 163, 74, 0.45);
+      align-items: center;
+      gap: 6px;
+      animation: pulseUpdate 1.8s infinite;
+    }
+    @keyframes pulseUpdate {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.04); }
+    }
+
+    /* MAP AREA WITH SMOOTH HEADING ROTATION SUPPORT */
+    #map-container { position: relative; flex: 1; width: 100%; overflow: hidden; background: #f2efe9; }
+    #map-rotator {
+      position: absolute;
+      width: 142vmax; height: 142vmax;
+      left: 50%; top: 50%;
+      transform: translate(-50%, -50%) rotate(0deg);
+      transform-origin: center center;
+      transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+      z-index: 1;
+    }
+    #map { width: 100%; height: 100%; }
+
+    .rider-upright-wrapper {
+      transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+      transform: rotate(var(--inv-map-rot, 0deg));
+    }
+
+    #map.offline-pista-mode .leaflet-tile-pane {
+      filter: contrast(1.24) brightness(1.05) saturate(0.85);
+    }
+    #map.dmd2-trail-mode .leaflet-tile-pane {
+      filter: contrast(1.18) saturate(1.28) brightness(0.98);
+    }
+
+    /* ACTIVE SHARED GROUP ROUTE BANNER */
+    #sharedRouteBanner {
+      display: none;
+      position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+      z-index: 960;
+      background: rgba(15, 23, 42, 0.94);
+      border: 1.5px solid #f97316;
+      border-radius: 14px;
+      padding: 7px 12px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.4);
+      width: calc(100% - 24px); max-width: 430px;
+      align-items: center; justify-content: space-between; gap: 8px;
+    }
+    #sharedRouteBanner.visible { display: flex; }
+    .route-banner-info { min-width: 0; }
+    .route-banner-title {
+      font-size: 12.5px; font-weight: 800; color: #fb923c;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .route-banner-sub {
+      font-size: 11px; color: #cbd5e1; margin-top: 1px;
+    }
+    .route-banner-actions { display: flex; gap: 5px; flex-shrink: 0; }
+    .mini-pill-btn {
+      background: #1e293b; color: #f8fafc; border: 1px solid #475569;
+      border-radius: 8px; padding: 5px 8px; font-size: 11px; font-weight: 700; cursor: pointer;
+    }
+
+    /* TOP FLOATING PILLS */
+    .top-pills {
+      position: absolute; top: 10px; left: 10px; z-index: 900;
+      display: flex; flex-direction: column; gap: 5px; align-items: flex-start;
+      pointer-events: none;
+      transition: top 0.2s ease;
+    }
+    .top-pills.shifted { top: 64px; }
+    .top-pills > * { pointer-events: auto; }
+    .live-pill {
+      background: #43a047; color: #fff; font-weight: 800; font-size: 11px;
+      padding: 5px 12px; border-radius: 999px; letter-spacing: 0.4px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.25); cursor: pointer;
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    .live-pill.paused { background: #64748b; }
+    .group-radar-pill {
+      background: rgba(15,23,42,0.92); color: #4ade80; border: 1.5px solid #22c55e;
+      font-size: 11.5px; font-weight: 800; padding: 4px 10px; border-radius: 999px;
+      cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+    .layer-pill {
+      background: rgba(22,27,38,0.92); color: #f8fafc; border: 1.5px solid #64748b;
+      font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 999px;
+      cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+    }
+    .offline-pill {
+      background: rgba(22,27,38,0.88); color: #38bdf8; border: 1px solid #38bdf8;
+      font-size: 10.5px; font-weight: 700; padding: 3px 9px; border-radius: 999px;
+      cursor: pointer;
+    }
+    #family-active-pill {
+      display: none; background: rgba(22,27,38,0.92); color: #fb923c; border: 1px solid #fb923c;
+      font-size: 10.5px; font-weight: 700; padding: 3px 9px; border-radius: 999px;
+      cursor: pointer;
+    }
+
+    /* TOP-RIGHT SCALE + GOOGLE MAPS STYLE COMPASS BUTTON */
+    .top-right-stack {
+      position: absolute; top: 10px; right: 10px; z-index: 900;
+      display: flex; flex-direction: column; align-items: flex-end; gap: 10px;
+      transition: top 0.2s ease;
+    }
+    .top-right-stack.shifted { top: 64px; }
+    .scale-box {
+      border-top: 2px solid #111827; border-left: 2px solid #111827; border-right: 2px solid #111827;
+      padding: 2px 14px 0; font-size: 11.5px; font-weight: 800; color: #111827;
+      background: rgba(255,255,255,0.72); border-radius: 2px;
+    }
+
+    .gmaps-compass-btn {
+      width: 48px; height: 48px;
+      border-radius: 15px;
+      background: #bce3f5;
+      border: none;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.28);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      transition: transform 0.14s ease, background 0.2s ease, box-shadow 0.2s ease;
+      position: relative;
+    }
+    .gmaps-compass-btn:active { transform: scale(0.93); }
+    .gmaps-compass-btn.course-up-active {
+      background: #93d5f3;
+      box-shadow: 0 0 0 2.5px #0284c7, 0 4px 12px rgba(0,0,0,0.35);
+    }
+    .gmaps-compass-inner {
+      width: 26px; height: 26px;
+      border-radius: 50%;
+      background: #0b222d;
+      display: flex; align-items: center; justify-content: center;
+      transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .compass-mode-badge {
+      position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%);
+      background: #0b222d; color: #bce3f5;
+      font-size: 8.5px; font-weight: 900; letter-spacing: 0.3px;
+      padding: 1px 5px; border-radius: 5px; white-space: nowrap;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+    }
+
+    /* FLOATING LEGEND BOX */
+    #mapLegendBox {
+      display: none;
+      background: rgba(22, 27, 38, 0.92); color: #f8fafc;
+      border: 1px solid #334155; border-radius: 12px;
+      padding: 8px 11px; font-size: 11px; line-height: 1.55;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.35);
+    }
+    .legend-row { display: flex; align-items: center; gap: 7px; }
+    .legend-swatch { width: 16px; height: 4px; border-radius: 2px; display: inline-block; }
+
+    /* SINGLE FLOATING "MENÚ" BUTTON + EXPANDABLE 4-ACTION POPOVER */
+    .left-menu-wrapper {
+      position: absolute; left: 12px; bottom: 78px; z-index: 950;
+      display: flex; flex-direction: column; align-items: flex-start; gap: 8px;
+    }
+    .btn-single-menu {
+      background: #161b26;
+      color: #f8fafc;
+      border: 2px solid #f97316;
+      border-radius: 16px;
+      padding: 12px 18px;
+      font-size: 14.5px;
+      font-weight: 800;
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.45);
+      cursor: pointer;
+      transition: transform 0.12s ease, background 0.15s ease;
+    }
+    .btn-single-menu:active { transform: scale(0.95); }
+    .btn-single-menu.open { background: #f97316; color: #ffffff; }
+
+    .menu-popover-card {
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+      background: rgba(22, 27, 38, 0.97);
+      border: 1.5px solid #334155;
+      border-radius: 18px;
+      padding: 10px;
+      width: 245px;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.55);
+    }
+    .menu-popover-card.open { display: flex; }
+
+    .menu-item-btn {
+      width: 100%;
+      border: none;
+      border-radius: 12px;
+      padding: 11px 12px;
+      font-size: 13.5px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      text-align: left;
+      transition: transform 0.1s ease;
+    }
+    .menu-item-btn:active { transform: scale(0.97); }
+    .mi-route   { background: #f97316; color: #ffffff; }
+    .mi-invite  { background: #16a34a; color: #ffffff; }
+    .mi-offline { background: #0f172a; color: #38bdf8; border: 1.5px solid #38bdf8; }
+    .mi-gpx     { background: #d32f2f; color: #ffffff; }
+
+    /* ZOOM CONTROLS */
+    .zoom-box {
+      position: absolute; right: 12px; bottom: 78px; z-index: 900;
+      background: rgba(26,32,44,0.92); border-radius: 14px;
+      display: flex; flex-direction: column; overflow: hidden;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.35);
+    }
+    .zoom-btn {
+      width: 44px; height: 44px; border: none; background: transparent;
+      color: #f8fafc; font-size: 22px; font-weight: 600; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .zoom-btn:first-child { border-bottom: 1px solid rgba(255,255,255,0.12); }
+
+    /* BOTTOM ROW: 6 UNIFORM CIRCULAR TRANSPARENT COLORED ICONS */
+    .bottom-actions {
+      position: absolute; left: 8px; right: 8px; bottom: 14px; z-index: 950;
+      display: flex; align-items: center; justify-content: space-between;
+      pointer-events: none;
+    }
+    .circle-action {
+      pointer-events: auto;
+      width: 48px; height: 48px; min-width: 48px; min-height: 48px;
+      border-radius: 50%; background: transparent;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: transform 0.12s ease, background 0.15s ease;
+    }
+    .circle-action:active { transform: scale(0.92); }
+    .circle-action svg { width: 23px; height: 23px; }
+    .act-voice  { border: 2.5px solid #0284c7; color: #0284c7; }
+    .act-stop   { border: 2.5px solid #f97316; color: #f97316; }
+    .act-sos    { border: 2.5px solid #dc2626; color: #dc2626; font-weight: 900; font-size: 13px; }
+    .act-comp   { border: 2.5px solid #4f46e5; color: #4f46e5; }
+    .act-group  { border: 2.5px solid #059669; color: #059669; }
+    .act-center { border: 2.5px solid #7c3aed; color: #7c3aed; }
+
+    /* MODALS & BOTTOM SHEETS */
+    .modal-backdrop {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.68);
+      z-index: 2000; align-items: center; justify-content: center; padding: 16px;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal-backdrop.sheet-mode {
+      align-items: flex-end; padding: 0;
+    }
+    .modal-card {
+      background: #241e26; color: #f8fafc; width: 100%; max-width: 420px;
+      border-radius: 22px; padding: 20px 18px; box-shadow: 0 18px 40px rgba(0,0,0,0.55);
+      max-height: 88dvh; overflow-y: auto;
+    }
+    .layers-sheet {
+      background: #231e24; color: #f8fafc; width: 100%; max-width: 480px;
+      border-radius: 26px 26px 0 0; padding: 12px 20px 26px;
+      box-shadow: 0 -10px 35px rgba(0,0,0,0.65);
+      max-height: 88dvh; overflow-y: auto;
+    }
+    .sheet-handle {
+      width: 36px; height: 4px; background: #6b646e; border-radius: 999px;
+      margin: 0 auto 16px;
+    }
+    .layers-sheet h2 {
+      margin: 0 0 14px; font-size: 21px; font-weight: 800; color: #f5f2f6;
+    }
+    .layer-option-row {
+      display: flex; align-items: flex-start; gap: 15px;
+      padding: 11px 4px; cursor: pointer; border-radius: 12px;
+      transition: background 0.15s ease;
+    }
+    .layer-option-row:active { background: rgba(255,255,255,0.06); }
+    .custom-radio {
+      width: 22px; height: 22px; min-width: 22px; border-radius: 50%;
+      border: 2px solid #9e96a1; margin-top: 2px;
+      display: flex; align-items: center; justify-content: center;
+      transition: border-color 0.15s ease;
+    }
+    .layer-option-row.selected .custom-radio {
+      border-color: #ef5350;
+    }
+    .custom-radio-dot {
+      width: 11px; height: 11px; border-radius: 50%; background: #ef5350;
+      display: none;
+    }
+    .layer-option-row.selected .custom-radio-dot {
+      display: block;
+    }
+    .layer-opt-title {
+      font-size: 16px; font-weight: 600; color: #f3eff5; line-height: 1.25;
+      display: flex; align-items: center; gap: 7px;
+    }
+    .dmd2-tag {
+      background: rgba(249, 115, 22, 0.22);
+      color: #fb923c;
+      border: 1px solid rgba(249, 115, 22, 0.45);
+      font-size: 10px;
+      font-weight: 800;
+      padding: 1px 6px;
+      border-radius: 6px;
+    }
+    .layer-opt-desc {
+      font-size: 12.5px; color: #aca3af; margin-top: 3px; line-height: 1.35;
+    }
+
+    /* DMD2 / BROUTER 6-PROFILE ROUTE PLANNER GRID */
+    .route-section-badge {
+      display: inline-block; font-size: 11px; font-weight: 800; letter-spacing: 0.6px;
+      text-transform: uppercase; padding: 3px 9px; border-radius: 7px; margin: 8px 0 8px;
+    }
+    .badge-road { background: rgba(2,132,199,0.2); color: #38bdf8; border: 1px solid rgba(56,189,248,0.35); }
+    .badge-offroad { background: rgba(249,115,22,0.2); color: #fb923c; border: 1px solid rgba(251,146,60,0.35); }
+
+    .profile-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 10px;
+    }
+    .profile-card-btn {
+      background: #18141a; border: 1.5px solid #3f3842; border-radius: 14px;
+      padding: 11px 7px; color: #f8fafc; cursor: pointer;
+      display: flex; flex-direction: column; align-items: center; text-align: center;
+      transition: transform 0.12s ease, border-color 0.15s ease, background 0.15s ease;
+    }
+    .profile-card-btn:active { transform: scale(0.95); }
+    .profile-card-btn.road-opt:hover, .profile-card-btn.road-opt.active {
+      border-color: #38bdf8; background: rgba(2,132,199,0.18);
+    }
+    .profile-card-btn.offroad-opt:hover, .profile-card-btn.offroad-opt.active {
+      border-color: #f97316; background: rgba(249,115,22,0.18);
+    }
+    .prof-emoji { font-size: 22px; margin-bottom: 4px; }
+    .prof-name { font-size: 12.5px; font-weight: 800; line-height: 1.2; }
+    .prof-sub { font-size: 10px; color: #a8a29e; margin-top: 3px; line-height: 1.2; }
+
+    .legend-toggle-row {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-top: 14px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.08);
+      font-size: 16px; font-weight: 600; color: #f3eff5;
+    }
+    .switch-wrap {
+      position: relative; width: 52px; height: 30px; display: inline-block;
+    }
+    .switch-wrap input { opacity: 0; width: 0; height: 0; }
+    .switch-slider {
+      position: absolute; inset: 0; background: #4b444e; border-radius: 999px;
+      cursor: pointer; transition: 0.2s;
+    }
+    .switch-slider::before {
+      content: ""; position: absolute; width: 22px; height: 22px; left: 4px; top: 4px;
+      background: #e2dce4; border-radius: 50%; transition: 0.2s;
+    }
+    .switch-wrap input:checked + .switch-slider {
+      background: #ef5350;
+    }
+    .switch-wrap input:checked + .switch-slider::before {
+      transform: translateX(22px); background: #ffffff;
+    }
+
+    .modal-card h2 { margin: 0 0 10px; font-size: 19.5px; font-weight: 800; }
+    .modal-card p { margin: 0 0 12px; font-size: 13px; line-height: 1.45; color: #d6d3d1; }
+
+    .radio-row {
+      display: flex; align-items: center; gap: 12px; padding: 8px 4px;
+      cursor: pointer; font-size: 14.5px; font-weight: 600;
+    }
+    .radio-row input[type="radio"] { accent-color: #ef4444; width: 19px; height: 19px; }
+
+    .outline-pill-btn {
+      width: 100%; padding: 11px; border-radius: 999px;
+      border: 1.5px solid #78716c; background: transparent;
+      color: #f87171; font-size: 14px; font-weight: 700;
+      margin-bottom: 9px; cursor: pointer;
+    }
+    .btn-row { display: flex; gap: 8px; margin-top: 8px; }
+    .solid-btn {
+      flex: 1; padding: 11px; border-radius: 12px; border: none;
+      font-weight: 700; font-size: 13.5px; cursor: pointer;
+    }
+    .progress-bar-wrap {
+      width: 100%; height: 11px; background: #161b26; border-radius: 999px;
+      overflow: hidden; margin: 10px 0 6px; border: 1px solid #334155;
+    }
+    .progress-bar-fill { height: 100%; width: 0%; background: #22c55e; transition: width 0.2s ease; }
+
+    #lock-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.92);
+      z-index: 3000; flex-direction: column; align-items: center; justify-content: center;
+      text-align: center; padding: 24px;
+    }
+    #lock-overlay.open { display: flex; }
+
+    .rider-badge { display: flex; flex-direction: column; align-items: center; }
+    .rider-dot {
+      width: 36px; height: 36px; border-radius: 50%;
+      border: 3px solid #fff; color: #fff; font-weight: 900; font-size: 14px;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 3px 12px rgba(0,0,0,0.5);
+    }
+    .rider-tag {
+      margin-top: 3px; background: #111827; color: #fff;
+      font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 6px;
+      white-space: nowrap; box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+      border: 1px solid rgba(255,255,255,0.15);
+    }
+    .dest-pin-badge {
+      background: #dc2626; color: #fff; border: 2.5px solid #fff;
+      border-radius: 50%; width: 32px; height: 32px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    }
+    .toast {
+      position: fixed; top: 68px; left: 50%; transform: translateX(-50%);
+      background: rgba(15,23,42,0.96); color: #f8fafc; border: 1px solid #475569;
+      padding: 9px 14px; border-radius: 12px; font-size: 12.5px; font-weight: 700;
+      z-index: 2500; display: none; box-shadow: 0 6px 20px rgba(0,0,0,0.45);
+      max-width: 90vw; text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+<!-- SCREEN 1: LOBBY -->
+<div id="lobby-screen">
+  <div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+      <div class="lobby-title">🧭 TrailSync <span class="free-pill">v12 · DMD2 + BROUTER</span></div>
+    </div>
+
+    <div id="inviteBanner" class="invite-banner">
+      📲 <strong>¡Te han invitado a un grupo!</strong> Escribe tu nombre y pulsa <em>Unirse</em> para veros todos y compartir el track rutable en tiempo real.
+    </div>
+
+    <p style="color:#94a3b8;font-size:13px;margin:0 0 14px;line-height:1.45;">
+      Incluye capa cartográfica estilo <strong>DMD2 Trail / Pistas</strong> con descarga offline, rutas <strong>BRouter</strong> compartidas con el grupo y detector automático de actualizaciones de la app.
+    </p>
+
+    <div class="lobby-card">
+      <label class="field-label">Tu nombre o indicativo</label>
+      <input type="text" id="lobbyNickInput" class="text-input" value="Giggo" placeholder="Ej. Giggo" />
+
+      <label class="field-label">Nombre del grupo / salida</label>
+      <input type="text" id="lobbyGroupNameInput" class="text-input" value="Biker Striker" placeholder="Ej. Biker Striker" />
+
+      <button class="primary-cta" onclick="createAndEnterGroup()">🚀 Crear nuevo grupo en vivo</button>
+    </div>
+
+    <div class="lobby-card">
+      <label class="field-label">¿Ya tienes código de grupo?</label>
+      <div style="display:flex;gap:8px;">
+        <input type="text" id="lobbyJoinCodeInput" class="text-input" style="margin-bottom:0;text-transform:uppercase;letter-spacing:2px;" maxlength="8" placeholder="EJ. BS482X" />
+        <button class="secondary-cta" style="width:auto;padding:0 20px;" onclick="joinExistingGroup()">Unirse</button>
+      </div>
+    </div>
+  </div>
+
+  <div style="text-align:center;font-size:11px;color:#64748b;">
+    Versión 12.0 · Capa DMD2 Trail Offline · BRouter 6 Perfiles · Auto-Actualización PWA
+  </div>
+</div>
+
+<!-- SCREEN 2: ACTIVE MAP TRACKER -->
+<div id="app">
+  <header>
+    <div class="header-left">
+      <button class="top-icon-btn" onclick="returnToLobby()" title="Cambiar de grupo">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      </button>
+      <span class="header-title" id="groupNameHeader">Biker Striker</span>
+      <span class="code-chip" id="headerCodeChip" onclick="shareGroupInvite()" title="Toca para invitar amigos">#BS482X</span>
+    </div>
+
+    <div class="header-icons">
+      <button class="top-icon-btn" onclick="toggleLiveRecording()" id="btnRecToggle" title="Parar seguimiento y guardar GPX">
+        <div class="rec-square" id="recIconShape"></div>
+      </button>
+
+      <button class="top-icon-btn" onclick="lockScreen()" title="Bloquear pantalla táctil">
+        <svg width="20" height="20" fill="#fbbf24" viewBox="0 0 24 24"><path d="M12 2a5 5 0 00-5 5v3H6a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2v-8a2 2 0 00-2-2h-1V7a5 5 0 00-5-5zm-3 5a3 3 0 116 0v3H9V7z"/></svg>
+      </button>
+
+      <button class="top-icon-btn" onclick="openModal('familyModal')" title="Compartir con la familia y Google Maps">
+        <svg width="21" height="21" fill="none" stroke="#fb7185" stroke-width="2.1" viewBox="0 0 24 24">
+          <circle cx="7" cy="6" r="2.5"/><circle cx="17" cy="6" r="2.5"/><circle cx="12" cy="11" r="2"/>
+          <path d="M3 19v-2a4 4 0 014-4h1M21 19v-2a4 4 0 00-4-4h-1M8.5 20v-2.5a3.5 3.5 0 017 0V20"/>
+        </svg>
+      </button>
+
+      <button class="top-icon-btn" onclick="openOfflineModal()" title="Descargar Península / DMD2 Offline">
+        <svg width="20" height="20" fill="none" stroke="#38bdf8" stroke-width="2.1" viewBox="0 0 24 24">
+          <path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/>
+        </svg>
+      </button>
+
+      <button class="top-icon-btn" onclick="openModal('settingsModal')" title="Ajustes y versión">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.1" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l-.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9c.26.6.85 1 1.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
+        </svg>
+      </button>
+
+      <!-- LAYERS MENU BUTTON -->
+      <button class="top-icon-btn" onclick="openLayersModal()" title="Seleccionar capa del mapa">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.1" viewBox="0 0 24 24">
+          <polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- MAP -->
+  <div id="map-container" onclick="closeQuickMenuIfOutside(event)">
+    <div id="map-rotator">
+      <div id="map"></div>
+    </div>
+    <div id="toast" class="toast"></div>
+
+    <!-- ACTIVE SHARED ROUTE BANNER -->
+    <div id="sharedRouteBanner">
+      <div class="route-banner-info">
+        <div class="route-banner-title" id="sharedRouteTitle">🧭 Ruta compartida del grupo</div>
+        <div class="route-banner-sub" id="sharedRouteStats">Calculando distancia...</div>
+      </div>
+      <div class="route-banner-actions">
+        <button class="mini-pill-btn" onclick="fitSharedRouteBounds()" title="Encuadrar ruta">Ver</button>
+        <button class="mini-pill-btn" onclick="exportPlannedRouteAsGPX()" title="Guardar GPX de esta ruta">GPX</button>
+        <button class="mini-pill-btn" style="color:#f87171;" onclick="clearSharedRoute()" title="Quitar ruta">✕</button>
+      </div>
+    </div>
+
+    <div class="top-pills" id="topPillsStack">
+      <!-- UPDATE APP BUTTON: APPEARS AUTOMATICALLY WHEN NEW WEB VERSION IS DETECTED -->
+      <button id="updateAppBannerBtn" onclick="applyAppUpdate()">
+        🔄 Actualizar app <span id="newVersionBadge"></span>
+      </button>
+
+      <div class="live-pill" id="livePill" onclick="toggleLiveRecording()">EN VIVO</div>
+      <div class="group-radar-pill" id="groupRadarPill" onclick="fitAllGroupMembers()">
+        👥 <span id="connectedCountLabel">Conectando grupo...</span> · Ver todos
+      </div>
+      <div class="layer-pill" id="layerNamePill" onclick="openLayersModal()">🗺️ Capa: DMD2 Trail / Pistas ▾</div>
+      <div class="offline-pill" id="offlineStatusPill" onclick="openOfflineModal()">🗺️ Mapas Offline: <span id="peninsulaBadge">0 teselas</span></div>
+      <div id="family-active-pill" onclick="openModal('familyModal')">👨‍👩‍👧‍👦 Familia activa</div>
+    </div>
+
+    <!-- TOP-RIGHT: SCALE + GOOGLE MAPS COMPASS BUTTON -->
+    <div class="top-right-stack" id="topRightStack">
+      <div class="scale-box">0,3 km</div>
+
+      <button class="gmaps-compass-btn" id="gmapsCompassBtn" onclick="toggleNavigationHeadingMode()" title="Alternar orientación: Norte arriba / Sentido de navegación">
+        <div class="gmaps-compass-inner" id="gmapsCompassNeedle">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <polygon points="16.5,7.5 13.8,13.8 7.5,16.5 10.2,10.2" fill="#bce3f5"/>
+            <circle cx="12" cy="12" r="1.7" fill="#0b222d"/>
+          </svg>
+        </div>
+        <span class="compass-mode-badge" id="compassModeBadge">NORTE</span>
+      </button>
+
+      <!-- FLOATING LEGEND -->
+      <div id="mapLegendBox">
+        <div style="font-weight:800;margin-bottom:4px;color:#fb923c;">Leyenda del mapa</div>
+        <div class="legend-row"><span class="legend-swatch" style="background:#ea580c;"></span> Ruta rutable del grupo</div>
+        <div class="legend-row"><span class="legend-swatch" style="background:#16a34a;"></span> Track recorrido en vivo</div>
+        <div class="legend-row"><span class="legend-swatch" style="background:#f59e0b;"></span> Tu posición GPS</div>
+        <div class="legend-row"><span class="legend-swatch" style="background:#0284c7;"></span> Compañeros de grupo</div>
+      </div>
+    </div>
+
+    <!-- SINGLE FLOATING "MENÚ" BUTTON WITH THE 4 ACTIONS INSIDE -->
+    <div class="left-menu-wrapper" id="leftMenuWrapper">
+      <div class="menu-popover-card" id="quickMenuPopover">
+        <button class="menu-item-btn mi-route" onclick="closeQuickMenu();openRoutePlannerForCenter()">
+          <span>🧭</span> <span>Crear ruta a punto</span>
+        </button>
+
+        <button class="menu-item-btn mi-invite" onclick="closeQuickMenu();shareGroupInvite()">
+          <span>📲</span> <span>Invitar amigos (<span id="floatCodeText">BS482X</span>)</span>
+        </button>
+
+        <button class="menu-item-btn mi-offline" onclick="closeQuickMenu();openOfflineModal()">
+          <span>🇪🇸🇵🇹</span> <span>Descargar mapa offline</span>
+        </button>
+
+        <label class="menu-item-btn mi-gpx" style="margin:0;">
+          <span>📂</span> <span>Cargar GPX al grupo</span>
+          <input type="file" accept=".gpx,application/gpx+xml,text/xml" style="display:none" onchange="closeQuickMenu();handleGPXFile(event)" />
+        </label>
+      </div>
+
+      <button class="btn-single-menu" id="btnMainMenu" onclick="toggleQuickMenu(event)">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.6" viewBox="0 0 24 24">
+          <path d="M4 7h16M4 12h16M4 17h16"/>
+        </svg>
+        <span>Menú</span>
+      </button>
+    </div>
+
+    <!-- ZOOM +/- -->
+    <div class="zoom-box">
+      <button class="zoom-btn" onclick="map.zoomIn()">+</button>
+      <button class="zoom-btn" onclick="map.zoomOut()">−</button>
+    </div>
+
+    <!-- BOTTOM 6 UNIFORM CIRCULAR TRANSPARENT COLORED ICONS -->
+    <div class="bottom-actions">
+      <button class="circle-action act-voice" id="btnVoice" onclick="toggleWalkie()" title="Walkie-Talkie PTT">
+        <svg fill="none" stroke="currentColor" stroke-width="2.3" viewBox="0 0 24 24">
+          <rect x="9" y="2" width="6" height="11" rx="3"/><path d="M5 10a7 7 0 0014 0M12 19v3M8 22h8"/>
+        </svg>
+      </button>
+
+      <button class="circle-action act-stop" onclick="openModal('stopModal')" title="Pedir parada">
+        <svg fill="currentColor" viewBox="0 0 24 24">
+          <path d="M18 8.5V6a1.5 1.5 0 00-3 0v2.5h-1V4.5a1.5 1.5 0 00-3 0v4h-1V5.5a1.5 1.5 0 00-3 0v6.2l-1.9-1.9a1.5 1.5 0 00-2.1 2.1l4.8 4.8A5 5 0 0011.3 18H15a4 4 0 004-4V8.5a1 1 0 00-1 0z"/>
+        </svg>
+      </button>
+
+      <button class="circle-action act-sos" onclick="triggerSOS()" title="Emergencia SOS">SOS</button>
+
+      <button class="circle-action act-comp" id="btnCompass" onclick="toggleBacktrack()" title="Volver por rastro (Backtrack)">
+        <svg fill="none" stroke="currentColor" stroke-width="2.3" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="9"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" fill="currentColor"/>
+        </svg>
+      </button>
+
+      <button class="circle-action act-group" onclick="openGroupModal()" title="Miembros del grupo">
+        <svg fill="currentColor" viewBox="0 0 24 24">
+          <circle cx="12" cy="7" r="2.5"/><circle cx="6" cy="9" r="2"/><circle cx="18" cy="9" r="2"/>
+          <path d="M9 14a3 3 0 016 0v5H9v-5zm-6 1a2.5 2.5 0 015 0v4H3v-4zm13 0a2.5 2.5 0 015 0v4h-5v-4z"/>
+        </svg>
+      </button>
+
+      <button class="circle-action act-center" onclick="recenterUser()" title="Centrar posición / Ver grupo">
+        <svg fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24">
+          <path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3"/>
+          <circle cx="12" cy="12" r="2" fill="currentColor"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- LOCK SCREEN OVERLAY -->
+<div id="lock-overlay">
+  <div style="font-size:44px;margin-bottom:10px;">🔒</div>
+  <h3 style="margin:0 0 8px;">Pantalla bloqueada en ruta</h3>
+  <p style="color:#94a3b8;font-size:13px;max-width:260px;">Evita toques accidentales con lluvia o guantes. El GPS y la grabación siguen activos.</p>
+  <button class="solid-btn" style="background:#f59e0b;color:#111;max-width:220px;margin-top:16px;" onclick="unlockScreen()">Desbloquear</button>
+</div>
+
+<!-- BOTTOM SHEET: DMD2 / BROUTER ROUTE PROFILE SELECTOR -->
+<div class="modal-backdrop sheet-mode" id="routePlannerModal" onclick="if(event.target===this)closeModal('routePlannerModal')">
+  <div class="layers-sheet">
+    <div class="sheet-handle" onclick="closeModal('routePlannerModal')"></div>
+    <h2>🧭 Crear ruta rutable para el grupo</h2>
+    <p style="font-size:12.5px;color:#aca3af;margin:0 0 6px;" id="destCoordsSummary">
+      Destino: 43.3420, -3.3090 · Mantén pulsado cualquier punto del mapa para cambiar el destino.
+    </p>
+
+    <div class="route-section-badge badge-road">🛣️ Carretera (Asfalto)</div>
+    <div class="profile-grid">
+      <button class="profile-card-btn road-opt" onclick="calculateBrouterRoute('road_fast')">
+        <span class="prof-emoji">⚡</span>
+        <span class="prof-name">Rápida</span>
+        <span class="prof-sub">Vías rápidas y enlaces directos</span>
+      </button>
+      <button class="profile-card-btn road-opt" onclick="calculateBrouterRoute('road_fun')">
+        <span class="prof-emoji">🏍️</span>
+        <span class="prof-name">Divertida</span>
+        <span class="prof-sub">Secundarias fluidas sin autovía</span>
+      </button>
+      <button class="profile-card-btn road-opt" onclick="calculateBrouterRoute('road_curvy')">
+        <span class="prof-emoji">➰</span>
+        <span class="prof-name">Con más curvas</span>
+        <span class="prof-sub">Puertos y tramos sinuosos</span>
+      </button>
+    </div>
+
+    <div class="route-section-badge badge-offroad">⛰️ Off-Road (Pistas y Caminos)</div>
+    <div class="profile-grid">
+      <button class="profile-card-btn offroad-opt" onclick="calculateBrouterRoute('trail_easy')">
+        <span class="prof-emoji">🟢</span>
+        <span class="prof-name">Trail Fácil</span>
+        <span class="prof-sub">Pistas anchas compactadas</span>
+      </button>
+      <button class="profile-card-btn offroad-opt" onclick="calculateBrouterRoute('trail_medium')">
+        <span class="prof-emoji">🟠</span>
+        <span class="prof-name">Trail Medio</span>
+        <span class="prof-sub">Tierra, grava y desnivel medio</span>
+      </button>
+      <button class="profile-card-btn offroad-opt" onclick="calculateBrouterRoute('trail_hard')">
+        <span class="prof-emoji">🔴</span>
+        <span class="prof-name">Trail Difícil</span>
+        <span class="prof-sub">Caminos rotos y sendero técnico</span>
+      </button>
+    </div>
+
+    <div id="routeCalcStatus" style="display:none;background:#18141a;padding:10px;border-radius:12px;font-size:12.5px;color:#4ade80;text-align:center;margin-top:6px;">
+      ⏳ Calculando track con BRouter y sincronizando con el grupo...
+    </div>
+
+    <div style="text-align:right;margin-top:10px;">
+      <button style="background:none;border:none;color:#94a3b8;font-weight:700;font-size:14px;cursor:pointer;" onclick="closeModal('routePlannerModal')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- BOTTOM SHEET: CAPAS DEL MAPA (CON DMD2 TRAIL / PISTAS) -->
+<div class="modal-backdrop sheet-mode" id="layersModal" onclick="if(event.target===this)closeModal('layersModal')">
+  <div class="layers-sheet">
+    <div class="sheet-handle" onclick="closeModal('layersModal')"></div>
+    <h2>Capas del mapa</h2>
+
+    <div id="layersListContainer"></div>
+
+    <div class="legend-toggle-row">
+      <span>Mostrar leyenda</span>
+      <label class="switch-wrap">
+        <input type="checkbox" id="toggleLegendCheckbox" onchange="toggleMapLegend(this.checked)" />
+        <span class="switch-slider"></span>
+      </label>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: DESCARGAR PENÍNSULA IBÉRICA / DMD2 TRAIL OFFLINE -->
+<div class="modal-backdrop" id="offlineModal">
+  <div class="modal-card">
+    <h2>🇪🇸🇵🇹 Descargar Mapas Offline (DMD2 + Topo)</h2>
+    <p>Descarga en tu teléfono las teselas de <strong>DMD2 Trail / Pistas</strong> y el mapa base de <strong>España y Portugal</strong> para navegar por pistas sin cobertura.</p>
+
+    <div style="margin-bottom:10px;">
+      <label class="field-label">Capa a descargar offline:</label>
+      <select id="offlineLayerChoice" style="width:100%;background:#161b26;color:#fff;border:1px solid #475569;border-radius:10px;padding:9px;font-size:13px;">
+        <option value="dmd2_trail">🧭 DMD2 Trail / Pistas (Senderos y pistas marcados)</option>
+        <option value="osm_base">🗺️ Mapa Base Carreteras / Pistas (OSM)</option>
+        <option value="both">📦 Ambos (DMD2 Trail + Mapa Base)</option>
+      </select>
+    </div>
+
+    <div style="background:#18141a;padding:12px;border-radius:12px;margin-bottom:12px;font-size:13px;">
+      <div><strong>Estado almacenamiento:</strong> <span id="offlineStorageInfo">0 teselas</span></div>
+      <div class="progress-bar-wrap"><div class="progress-bar-fill" id="offlineProgressBar"></div></div>
+      <div id="offlineProgressLabel" style="font-size:12px;color:#94a3b8;">Elige capa y descarga toda la Península o tu zona</div>
+    </div>
+
+    <button class="solid-btn" style="background:#f97316;color:#fff;width:100%;padding:14px;font-size:15px;margin-bottom:10px;" id="btnDownloadPeninsula" onclick="downloadIberianPeninsulaOneClick()">
+      ⬇️ Descargar TODA la Península (1 clic)
+    </button>
+
+    <label class="field-label" style="margin-top:6px;">O descarga detalle por zona (Zoom 11–14):</label>
+    <div style="display:flex;gap:6px;margin-bottom:10px;">
+      <select id="regionSelect" style="flex:1;background:#161b26;color:#fff;border:1px solid #475569;border-radius:10px;padding:9px;font-size:13px;">
+        <option value="current">📍 Zona visible en pantalla / Ruta activa</option>
+        <option value="cantabria">🏔️ Cantabria y Picos de Europa</option>
+        <option value="euskadi">🌲 País Vasco y Navarra</option>
+        <option value="asturias">⛰️ Asturias y León</option>
+        <option value="pirineos">🗻 Pirineos (Aragón / Cataluña)</option>
+        <option value="centro">🧭 Sistema Central (Madrid / Gredos)</option>
+        <option value="sur">☀️ Andalucía y Sierra Nevada</option>
+        <option value="portugal">🇵🇹 Portugal Norte y Centro</option>
+      </select>
+      <button class="solid-btn" style="flex:0 0 auto;background:#0284c7;color:#fff;padding:0 14px;" onclick="downloadSelectedRegion()">Bajar zona</button>
+    </div>
+
+    <button class="solid-btn" style="background:#334155;color:#fca5a5;width:100%;margin-bottom:10px;" onclick="clearOfflineMapCache()">🗑️ Vaciar mapas offline</button>
+    <div style="text-align:right;"><button style="background:none;border:none;color:#94a3b8;font-weight:700;" onclick="closeModal('offlineModal')">Cerrar</button></div>
+  </div>
+</div>
+
+<!-- MODAL: COMPARTIR CON LA FAMILIA -->
+<div class="modal-backdrop" id="familyModal">
+  <div class="modal-card">
+    <h2>Compartir con la familia</h2>
+    <p>Genera un enlace temporal en tiempo real que caduca automáticamente al elegir duración, o abre tu posición en <strong>Google Maps</strong> al momento.</p>
+
+    <button class="solid-btn" style="background:#0284c7;color:#fff;width:100%;margin-bottom:10px;" onclick="openCurrentInGoogleMaps()">
+      🗺️ Abrir mi ubicación actual en Google Maps
+    </button>
+
+    <p style="font-weight:700;color:#fff;margin-bottom:6px;">Si lanzas un S.O.S., tu familia lo ve:</p>
+    <label class="radio-row"><input type="radio" name="familySosDelay" value="5min" checked /> A los 5 minutos</label>
+    <label class="radio-row"><input type="radio" name="familySosDelay" value="instant" /> Al momento</label>
+    <label class="radio-row"><input type="radio" name="familySosDelay" value="never" /> Nunca</label>
+    <p style="font-size:12px;color:#a8a29e;margin-top:6px;">Solo si no pulsas «Estoy bien» antes: el grupo lo recibe al momento.</p>
+
+    <button class="outline-pill-btn" onclick="startFamilyShare('Durante 2 horas', 2)">Durante 2 horas</button>
+    <button class="outline-pill-btn" onclick="startFamilyShare('Mientras esté en ruta', 12)">Mientras esté en ruta</button>
+    <button class="outline-pill-btn" onclick="startFamilyShare('Durante 24 horas', 24)">Durante 24 horas</button>
+
+    <div id="familyShareBox" style="display:none;background:#18141a;padding:12px;border-radius:12px;margin-top:8px;">
+      <div style="font-size:12px;color:#4ade80;font-weight:700;margin-bottom:6px;" id="familyShareStatus"></div>
+      <div class="btn-row">
+        <button class="solid-btn" style="background:#25D366;color:#052e16;" onclick="shareFamilyWhatsApp()">WhatsApp (Enlace + Maps)</button>
+        <button class="solid-btn" style="background:#334155;color:#fff;" onclick="stopFamilyShare()">Detener</button>
+      </div>
+    </div>
+
+    <div style="text-align:right;margin-top:10px;">
+      <button style="background:none;border:none;color:#f87171;font-weight:700;font-size:15px;cursor:pointer;" onclick="closeModal('familyModal')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: STOP REQUEST -->
+<div class="modal-backdrop" id="stopModal">
+  <div class="modal-card">
+    <h2>Pedir parada al grupo</h2>
+    <p>Envía alerta al grupo y guarda el punto en el archivo GPX.</p>
+    <button class="outline-pill-btn" onclick="registerStop('⛽ Repostar gasolina')">⛽ Repostar gasolina</button>
+    <button class="outline-pill-btn" onclick="registerStop('🔧 Avería / Pinchazo')">🔧 Avería / Pinchazo</button>
+    <button class="outline-pill-btn" onclick="registerStop('🏁 Reagrupar / Descanso')">🏁 Reagrupar / Descanso</button>
+    <button class="outline-pill-btn" onclick="registerStop('📍 Marcar peligro en pista')">📍 Marcar peligro en pista</button>
+    <div style="text-align:right;margin-top:8px;"><button style="background:none;border:none;color:#94a3b8;font-weight:700;" onclick="closeModal('stopModal')">Cerrar</button></div>
+  </div>
+</div>
+
+<!-- MODAL: SOS COUNTDOWN -->
+<div class="modal-backdrop" id="sosModal">
+  <div class="modal-card" style="border:2px solid #ef4444;">
+    <h2 style="color:#f87171;">🆘 S.O.S. ENVIADO AL GRUPO</h2>
+    <p id="sosDetails">Tu ubicación exacta y alerta sonora ya se han enviado al grupo y registrado en el GPX.</p>
+    <div class="btn-row" style="margin-bottom:10px;">
+      <button class="solid-btn" style="background:#0284c7;color:#fff;" onclick="openCurrentInGoogleMaps()">🗺️ Ver en Google Maps</button>
+    </div>
+    <div id="sosFamilyTimerBox" style="display:none;background:#3f151b;padding:12px;border-radius:12px;margin-bottom:12px;">
+      <div style="font-weight:800;font-size:14px;color:#fecaca;" id="sosCountdownText">Aviso a familia en 05:00</div>
+      <button class="solid-btn" style="background:#22c55e;color:#052e16;width:100%;margin-top:10px;" onclick="cancelFamilySos()">✅ Estoy bien (Cancelar aviso a familia)</button>
+    </div>
+    <button class="solid-btn" style="background:#334155;color:#fff;width:100%;" onclick="closeModal('sosModal')">Cerrar</button>
+  </div>
+</div>
+
+<!-- MODAL: GROUP & FRIENDS LIVE -->
+<div class="modal-backdrop" id="groupModal">
+  <div class="modal-card">
+    <h2 id="groupModalTitle">Grupo: Biker Striker</h2>
+    <p id="statsSummary">Grabación activa · 0 puntos · 0 incidencias</p>
+
+    <div style="background:#18141a;padding:10px 12px;border-radius:12px;margin-bottom:10px;border:1px solid #334155;">
+      <div style="font-size:11.5px;color:#94a3b8;margin-bottom:4px;">Enlace directo para que tus amigos entren sin escribir código:</div>
+      <div style="display:flex;gap:6px;">
+        <input id="directInviteUrlInput" readonly style="flex:1;background:#111622;color:#38bdf8;border:1px solid #334155;border-radius:8px;padding:7px 9px;font-size:11.5px;" />
+        <button class="solid-btn" style="flex:0 0 auto;background:#0284c7;color:#fff;padding:0 12px;" onclick="copyInviteLink()">Copiar</button>
+      </div>
+    </div>
+
+    <div class="btn-row" style="margin-bottom:12px;">
+      <button class="solid-btn" style="background:#25D366;color:#052e16;" onclick="shareGroupInvite()">📲 WhatsApp</button>
+      <button class="solid-btn" style="background:#6366f1;color:#fff;" onclick="fitAllGroupMembers();closeModal('groupModal');">🗺️ Ver todos</button>
+      <button class="solid-btn" style="background:#334155;color:#fff;" onclick="spawnSimulatedFriend()">+ Amigo test</button>
+    </div>
+
+    <div id="membersContainer" style="margin-bottom:12px;"></div>
+    <div style="font-weight:700;font-size:13px;margin-bottom:6px;">Incidencias registradas en este trayecto:</div>
+    <div id="incidentsContainer" style="font-size:12px;color:#cbd5e1;max-height:110px;overflow-y:auto;"></div>
+    <div class="btn-row" style="margin-top:14px;">
+      <button class="solid-btn" style="background:#f97316;color:#fff;" onclick="exportRecordedGPX()">💾 Descargar GPX</button>
+      <button class="solid-btn" style="background:#334155;color:#fff;" onclick="closeModal('groupModal')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: SETTINGS + APP UPDATE CHECK -->
+<div class="modal-backdrop" id="settingsModal">
+  <div class="modal-card">
+    <h2>Ajustes de ruta y App</h2>
+    <div style="background:#18141a;padding:10px 12px;border-radius:12px;margin-bottom:12px;border:1px solid #334155;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+      <div>
+        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">12.0.0</span></div>
+        <div style="font-size:11px;color:#94a3b8;" id="webVerStatusLabel">Comprobando actualizaciones en la web...</div>
+      </div>
+      <button class="solid-btn" style="flex:0 0 auto;background:#16a34a;color:#fff;padding:8px 12px;font-size:12px;" onclick="manualCheckForUpdates()">🔄 Buscar / Actualizar</button>
+    </div>
+
+    <label style="font-size:12px;color:#94a3b8;">Tu indicativo en el mapa</label>
+    <input id="nickInput" value="Giggo (tú)" style="width:100%;padding:10px;border-radius:10px;border:1px solid #475569;background:#161b26;color:#fff;margin:6px 0 12px;" onchange="updateNick(this.value)" />
+    <label style="display:flex;align-items:center;gap:8px;font-size:13.5px;margin-bottom:12px;cursor:pointer;">
+      <input type="checkbox" id="voiceAlertsToggle" checked /> 🔊 Avisos de voz para intercomunicador
+    </label>
+    <button class="solid-btn" style="background:#0284c7;color:#fff;width:100%;margin-bottom:8px;" onclick="enableRealGPS()">📡 Activar GPS real del dispositivo</button>
+    <button class="solid-btn" style="background:#10b981;color:#052e16;width:100%;margin-bottom:8px;" onclick="exportRecordedGPX()">💾 Exportar GPX recorrido + incidencias</button>
+    <button class="solid-btn" style="background:#334155;color:#fff;width:100%;" onclick="closeModal('settingsModal')">Cerrar</button>
+  </div>
+</div>
+
+<script>
+  const APP_VERSION = '12.0.1';
+  let swWaitingWorker = null;
+  let remoteVersionFound = null;
+
+  function loadScript(src) {
+    return new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = src;
+      s.onload = resolve;
+      s.onerror = reject;
+      document.head.appendChild(s);
+    });
+  }
+
+  async function ensureLibraries() {
+    if (!window.L) {
+      try { await loadScript('https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js'); }
+      catch (e) {
+        try { await loadScript('https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'); }
+        catch (e2) { await loadScript('https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js'); }
+      }
+    }
+    if (!window.mqtt) {
+      try { await loadScript('https://cdn.jsdelivr.net/npm/mqtt@5.10.1/dist/mqtt.min.js'); }
+      catch (e) { try { await loadScript('https://unpkg.com/mqtt@5.10.1/dist/mqtt.min.js'); } catch (e2) {} }
+    }
+    initApp();
+  }
+
+  // --- PWA UPDATE DETECTOR (DETECTS NEW WEB DEPLOYMENTS ON NETLIFY / HOSTING) ---
+  function showAppUpdateButton(newVerText = '') {
+    const btn = document.getElementById('updateAppBannerBtn');
+    const badge = document.getElementById('newVersionBadge');
+    const statusLbl = document.getElementById('webVerStatusLabel');
+    if (badge && newVerText) badge.textContent = `(${newVerText})`;
+    if (btn) btn.style.display = 'inline-flex';
+    if (statusLbl) statusLbl.textContent = `¡Nueva versión disponible${newVerText ? ' (' + newVerText + ')' : ''}! Pulsa Actualizar.`;
+  }
+
+  async function checkWebVersionUpdate(notifyIfCurrent = false) {
+    try {
+      const res = await fetch(`./manifest.json?nocache=${Date.now()}`, { cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.version && data.version !== APP_VERSION) {
+          remoteVersionFound = data.version;
+          showAppUpdateButton('v' + data.version);
+          showToast(`🆕 Nueva versión v${data.version} disponible en la web. Pulsa "Actualizar app".`);
+          return true;
+        } else {
+          const statusLbl = document.getElementById('webVerStatusLabel');
+          if (statusLbl) statusLbl.textContent = `Estás en la última versión (v${APP_VERSION})`;
+          if (notifyIfCurrent) showToast(`✅ Ya tienes la última versión (v${APP_VERSION})`);
+        }
+      }
+    } catch (e) {}
+
+    if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+      try {
+        const reg = await navigator.serviceWorker.getRegistration();
+        if (reg) {
+          await reg.update();
+          if (reg.waiting) {
+            swWaitingWorker = reg.waiting;
+            showAppUpdateButton('Nueva');
+            return true;
+          }
+        }
+      } catch (e) {}
+    }
+    return false;
+  }
+
+  async function manualCheckForUpdates() {
+    const found = await checkWebVersionUpdate(true);
+    if (found) {
+      applyAppUpdate();
+    }
+  }
+
+  async function applyAppUpdate() {
+    showToast('🔄 Actualizando aplicación a la última versión...');
+    try {
+      if (swWaitingWorker) {
+        swWaitingWorker.postMessage({ type: 'SKIP_WAITING' });
+      }
+      if ('caches' in window) {
+        const keys = await caches.keys();
+        // Keep downloaded offline map tiles (`trailsync-peninsula-tiles-v2`), delete old app shell caches
+        await Promise.all(keys.filter(k => k !== TILE_CACHE_NAME).map(k => caches.delete(k)));
+      }
+      if ('serviceWorker' in navigator) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map(r => r.update()));
+      }
+    } catch (e) {}
+    setTimeout(() => {
+      window.location.reload();
+    }, 350);
+  }
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      checkWebVersionUpdate(false);
+    }
+  });
+
+  // --- SINGLE "MENÚ" BUTTON TOGGLE ---
+  function toggleQuickMenu(e) {
+    if (e) e.stopPropagation();
+    const pop = document.getElementById('quickMenuPopover');
+    const btn = document.getElementById('btnMainMenu');
+    const isOpen = pop.classList.contains('open');
+    if (isOpen) {
+      closeQuickMenu();
+    } else {
+      pop.classList.add('open');
+      btn.classList.add('open');
+    }
+  }
+
+  function closeQuickMenu() {
+    document.getElementById('quickMenuPopover')?.classList.remove('open');
+    document.getElementById('btnMainMenu')?.classList.remove('open');
+  }
+
+  function closeQuickMenuIfOutside(e) {
+    const wrapper = document.getElementById('leftMenuWrapper');
+    if (wrapper && !wrapper.contains(e.target)) {
+      closeQuickMenu();
+    }
+  }
+
+  const TILE_CACHE_NAME = 'trailsync-peninsula-tiles-v2';
+  const DMD2_TRAIL_TILE_URL = 'https://a.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png';
+  const OSM_BASE_TILE_URL   = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+
+  const LAYER_MODES = [
+    {
+      key: 'dmd2_trail',
+      title: 'DMD2 Trail / Pistas',
+      badge: 'DMD2',
+      desc: 'Estilo off-road: pistas forestales, caminos y curvas de nivel resaltadas · descargable offline',
+      url: DMD2_TRAIL_TILE_URL,
+      fallbackUrl: 'https://tile.opentopomap.org/{z}/{x}/{y}.png',
+      cacheOnly: false,
+      pistaStyle: false,
+      dmd2Style: true,
+      maxZoom: 18
+    },
+    {
+      key: 'auto',
+      title: 'Automático',
+      desc: 'Offline si está descargado; si no, topográfico',
+      url: 'https://tile.opentopomap.org/{z}/{x}/{y}.png',
+      fallbackUrl: OSM_BASE_TILE_URL,
+      cacheOnly: false,
+      pistaStyle: false,
+      dmd2Style: false,
+      maxZoom: 17
+    },
+    {
+      key: 'offline',
+      title: 'Offline',
+      desc: 'Los mapas descargados en el móvil · funciona sin cobertura',
+      url: DMD2_TRAIL_TILE_URL,
+      fallbackUrl: OSM_BASE_TILE_URL,
+      cacheOnly: true,
+      pistaStyle: false,
+      dmd2Style: false,
+      maxZoom: 18
+    },
+    {
+      key: 'offline_pista',
+      title: 'Offline Pista',
+      desc: 'Fondo claro y pistas más gruesas, para leer los cruces · sin cobertura',
+      url: OSM_BASE_TILE_URL,
+      fallbackUrl: 'https://tile.opentopomap.org/{z}/{x}/{y}.png',
+      cacheOnly: false,
+      pistaStyle: true,
+      dmd2Style: false,
+      maxZoom: 18
+    },
+    {
+      key: 'outdoors',
+      title: 'Topográfico Outdoors',
+      desc: 'Curvas de nivel y senderos · necesita conexión',
+      url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
+      fallbackUrl: 'https://tile.opentopomap.org/{z}/{x}/{y}.png',
+      cacheOnly: false,
+      pistaStyle: false,
+      dmd2Style: false,
+      maxZoom: 18
+    },
+    {
+      key: 'osm',
+      title: 'OpenStreetMap',
+      desc: 'Callejero estándar · necesita conexión',
+      url: OSM_BASE_TILE_URL,
+      fallbackUrl: 'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
+      cacheOnly: false,
+      pistaStyle: false,
+      dmd2Style: false,
+      maxZoom: 19
+    },
+    {
+      key: 'opentopo',
+      title: 'OpenTopoMap',
+      desc: 'Relieve sombreado · necesita conexión',
+      url: 'https://tile.opentopomap.org/{z}/{x}/{y}.png',
+      fallbackUrl: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
+      cacheOnly: false,
+      pistaStyle: false,
+      dmd2Style: false,
+      maxZoom: 17
+    },
+    {
+      key: 'satelite_ign',
+      title: 'Satélite (España)',
+      desc: 'Ortofoto del IGN, solo España · necesita conexión',
+      url: 'https://www.ign.es/wmts/pnoa-ma?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=OI.OrthoimageCoverage&STYLE=default&TILEMATRIXSET=GoogleMapsCompatible&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT=image/jpeg',
+      fallbackUrl: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+      cacheOnly: false,
+      pistaStyle: false,
+      dmd2Style: false,
+      maxZoom: 19
+    }
+  ];
+
+  // DMD2 / BROUTER 6 PROFILES
+  const BROUTER_PROFILES = {
+    road_fast:    { label: 'Carretera · Rápida',         brouter: 'car-fast',      color: '#0284c7' },
+    road_fun:     { label: 'Carretera · Divertida',      brouter: 'car-eco',       color: '#0ea5e9' },
+    road_curvy:   { label: 'Carretera · Con más curvas', brouter: 'moped',         color: '#6366f1' },
+    trail_easy:   { label: 'Off-Road · Trail Fácil',     brouter: 'gravel',        color: '#22c55e' },
+    trail_medium: { label: 'Off-Road · Trail Medio',     brouter: 'trekking',      color: '#f97316' },
+    trail_hard:   { label: 'Off-Road · Trail Difícil',   brouter: 'mtb',           color: '#dc2626' }
+  };
+
+  let selectedLayerKey = localStorage.getItem('trailsync_selected_layer') || 'dmd2_trail';
+
+  let map, baseTileLayer, plannedLine, recordedLine, backtrackLine, incidentLayer, userMarker, destMarker;
+  let isRecording = true;
+  let realGpsActive = false;
+  let realGpsWatch = null;
+  let backtrackOn = false;
+  let walkieActive = false;
+  let groupCode = 'BS482X';
+  let groupName = 'Biker Striker';
+  let userNick = 'Giggo';
+  let myPeerId = localStorage.getItem('trailsync_peer_id') || ('peer_' + Math.random().toString(36).slice(2, 10));
+  localStorage.setItem('trailsync_peer_id', myPeerId);
+
+  let userPos = [43.3485, -3.3145];
+  let prevUserPos = null;
+  let currentHeadingDeg = 0;
+  let courseUpMode = false;
+
+  let pendingDestCoords = null;
+  let activeSharedRoute = null;
+  let lastSeenRouteId = null;
+
+  let recordedTrack = [];
+  let recordedIncidents = [];
+  let peers = {};
+  let peerMarkers = {};
+  let mqttClients = [];
+  let bcChannel = null;
+  let familyShareUrl = '';
+  let familyExpireAt = 0;
+  let sosTimer = null;
+  let firstFriendAutoFitted = false;
+
+  let plannedCoords = [];
+
+  const IBERIAN_BOUNDS = { south: 35.95, west: -9.55, north: 43.85, east: 3.35 };
+  const REGION_BOXES = {
+    cantabria: { south: 42.75, west: -4.85, north: 43.52, east: -3.12 },
+    euskadi:   { south: 42.45, west: -3.45, north: 43.46, east: -1.15 },
+    asturias:  { south: 42.85, west: -7.18, north: 43.67, east: -4.50 },
+    pirineos:  { south: 42.15, west: -0.95, north: 42.95, east: 2.35 },
+    centro:    { south: 40.10, west: -5.65, north: 41.25, east: -3.35 },
+    sur:       { south: 36.70, west: -6.30, north: 37.95, east: -2.45 },
+    portugal:  { south: 39.40, west: -9.45, north: 42.15, east: -6.20 }
+  };
+
+  const urlParams = new URLSearchParams(window.location.search);
+  const invitedCode = urlParams.get('grupo');
+  const invitedGroupName = urlParams.get('nombre');
+  const familyToken = urlParams.get('familia');
+  const familyExpParam = Number(urlParams.get('exp') || 0);
+  const familyRiderParam = urlParams.get('rider');
+
+  if (invitedCode) {
+    document.getElementById('lobbyJoinCodeInput').value = invitedCode.toUpperCase();
+    document.getElementById('inviteBanner').style.display = 'block';
+    const savedNick = localStorage.getItem('trailsync_nick');
+    if (savedNick) document.getElementById('lobbyNickInput').value = savedNick;
+  }
+
+  function downsampleCoords(coords, maxPts = 280) {
+    if (!Array.isArray(coords) || coords.length <= maxPts) return coords;
+    const step = (coords.length - 1) / (maxPts - 1);
+    const out = [];
+    for (let i = 0; i < maxPts - 1; i++) {
+      const idx = Math.round(i * step);
+      out.push([Number(coords[idx][0].toFixed(5)), Number(coords[idx][1].toFixed(5))]);
+    }
+    const last = coords[coords.length - 1];
+    out.push([Number(last[0].toFixed(5)), Number(last[1].toFixed(5))]);
+    return out;
+  }
+
+  function computeTotalDistanceKm(coords) {
+    if (!coords || coords.length < 2) return 0;
+    let total = 0;
+    for (let i = 1; i < coords.length; i++) {
+      const R = 6371;
+      const dLat = (coords[i][0] - coords[i-1][0]) * Math.PI / 180;
+      const dLon = (coords[i][1] - coords[i-1][1]) * Math.PI / 180;
+      const a = Math.sin(dLat/2)**2 + Math.cos(coords[i-1][0]*Math.PI/180)*Math.cos(coords[i][0]*Math.PI/180)*Math.sin(dLon/2)**2;
+      total += R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+    return total;
+  }
+
+  function applySharedGroupRoute(routeObj, broadcastToGroup = false) {
+    if (!routeObj || !Array.isArray(routeObj.coords) || routeObj.coords.length < 2) return;
+    activeSharedRoute = routeObj;
+    lastSeenRouteId = routeObj.id;
+    plannedCoords = routeObj.coords;
+
+    const lineColor = routeObj.color || '#ea580c';
+    const isPista = getActiveLayerObj().pistaStyle;
+    plannedLine.setLatLngs(plannedCoords);
+    plannedLine.setStyle({
+      color: isPista ? '#dc2626' : lineColor,
+      weight: isPista ? 8 : 6,
+      dashArray: null
+    });
+
+    const endPt = plannedCoords[plannedCoords.length - 1];
+    placeDestinationPin(endPt[0], endPt[1], false);
+
+    const distKm = routeObj.distanceKm || computeTotalDistanceKm(plannedCoords);
+    document.getElementById('sharedRouteTitle').textContent = `🧭 ${routeObj.title} (por ${routeObj.author})`;
+    document.getElementById('sharedRouteStats').textContent = `${distKm.toFixed(1)} km · Rutable para todo el grupo`;
+    document.getElementById('sharedRouteBanner').classList.add('visible');
+    document.getElementById('topPillsStack').classList.add('shifted');
+    document.getElementById('topRightStack').classList.add('shifted');
+
+    if (broadcastToGroup) {
+      publishGroupRoute(routeObj);
+    }
+  }
+
+  function fitSharedRouteBounds() {
+    if (plannedCoords.length > 1) {
+      map.fitBounds(plannedLine.getBounds(), { padding: [55, 55] });
+    }
+  }
+
+  function clearSharedRoute() {
+    activeSharedRoute = null;
+    plannedCoords = [];
+    plannedLine.setLatLngs([]);
+    if (destMarker) { map.removeLayer(destMarker); destMarker = null; }
+    document.getElementById('sharedRouteBanner').classList.remove('visible');
+    document.getElementById('topPillsStack').classList.remove('shifted');
+    document.getElementById('topRightStack').classList.remove('shifted');
+    showToast('🗑️ Ruta retirada del mapa');
+  }
+
+  function placeDestinationPin(lat, lon, openSheet = true) {
+    pendingDestCoords = [lat, lon];
+    const destIcon = L.divIcon({
+      className: '',
+      html: `<div class="rider-upright-wrapper"><div class="dest-pin-badge">🏁</div></div>`,
+      iconSize: [32, 32], iconAnchor: [16, 16]
+    });
+    if (!destMarker) {
+      destMarker = L.marker(pendingDestCoords, { icon: destIcon }).addTo(map);
+    } else {
+      destMarker.setLatLng(pendingDestCoords);
+    }
+    if (openSheet) {
+      document.getElementById('destCoordsSummary').textContent =
+        `Destino: ${lat.toFixed(5)}, ${lon.toFixed(5)} · Elige cómo quieres llegar (Carretera u Off-Road):`;
+      document.getElementById('routeCalcStatus').style.display = 'none';
+      openModal('routePlannerModal');
+    }
+  }
+
+  function openRoutePlannerForCenter() {
+    const c = map.getCenter();
+    const targetLat = Math.abs(c.lat - userPos[0]) < 0.0002 ? userPos[0] + 0.015 : c.lat;
+    const targetLon = Math.abs(c.lng - userPos[1]) < 0.0002 ? userPos[1] + 0.015 : c.lng;
+    placeDestinationPin(targetLat, targetLon, true);
+  }
+
+  async function calculateBrouterRoute(profileKey) {
+    if (!pendingDestCoords) return;
+    const prof = BROUTER_PROFILES[profileKey] || BROUTER_PROFILES.trail_medium;
+    const statusEl = document.getElementById('routeCalcStatus');
+    statusEl.style.display = 'block';
+    statusEl.textContent = `⏳ Calculando ruta "${prof.label}" con BRouter...`;
+
+    const startLon = userPos[1].toFixed(6), startLat = userPos[0].toFixed(6);
+    const endLon = pendingDestCoords[1].toFixed(6), endLat = pendingDestCoords[0].toFixed(6);
+
+    let routeCoords = null;
+    let distKm = 0;
+
+    try {
+      const brouterUrl = `https://brouter.de/brouter?lonlats=${startLon},${startLat}|${endLon},${endLat}&profile=${prof.brouter}&alternativeidx=0&format=geojson`;
+      const resp = await fetch(brouterUrl);
+      if (resp.ok) {
+        const geo = await resp.json();
+        const feat = geo.features && geo.features[0];
+        if (feat && feat.geometry && Array.isArray(feat.geometry.coordinates)) {
+          routeCoords = feat.geometry.coordinates.map(c => [c[1], c[0]]);
+          if (feat.properties && feat.properties['track-length']) {
+            distKm = Number(feat.properties['track-length']) / 1000;
+          }
+        }
+      }
+    } catch (e) {}
+
+    if (!routeCoords || routeCoords.length < 2) {
+      try {
+        const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${startLon},${startLat};${endLon},${endLat}?overview=full&geometries=geojson`;
+        const resp2 = await fetch(osrmUrl);
+        if (resp2.ok) {
+          const data2 = await resp2.json();
+          const r = data2.routes && data2.routes[0];
+          if (r && r.geometry && Array.isArray(r.geometry.coordinates)) {
+            routeCoords = r.geometry.coordinates.map(c => [c[1], c[0]]);
+            distKm = (r.distance || 0) / 1000;
+          }
+        }
+      } catch (e) {}
+    }
+
+    if (!routeCoords || routeCoords.length < 2) {
+      routeCoords = [userPos, pendingDestCoords];
+      distKm = computeTotalDistanceKm(routeCoords);
+    }
+
+    if (!distKm) distKm = computeTotalDistanceKm(routeCoords);
+    const compactCoords = downsampleCoords(routeCoords, 280);
+
+    const routeObj = {
+      id: 'rt_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+      title: prof.label,
+      author: userNick,
+      color: prof.color,
+      profileKey,
+      distanceKm: Number(distKm.toFixed(2)),
+      coords: compactCoords,
+      ts: Date.now()
+    };
+
+    applySharedGroupRoute(routeObj, true);
+    fitSharedRouteBounds();
+    recordIncident('ROUTE_CREATED', `Ruta generada (${prof.label} · ${routeObj.distanceKm} km)`);
+    closeModal('routePlannerModal');
+    showToast(`🧭 Ruta "${prof.label}" (${routeObj.distanceKm} km) compartida con todo el grupo`);
+    speakAlert(`Ruta ${prof.label} calculada y compartida con el grupo`);
+  }
+
+  function exportPlannedRouteAsGPX() {
+    if (!plannedCoords || plannedCoords.length < 2) return showToast('No hay ruta activa para exportar');
+    const title = activeSharedRoute ? activeSharedRoute.title : 'Ruta_Grupo';
+    const trkptsXml = plannedCoords.map(p =>
+      `      <trkpt lat="${p[0].toFixed(6)}" lon="${p[1].toFixed(6)}"></trkpt>`
+    ).join('\n');
+    const gpx = `<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="TrailSync BRouter Group" xmlns="http://www.topografix.com/GPX/1/1">
+  <metadata><name>${escapeXml(title)}</name></metadata>
+  <trk><name>${escapeXml(title)}</name><trkseg>\n${trkptsXml}\n  </trkseg></trk>
+</gpx>`;
+    const blob = new Blob([gpx], { type: 'application/gpx+xml' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${title.replace(/[^a-zA-Z0-9_-]+/g, '_')}.gpx`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  // --- COMPASS / HEADING ORIENTATION ---
+  function computeBearing(lat1, lon1, lat2, lon2) {
+    const toRad = d => d * Math.PI / 180;
+    const toDeg = r => r * 180 / Math.PI;
+    const dLon = toRad(lon2 - lon1);
+    const y = Math.sin(dLon) * Math.cos(toRad(lat2));
+    const x = Math.cos(toRad(lat1)) * Math.sin(toRad(lat2)) -
+              Math.sin(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.cos(dLon);
+    return (toDeg(Math.atan2(y, x)) + 360) % 360;
+  }
+
+  function applyMapOrientation() {
+    const rotator = document.getElementById('map-rotator');
+    const needle = document.getElementById('gmapsCompassNeedle');
+    const btn = document.getElementById('gmapsCompassBtn');
+    const badge = document.getElementById('compassModeBadge');
+
+    if (courseUpMode) {
+      rotator.style.transform = `translate(-50%, -50%) rotate(${-currentHeadingDeg}deg)`;
+      document.documentElement.style.setProperty('--inv-map-rot', `${currentHeadingDeg}deg`);
+      needle.style.transform = `rotate(${-currentHeadingDeg}deg)`;
+      btn.classList.add('course-up-active');
+      badge.textContent = 'RUMBO';
+    } else {
+      rotator.style.transform = 'translate(-50%, -50%) rotate(0deg)';
+      document.documentElement.style.setProperty('--inv-map-rot', '0deg');
+      needle.style.transform = 'rotate(0deg)';
+      btn.classList.remove('course-up-active');
+      badge.textContent = 'NORTE';
+    }
+  }
+
+  function toggleNavigationHeadingMode() {
+    courseUpMode = !courseUpMode;
+    if (courseUpMode && currentHeadingDeg === 0 && plannedCoords.length > 1) {
+      currentHeadingDeg = computeBearing(plannedCoords[0][0], plannedCoords[0][1], plannedCoords[1][0], plannedCoords[1][1]);
+    }
+    applyMapOrientation();
+    if (courseUpMode) {
+      map.setView(userPos, Math.max(map.getZoom(), 16));
+      showToast('🧭 Orientación: Sentido de navegación (Rumbo arriba)');
+      speakAlert('Mapa orientado en el sentido de la marcha');
+    } else {
+      showToast('⬆️ Orientación: Norte arriba fijado');
+      speakAlert('Mapa orientado al norte');
+    }
+  }
+
+  window.addEventListener('deviceorientationabsolute', handleDeviceCompass, true);
+  window.addEventListener('deviceorientation', handleDeviceCompass, true);
+
+  function handleDeviceCompass(e) {
+    if (!courseUpMode) return;
+    let heading = null;
+    if (typeof e.webkitCompassHeading === 'number') {
+      heading = e.webkitCompassHeading;
+    } else if (e.absolute && typeof e.alpha === 'number') {
+      heading = (360 - e.alpha) % 360;
+    }
+    if (heading !== null && !isNaN(heading)) {
+      currentHeadingDeg = Math.round(heading);
+      applyMapOrientation();
+    }
+  }
+
+  function getActiveLayerObj() {
+    return LAYER_MODES.find(l => l.key === selectedLayerKey) || LAYER_MODES[0];
+  }
+
+  function renderLayersMenu() {
+    const container = document.getElementById('layersListContainer');
+    container.innerHTML = LAYER_MODES.map(layer => {
+      const isSelected = layer.key === selectedLayerKey;
+      const badgeHtml = layer.badge ? `<span class="dmd2-tag">${layer.badge}</span>` : '';
+      return `
+        <div class="layer-option-row ${isSelected ? 'selected' : ''}" onclick="selectMapLayer('${layer.key}')">
+          <div class="custom-radio"><div class="custom-radio-dot"></div></div>
+          <div>
+            <div class="layer-opt-title">${layer.title} ${badgeHtml}</div>
+            <div class="layer-opt-desc">${layer.desc}</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function openLayersModal() {
+    renderLayersMenu();
+    openModal('layersModal');
+  }
+
+  function selectMapLayer(key) {
+    selectedLayerKey = key;
+    localStorage.setItem('trailsync_selected_layer', key);
+    const mode = getActiveLayerObj();
+
+    if (baseTileLayer) map.removeLayer(baseTileLayer);
+    baseTileLayer = buildOfflineTileLayer(mode).addTo(map);
+
+    const mapEl = document.getElementById('map');
+    mapEl.classList.remove('offline-pista-mode', 'dmd2-trail-mode');
+    const baseRouteColor = activeSharedRoute?.color || '#ea580c';
+
+    if (mode.pistaStyle) {
+      mapEl.classList.add('offline-pista-mode');
+      plannedLine.setStyle({ weight: 8, color: '#dc2626' });
+    } else if (mode.dmd2Style) {
+      mapEl.classList.add('dmd2-trail-mode');
+      plannedLine.setStyle({ weight: 7, color: baseRouteColor });
+    } else {
+      plannedLine.setStyle({ weight: 6, color: baseRouteColor });
+    }
+
+    document.getElementById('layerNamePill').textContent = `🗺️ Capa: ${mode.title} ▾`;
+    renderLayersMenu();
+    closeModal('layersModal');
+    showToast(`🗺️ Capa activada: ${mode.title}`);
+  }
+
+  function toggleMapLegend(show) {
+    document.getElementById('mapLegendBox').style.display = show ? 'block' : 'none';
+  }
+
+  function speakAlert(text) {
+    if (!document.getElementById('voiceAlertsToggle')?.checked) return;
+    if ('speechSynthesis' in window) {
+      try {
+        window.speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(text);
+        u.lang = 'es-ES';
+        u.rate = 1.05;
+        window.speechSynthesis.speak(u);
+      } catch (e) {}
+    }
+  }
+
+  function createAndEnterGroup() {
+    userNick = (document.getElementById('lobbyNickInput').value || 'Giggo').trim();
+    groupName = (document.getElementById('lobbyGroupNameInput').value || 'Biker Striker').trim();
+    groupCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+    localStorage.setItem('trailsync_nick', userNick);
+    enterTracker();
+  }
+
+  function joinExistingGroup() {
+    userNick = (document.getElementById('lobbyNickInput').value || 'Amigo').trim();
+    const code = (document.getElementById('lobbyJoinCodeInput').value || '').trim().toUpperCase();
+    if (code.length < 4) return showToast('Introduce un código de grupo válido (mín. 4 caracteres)');
+    groupCode = code;
+    groupName = invitedGroupName ? decodeURIComponent(invitedGroupName) : ('Grupo ' + code);
+    localStorage.setItem('trailsync_nick', userNick);
+    enterTracker();
+  }
+
+  function enterTracker() {
+    document.getElementById('lobby-screen').style.display = 'none';
+    document.getElementById('app').classList.add('active');
+    document.getElementById('groupNameHeader').textContent = groupName;
+    document.getElementById('headerCodeChip').textContent = '#' + groupCode;
+    document.getElementById('floatCodeText').textContent = groupCode;
+    document.getElementById('nickInput').value = userNick + ' (tú)';
+    if (map) {
+      setTimeout(() => map.invalidateSize(), 120);
+      userMarker.setIcon(createRiderIcon(userNick + ' (tú)', '#f59e0b', true));
+    }
+    clearPeerMarkers();
+    connectGroupSync();
+    enableRealGPS(true);
+    updateGroupRadarLabel();
+    speakAlert(`Conectado al grupo ${groupName}`);
+  }
+
+  function returnToLobby() {
+    document.getElementById('app').classList.remove('active');
+    document.getElementById('lobby-screen').style.display = 'flex';
+  }
+
+  function clearPeerMarkers() {
+    Object.values(peerMarkers).forEach(m => map && map.removeLayer(m));
+    peerMarkers = {};
+    peers = {};
+    firstFriendAutoFitted = false;
+  }
+
+  // --- MULTI-BROKER REDUNDANT E2E SYNC ---
+  async function getGroupCryptoKey(code) {
+    const enc = new TextEncoder();
+    const keyMaterial = await crypto.subtle.importKey('raw', enc.encode(code), 'PBKDF2', false, ['deriveKey']);
+    return crypto.subtle.deriveKey(
+      { name: 'PBKDF2', salt: enc.encode('trailsync-salt-2026'), iterations: 10000, hash: 'SHA-256' },
+      keyMaterial,
+      { name: 'AES-GCM', length: 256 },
+      false,
+      ['encrypt', 'decrypt']
+    );
+  }
+
+  async function encryptPayload(obj) {
+    const key = await getGroupCryptoKey(groupCode);
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const encoded = new TextEncoder().encode(JSON.stringify(obj));
+    const cipher = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, encoded);
+    return JSON.stringify({ iv: Array.from(iv), data: Array.from(new Uint8Array(cipher)) });
+  }
+
+  async function decryptPayload(rawStr) {
+    const parsed = JSON.parse(rawStr);
+    const key = await getGroupCryptoKey(groupCode);
+    const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: new Uint8Array(parsed.iv) }, key, new Uint8Array(parsed.data));
+    return JSON.parse(new TextDecoder().decode(plain));
+  }
+
+  function connectGroupSync() {
+    const baseTopic = `trailsync/e2e/v7/${groupCode}`;
+    if ('BroadcastChannel' in window) {
+      if (bcChannel) bcChannel.close();
+      bcChannel = new BroadcastChannel(baseTopic);
+      bcChannel.onmessage = ev => handleIncomingGroupMessage(ev.data);
+    }
+    mqttClients.forEach(c => { try { c.end(true); } catch (e) {} });
+    mqttClients = [];
+
+    if (window.mqtt) {
+      const brokers = ['wss://broker.emqx.io:8084/mqtt', 'wss://broker.hivemq.com:8884/mqtt'];
+      brokers.forEach((brokerUrl, idx) => {
+        try {
+          const client = window.mqtt.connect(brokerUrl, {
+            clientId: `ts12_${myPeerId}_${idx}_${Math.floor(Math.random()*999)}`,
+            reconnectPeriod: 3000,
+            connectTimeout: 8000
+          });
+          client.on('connect', () => {
+            client.subscribe(`${baseTopic}/#`);
+            broadcastState('HELLO');
+            if (activeSharedRoute) publishGroupRoute(activeSharedRoute);
+          });
+          client.on('message', async (_topic, payload) => {
+            try { handleIncomingGroupMessage(await decryptPayload(payload.toString())); } catch (e) {}
+          });
+          mqttClients.push(client);
+        } catch (e) {}
+      });
+    }
+  }
+
+  async function publishGroupRoute(routeObj) {
+    const msg = {
+      peerId: myPeerId,
+      nick: userNick,
+      kind: 'SHARED_ROUTE',
+      route: routeObj,
+      ts: Date.now()
+    };
+    if (bcChannel) bcChannel.postMessage(msg);
+    const encrypted = await encryptPayload(msg);
+    const routeTopic = `trailsync/e2e/v7/${groupCode}/shared_route`;
+    mqttClients.forEach(c => {
+      if (c && c.connected) {
+        c.publish(routeTopic, encrypted, { retain: true, qos: 0 });
+      }
+    });
+  }
+
+  async function broadcastState(kind, extra = {}) {
+    if (familyExpireAt && Date.now() > familyExpireAt) {
+      stopFamilyShare();
+      showToast('⏱️ El enlace temporal para la familia ha caducado');
+    }
+    const msg = {
+      peerId: myPeerId,
+      nick: userNick,
+      kind,
+      lat: userPos[0],
+      lon: userPos[1],
+      heading: currentHeadingDeg,
+      ts: Date.now(),
+      ...extra
+    };
+    if (bcChannel) bcChannel.postMessage(msg);
+    const encrypted = await encryptPayload(msg);
+    const peerTopic = `trailsync/e2e/v7/${groupCode}/${myPeerId}`;
+    mqttClients.forEach(c => {
+      if (c && c.connected) {
+        c.publish(peerTopic, encrypted, { retain: true, qos: 0 });
+      }
+    });
+  }
+
+  function handleIncomingGroupMessage(msg) {
+    if (!msg) return;
+    if (msg.ts && (Date.now() - msg.ts > 12 * 3600 * 1000)) return;
+
+    if (msg.kind === 'SHARED_ROUTE' && msg.route && msg.route.id !== lastSeenRouteId) {
+      applySharedGroupRoute(msg.route, false);
+      if (msg.peerId !== myPeerId) {
+        showToast(`🧭 ${msg.route.author} ha compartido una ruta (${msg.route.title}) con todo el grupo`);
+        speakAlert(`${msg.route.author} ha compartido una nueva ruta con el grupo`);
+      }
+      return;
+    }
+
+    if (msg.peerId === myPeerId) return;
+
+    const isNewFriend = !peers[msg.peerId];
+    peers[msg.peerId] = {
+      nick: msg.nick || 'Amigo',
+      lat: msg.lat,
+      lon: msg.lon,
+      lastSeen: Date.now(),
+      status: msg.kind === 'SOS' ? '🆘 S.O.S.' : (msg.kind === 'STOP' ? msg.reason : 'En ruta')
+    };
+
+    updatePeerMarkers();
+    updateGroupRadarLabel();
+
+    if (isNewFriend) {
+      showToast(`🏍️ ${peers[msg.peerId].nick} se ha conectado al mapa`);
+      broadcastState('POS');
+      if (activeSharedRoute) publishGroupRoute(activeSharedRoute);
+      if (!firstFriendAutoFitted) {
+        firstFriendAutoFitted = true;
+        setTimeout(() => fitAllGroupMembers(), 400);
+      }
+    }
+  }
+
+  function calcDistanceLabel(lat1, lon1, lat2, lon2) {
+    const R = 6371000;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+    const d = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return d < 1000 ? `${Math.round(d)} m` : `${(d / 1000).toFixed(1)} km`;
+  }
+
+  function updatePeerMarkers() {
+    const colors = ['#0284c7', '#10b981', '#8b5cf6', '#ec4899', '#06b6d4', '#eab308'];
+    let idx = 0;
+    Object.entries(peers).forEach(([id, p]) => {
+      const distStr = calcDistanceLabel(userPos[0], userPos[1], p.lat, p.lon);
+      const label = `${p.nick} · ${distStr}`;
+      const icon = createRiderIcon(label, colors[idx++ % colors.length], false);
+      if (!peerMarkers[id]) {
+        peerMarkers[id] = L.marker([p.lat, p.lon], { icon }).addTo(map);
+      } else {
+        peerMarkers[id].setLatLng([p.lat, p.lon]);
+        peerMarkers[id].setIcon(icon);
+      }
+    });
+  }
+
+  function updateGroupRadarLabel() {
+    const count = Object.keys(peers).length + 1;
+    const anyConnected = mqttClients.some(c => c && c.connected);
+    const el = document.getElementById('connectedCountLabel');
+    if (el) {
+      el.textContent = count > 1
+        ? `${count} en el mapa`
+        : (anyConnected ? '1 en mapa (esperando amigos)' : 'Conectando grupo...');
+    }
+  }
+
+  function fitAllGroupMembers() {
+    if (courseUpMode) {
+      courseUpMode = false;
+      applyMapOrientation();
+    }
+    const pts = [userPos, ...Object.values(peers).map(p => [p.lat, p.lon])];
+    if (pts.length === 1) {
+      map.setView(userPos, 16);
+      showToast('📍 Centrado en tu posición');
+    } else {
+      map.fitBounds(L.latLngBounds(pts), { padding: [65, 65], maxZoom: 16 });
+      showToast(`👥 Mostrando a los ${pts.length} miembros del grupo`);
+    }
+  }
+
+  function spawnSimulatedFriend() {
+    const names = ['Carlos', 'Mikel', 'Elena', 'Javi'];
+    const idx = Object.keys(peers).length;
+    const name = names[idx % names.length];
+    const fakeId = 'sim_friend_' + (idx + 1);
+    handleIncomingGroupMessage({
+      peerId: fakeId, nick: name, kind: 'POS',
+      lat: userPos[0] + (Math.random() - 0.5) * 0.006,
+      lon: userPos[1] + (Math.random() - 0.5) * 0.006,
+      ts: Date.now()
+    });
+    fitAllGroupMembers();
+  }
+
+  function createRiderIcon(label, bgColor, isSelf = false) {
+    const innerContent = isSelf
+      ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="#ffffff" style="transform:rotate(${currentHeadingDeg}deg);transition:transform 0.3s ease;"><polygon points="12,3 20,20 12,16 4,20"/></svg>`
+      : (label[0] || 'G').toUpperCase();
+    return L.divIcon({
+      className: '',
+      html: `<div class="rider-upright-wrapper"><div class="rider-badge"><div class="rider-dot" style="background:${bgColor};">${innerContent}</div><div class="rider-tag">${label}</div></div></div>`,
+      iconSize: [126, 58], iconAnchor: [63, 20]
+    });
+  }
+
+  function createFallbackTopoCanvas(coords, isPista) {
+    const c = document.createElement('canvas');
+    c.width = 256; c.height = 256;
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = isPista ? '#faf8f5' : '#f2efe9';
+    ctx.fillRect(0, 0, 256, 256);
+    ctx.strokeStyle = isPista ? '#e5dfd5' : '#dfd9cd';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(0, 0, 256, 256);
+    ctx.strokeStyle = isPista ? 'rgba(217,119,6,0.35)' : 'rgba(180,145,95,0.32)';
+    ctx.lineWidth = isPista ? 2.2 : 1;
+    ctx.beginPath();
+    ctx.arc(128, 128, 65 + (coords.x % 4) * 14, 0, Math.PI * 2);
+    ctx.stroke();
+    return c.toDataURL();
+  }
+
+  function buildOfflineTileLayer(modeObj) {
+    const OfflineLayer = L.TileLayer.extend({
+      createTile: function(coords, done) {
+        const tile = document.createElement('img');
+        tile.alt = '';
+        tile.crossOrigin = 'anonymous';
+        const url = this.getTileUrl(coords);
+        const fallbackUrl = modeObj.fallbackUrl
+          ? modeObj.fallbackUrl.replace('{z}', coords.z).replace('{x}', coords.x).replace('{y}', coords.y)
+          : null;
+
+        const loadFromNetworkOrFallback = () => {
+          if (modeObj.cacheOnly) {
+            // In Offline-only mode, check both DMD2 Trail and OSM Base cache URLs
+            const altCacheUrl = OSM_BASE_TILE_URL.replace('{z}', coords.z).replace('{x}', coords.x).replace('{y}', coords.y);
+            if ('caches' in window) {
+              caches.open(TILE_CACHE_NAME).then(c => c.match(altCacheUrl)).then(altResp => {
+                if (altResp) {
+                  altResp.blob().then(b => {
+                    const u = URL.createObjectURL(b);
+                    tile.onload = () => { URL.revokeObjectURL(u); done(null, tile); };
+                    tile.src = u;
+                  });
+                } else {
+                  tile.onload = () => done(null, tile);
+                  tile.src = createFallbackTopoCanvas(coords, modeObj.pistaStyle);
+                }
+              });
+            } else {
+              tile.onload = () => done(null, tile);
+              tile.src = createFallbackTopoCanvas(coords, modeObj.pistaStyle);
+            }
+            return;
+          }
+          let triedSecondary = false;
+          tile.onload = () => {
+            fetch(tile.src, { mode: 'cors' })
+              .then(r => { if (r.ok) caches.open(TILE_CACHE_NAME).then(c => c.put(url, r)); })
+              .catch(() => {});
+            done(null, tile);
+          };
+          tile.onerror = () => {
+            if (!triedSecondary && fallbackUrl) {
+              triedSecondary = true;
+              tile.src = fallbackUrl;
+            } else {
+              tile.onload = () => done(null, tile);
+              tile.src = createFallbackTopoCanvas(coords, modeObj.pistaStyle);
+            }
+          };
+          tile.src = url;
+        };
+
+        if ('caches' in window) {
+          caches.open(TILE_CACHE_NAME).then(c => c.match(url)).then(resp => {
+            if (resp) {
+              resp.blob().then(b => {
+                const u = URL.createObjectURL(b);
+                tile.onload = () => { URL.revokeObjectURL(u); done(null, tile); };
+                tile.onerror = () => loadFromNetworkOrFallback();
+                tile.src = u;
+              });
+            } else {
+              loadFromNetworkOrFallback();
+            }
+          }).catch(() => loadFromNetworkOrFallback());
+        } else {
+          loadFromNetworkOrFallback();
+        }
+        return tile;
+      }
+    });
+    return new OfflineLayer(modeObj.url, {
+      attribution: '&copy; OpenStreetMap / CyclOSM DMD2 / IGN / Esri',
+      maxZoom: modeObj.maxZoom || 18
+    });
+  }
+
+  function initApp() {
+    if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+      navigator.serviceWorker.register('sw.js').then(reg => {
+        if (reg.waiting) {
+          swWaitingWorker = reg.waiting;
+          showAppUpdateButton('Nueva');
+        }
+        reg.addEventListener('updatefound', () => {
+          const newWorker = reg.installing;
+          if (!newWorker) return;
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              swWaitingWorker = newWorker;
+              showAppUpdateButton('Nueva');
+            }
+          });
+        });
+      }).catch(() => {});
+    }
+
+    // Check manifest.json on server for newer APP_VERSION
+    checkWebVersionUpdate(false);
+
+    const startMode = getActiveLayerObj();
+    map = L.map('map', { zoomControl: false }).setView(userPos, 15);
+    baseTileLayer = buildOfflineTileLayer(startMode).addTo(map);
+    document.getElementById('layerNamePill').textContent = `🗺️ Capa: ${startMode.title} ▾`;
+    if (startMode.pistaStyle) document.getElementById('map').classList.add('offline-pista-mode');
+    if (startMode.dmd2Style) document.getElementById('map').classList.add('dmd2-trail-mode');
+
+    plannedLine = L.polyline([], { color: '#ea580c', weight: 6 }).addTo(map);
+    recordedLine = L.polyline([], { color: '#16a34a', weight: 6 }).addTo(map);
+    backtrackLine = L.polyline([], { color: '#4f46e5', weight: 4, dashArray: '5, 6' }).addTo(map);
+    incidentLayer = L.layerGroup().addTo(map);
+    userMarker = L.marker(userPos, { icon: createRiderIcon(userNick + ' (tú)', '#f59e0b', true) }).addTo(map);
+
+    map.on('contextmenu', e => {
+      placeDestinationPin(e.latlng.lat, e.latlng.lng, true);
+    });
+
+    refreshOfflineStats();
+
+    if (familyToken && (!familyExpParam || Date.now() < familyExpParam)) {
+      userNick = familyRiderParam ? (decodeURIComponent(familyRiderParam) + ' (Familia)') : 'Familia';
+      groupCode = familyToken.toUpperCase();
+      groupName = 'Seguimiento Familiar';
+      enterTracker();
+    } else if (invitedCode) {
+      joinExistingGroup();
+    }
+
+    setInterval(() => {
+      updateGroupRadarLabel();
+      updatePeerMarkers();
+      if (isRecording) {
+        broadcastState('POS');
+      }
+    }, 2500);
+  }
+
+  // --- OFFLINE TILE DOWNLOADER (SUPPORTS DMD2 TRAIL + BASE MAP) ---
+  function lon2tile(lon, z) { return Math.floor((lon + 180) / 360 * Math.pow(2, z)); }
+  function lat2tile(lat, z) { return Math.floor((1 - Math.log(Math.tan(lat * Math.PI / 180) + 1 / Math.cos(lat * Math.PI / 180)) / Math.PI) / 2 * Math.pow(2, z)); }
+
+  function getSelectedOfflineTemplates() {
+    const choice = document.getElementById('offlineLayerChoice')?.value || 'dmd2_trail';
+    if (choice === 'dmd2_trail') return [DMD2_TRAIL_TILE_URL];
+    if (choice === 'osm_base') return [OSM_BASE_TILE_URL];
+    return [DMD2_TRAIL_TILE_URL, OSM_BASE_TILE_URL];
+  }
+
+  function buildTileUrlsFromBox(box, minZ, maxZ, templates) {
+    const urls = new Set();
+    for (const tpl of templates) {
+      for (let z = minZ; z <= maxZ; z++) {
+        const x1 = lon2tile(box.west, z), x2 = lon2tile(box.east, z);
+        const y1 = lat2tile(box.north, z), y2 = lat2tile(box.south, z);
+        for (let x = Math.min(x1, x2); x <= Math.max(x1, x2); x++) {
+          for (let y = Math.min(y1, y2); y <= Math.max(y1, y2); y++) {
+            urls.add(tpl.replace('{z}', z).replace('{x}', x).replace('{y}', y));
+          }
+        }
+      }
+    }
+    return [...urls];
+  }
+
+  async function batchCacheUrls(urlList, labelSuccess) {
+    if (!('caches' in window)) return showToast('Tu navegador no soporta almacenamiento offline');
+    const cache = await caches.open(TILE_CACHE_NAME);
+    const bar = document.getElementById('offlineProgressBar');
+    const lbl = document.getElementById('offlineProgressLabel');
+    let done = 0;
+
+    for (let i = 0; i < urlList.length; i += 8) {
+      await Promise.all(urlList.slice(i, i + 8).map(async u => {
+        try {
+          if (!(await cache.match(u))) {
+            const r = await fetch(u, { mode: 'cors' });
+            if (r.ok) await cache.put(u, r);
+          }
+        } catch (e) {}
+        done++;
+      }));
+      const pct = Math.round((done / urlList.length) * 100);
+      bar.style.width = pct + '%';
+      lbl.textContent = `Descargando ${done} / ${urlList.length} teselas (${pct}%)`;
+    }
+    localStorage.setItem('peninsulaOfflineReady', '1');
+    lbl.textContent = labelSuccess;
+    refreshOfflineStats();
+    showToast(labelSuccess);
+    speakAlert('Descarga de mapa offline completada');
+  }
+
+  async function downloadIberianPeninsulaOneClick() {
+    const btn = document.getElementById('btnDownloadPeninsula');
+    btn.disabled = true;
+    btn.textContent = '⏳ Descargando Península Ibérica...';
+    const templates = getSelectedOfflineTemplates();
+    const peninsulaBaseUrls = buildTileUrlsFromBox(IBERIAN_BOUNDS, 5, 10, templates);
+    const baseBounds = plannedCoords.length > 1 ? plannedLine.getBounds().extend(userPos) : L.latLngBounds([userPos, userPos]);
+    const b = baseBounds.pad(0.18);
+    const corridorBox = { south: b.getSouth(), west: b.getWest(), north: b.getNorth(), east: b.getEast() };
+    const highDetailUrls = buildTileUrlsFromBox(corridorBox, 12, 15, templates).slice(0, 350);
+    const combined = [...new Set([...peninsulaBaseUrls, ...highDetailUrls])];
+    await batchCacheUrls(combined, `✅ Península Ibérica + DMD2 Trail lista offline (${combined.length} teselas)`);
+    btn.disabled = false;
+    btn.textContent = '✅ Península descargada (Actualizar)';
+  }
+
+  async function downloadSelectedRegion() {
+    const val = document.getElementById('regionSelect').value;
+    const templates = getSelectedOfflineTemplates();
+    const box = val === 'current'
+      ? { south: map.getBounds().pad(0.15).getSouth(), west: map.getBounds().pad(0.15).getWest(), north: map.getBounds().pad(0.15).getNorth(), east: map.getBounds().pad(0.15).getEast() }
+      : REGION_BOXES[val];
+    const urls = buildTileUrlsFromBox(box, 11, 14, templates).slice(0, 550);
+    await batchCacheUrls(urls, `✅ Zona regional descargada offline (${urls.length} teselas)`);
+  }
+
+  async function clearOfflineMapCache() {
+    if ('caches' in window) {
+      await caches.delete(TILE_CACHE_NAME);
+      localStorage.removeItem('peninsulaOfflineReady');
+      document.getElementById('offlineProgressBar').style.width = '0%';
+      document.getElementById('offlineProgressLabel').textContent = 'Caché vaciada.';
+      refreshOfflineStats();
+      showToast('🗑️ Mapas offline eliminados');
+    }
+  }
+
+  async function refreshOfflineStats() {
+    if (!('caches' in window)) return;
+    const cache = await caches.open(TILE_CACHE_NAME);
+    const keys = await cache.keys();
+    const ready = localStorage.getItem('peninsulaOfflineReady') === '1' || keys.length > 200;
+    document.getElementById('peninsulaBadge').textContent = ready ? `Lista (${keys.length} teselas)` : `${keys.length} teselas`;
+    const el = document.getElementById('offlineStorageInfo');
+    if (el) el.textContent = `${keys.length} teselas (~${(keys.length * 0.025).toFixed(1)} MB) · ${ready ? 'Offline activo' : 'Pendiente'}`;
+  }
+
+  function openOfflineModal() { refreshOfflineStats(); openModal('offlineModal'); }
+
+  // --- RECORDING, GPX, FAMILY + GOOGLE MAPS, SOS, STOP ---
+  function recordPoint(lat, lon, ele = 65) {
+    if (!isRecording) return;
+    recordedTrack.push({ lat, lon, ele, time: new Date().toISOString() });
+    recordedLine.setLatLngs(recordedTrack.map(p => [p.lat, p.lon]));
+    if (backtrackOn) backtrackLine.setLatLngs(recordedTrack.map(p => [p.lat, p.lon]));
+  }
+
+  function recordIncident(type, title) {
+    const inc = { type, title, lat: userPos[0], lon: userPos[1], time: new Date().toISOString() };
+    recordedIncidents.push(inc);
+    L.marker([inc.lat, inc.lon]).addTo(incidentLayer).bindPopup(`<strong>${title}</strong><br>${new Date(inc.time).toLocaleTimeString()}`);
+  }
+
+  function toggleLiveRecording() {
+    const pill = document.getElementById('livePill');
+    const shape = document.getElementById('recIconShape');
+    if (isRecording) {
+      isRecording = false;
+      pill.textContent = 'DETENIDO';
+      pill.classList.add('paused');
+      shape.className = 'rec-play';
+      recordIncident('STOP_TRACK', 'Fin de grabación en vivo');
+      exportRecordedGPX();
+      showToast('💾 Ruta detenida y archivo .GPX descargado');
+    } else {
+      isRecording = true;
+      pill.textContent = 'EN VIVO';
+      pill.classList.remove('paused');
+      shape.className = 'rec-square';
+      recordIncident('RESUME_TRACK', 'Reanudación de grabación');
+      showToast('● Grabación en vivo reanudada');
+    }
+  }
+
+  function exportRecordedGPX() {
+    const wptsXml = recordedIncidents.map(i =>
+      `  <wpt lat="${i.lat.toFixed(6)}" lon="${i.lon.toFixed(6)}">\n    <time>${i.time}</time>\n    <name>${escapeXml(i.title)}</name>\n    <type>${escapeXml(i.type)}</type>\n  </wpt>`
+    ).join('\n');
+    const trkptsXml = recordedTrack.map(p =>
+      `      <trkpt lat="${p.lat.toFixed(6)}" lon="${p.lon.toFixed(6)}">\n        <ele>${p.ele}</ele>\n        <time>${p.time}</time>\n      </trkpt>`
+    ).join('\n');
+    const gpx = `<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="TrailSync GPX Group Tracker" xmlns="http://www.topografix.com/GPX/1/1">
+  <metadata>
+    <name>${escapeXml(groupName)} - ${new Date().toLocaleDateString()}</name>
+    <desc>Puntos: ${recordedTrack.length} | Incidencias: ${recordedIncidents.length}</desc>
+    <time>${new Date().toISOString()}</time>
+  </metadata>
+${wptsXml}
+  <trk>
+    <name>Recorrido (${userNick})</name>
+    <trkseg>
+${trkptsXml}
+    </trkseg>
+  </trk>
+</gpx>`;
+    const blob = new Blob([gpx], { type: 'application/gpx+xml' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${groupName.replace(/\s+/g,'_')}_${new Date().toISOString().slice(0,16).replace(/[:T]/g,'-')}.gpx`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function escapeXml(str) {
+    return String(str).replace(/[<>&'"]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;',"'":'&apos;','"':'&quot;'}[c]));
+  }
+
+  function getGoogleMapsUrl() {
+    return `https://www.google.com/maps?q=${userPos[0].toFixed(6)},${userPos[1].toFixed(6)}`;
+  }
+
+  function openCurrentInGoogleMaps() {
+    window.open(getGoogleMapsUrl(), '_blank');
+  }
+
+  function startFamilyShare(durationLabel, hours) {
+    familyExpireAt = Date.now() + hours * 3600 * 1000;
+    familyShareUrl = `${window.location.origin}${window.location.pathname}?familia=${groupCode}&exp=${familyExpireAt}&rider=${encodeURIComponent(userNick)}`;
+    navigator.clipboard?.writeText(familyShareUrl);
+    document.getElementById('familyShareBox').style.display = 'block';
+    document.getElementById('familyShareStatus').textContent = `✅ Enlace activo (${durationLabel}) y copiado.`;
+    document.getElementById('family-active-pill').style.display = 'inline-block';
+    broadcastState('POS');
+    recordIncident('FAMILY_SHARE', `Enlace familiar activo (${durationLabel})`);
+  }
+
+  function shareFamilyWhatsApp() {
+    const mapsUrl = getGoogleMapsUrl();
+    const text = `Sigue mi ruta en vivo (${userNick}): ${familyShareUrl}\nVer ubicación actual en Google Maps: ${mapsUrl}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+  }
+
+  function stopFamilyShare() {
+    familyShareUrl = '';
+    familyExpireAt = 0;
+    document.getElementById('familyShareBox').style.display = 'none';
+    document.getElementById('family-active-pill').style.display = 'none';
+  }
+
+  function triggerSOS() {
+    const delayMode = document.querySelector('input[name="familySosDelay"]:checked')?.value || '5min';
+    recordIncident('SOS', '🆘 ALERTA S.O.S. ACTIVADA');
+    broadcastState('SOS');
+    speakAlert('Alerta SOS enviada al grupo');
+    document.getElementById('sosDetails').textContent = `Coordenadas: ${userPos[0].toFixed(5)}, ${userPos[1].toFixed(5)}. El grupo ya ha recibido el aviso al momento.`;
+    const timerBox = document.getElementById('sosFamilyTimerBox');
+    clearInterval(sosTimer);
+    if (delayMode === '5min') {
+      timerBox.style.display = 'block';
+      let secs = 300;
+      document.getElementById('sosCountdownText').textContent = 'Aviso a familia en 05:00';
+      sosTimer = setInterval(() => {
+        secs--;
+        const m = String(Math.floor(secs / 60)).padStart(2, '0');
+        const s = String(secs % 60).padStart(2, '0');
+        document.getElementById('sosCountdownText').textContent = `Aviso a familia en ${m}:${s}`;
+        if (secs <= 0) {
+          clearInterval(sosTimer);
+          document.getElementById('sosCountdownText').textContent = '🚨 Aviso S.O.S. enviado a tu familia.';
+        }
+      }, 1000);
+    } else if (delayMode === 'instant') {
+      timerBox.style.display = 'block';
+      document.getElementById('sosCountdownText').textContent = '🚨 Tu familia ha recibido el S.O.S. al momento.';
+    } else {
+      timerBox.style.display = 'none';
+    }
+    openModal('sosModal');
+  }
+
+  function cancelFamilySos() {
+    clearInterval(sosTimer);
+    document.getElementById('sosCountdownText').textContent = '✅ Cancelado: familia avisada de que estás bien.';
+    recordIncident('SOS_OK', 'Confirmado «Estoy bien»');
+  }
+
+  function registerStop(reason) {
+    recordIncident('STOP_REQUEST', reason);
+    broadcastState('STOP', { reason });
+    closeModal('stopModal');
+    showToast(`📢 ${reason}`);
+    speakAlert(`Parada solicitada: ${reason}`);
+  }
+
+  function toggleWalkie() {
+    walkieActive = !walkieActive;
+    document.getElementById('btnVoice').style.background = walkieActive ? 'rgba(2,132,199,0.28)' : 'transparent';
+    showToast(walkieActive ? '🎙️ Canal PTT abierto' : '🔇 Canal PTT en espera');
+  }
+
+  function toggleBacktrack() {
+    backtrackOn = !backtrackOn;
+    backtrackLine.setLatLngs(backtrackOn ? recordedTrack.map(p => [p.lat, p.lon]) : []);
+    document.getElementById('btnCompass').style.background = backtrackOn ? 'rgba(79,70,229,0.25)' : 'transparent';
+    showToast(backtrackOn ? '↩️ Rastro de regreso activado' : '🧭 Rastro de regreso oculto');
+  }
+
+  function recenterUser() {
+    if (courseUpMode) {
+      map.setView(userPos, Math.max(map.getZoom(), 16));
+      showToast('🧭 Centrado en rumbo de navegación');
+    } else if (Object.keys(peers).length > 0) {
+      fitAllGroupMembers();
+    } else {
+      map.setView(userPos, 16);
+    }
+  }
+
+  function lockScreen() { document.getElementById('lock-overlay').classList.add('open'); }
+  function unlockScreen() { document.getElementById('lock-overlay').classList.remove('open'); }
+
+  function buildInviteUrl() {
+    return `${window.location.origin}${window.location.pathname}?grupo=${groupCode}&nombre=${encodeURIComponent(groupName)}`;
+  }
+
+  function copyInviteLink() {
+    navigator.clipboard?.writeText(buildInviteUrl());
+    showToast(`📋 Enlace del grupo #${groupCode} copiado`);
+  }
+
+  function shareGroupInvite() {
+    const inviteUrl = buildInviteUrl();
+    navigator.clipboard?.writeText(inviteUrl);
+    showToast(`📲 Abriendo WhatsApp para invitar al grupo #${groupCode}`);
+    window.open(`https://wa.me/?text=${encodeURIComponent(`Únete a mi grupo "${groupName}" en TrailSync para vernos todos en el mapa y compartir el track rutable (Código: ${groupCode}): ${inviteUrl}`)}`, '_blank');
+  }
+
+  function openGroupModal() {
+    document.getElementById('groupModalTitle').textContent = `${groupName} (#${groupCode})`;
+    document.getElementById('directInviteUrlInput').value = buildInviteUrl();
+    const totalMembers = Object.keys(peers).length + 1;
+    document.getElementById('statsSummary').textContent =
+      `${totalMembers} conectados en el mapa · ${recordedTrack.length} puntos · ${recordedIncidents.length} incidencias`;
+
+    const allMembers = [
+      { name: userNick + ' (tú)', status: realGpsActive ? 'GPS en vivo' : 'Ubicación activa', coords: userPos },
+      ...Object.values(peers).map(p => ({
+        name: p.nick,
+        status: `${p.status} · a ${calcDistanceLabel(userPos[0], userPos[1], p.lat, p.lon)} · hace ${Math.max(1, Math.round((Date.now() - p.lastSeen)/1000))}s`,
+        coords: [p.lat, p.lon]
+      }))
+    ];
+    document.getElementById('membersContainer').innerHTML = allMembers.map(m =>
+      `<div onclick="map.setView([${m.coords[0]},${m.coords[1]}],16);closeModal('groupModal');" style="padding:9px 10px;background:#18141a;border-radius:10px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;">
+        <div><strong>${m.name}</strong><div style="font-size:11.5px;color:#4ade80;">${m.status}</div></div>
+        <span style="font-size:11px;color:#38bdf8;font-weight:700;">Ver 📍</span>
+      </div>`
+    ).join('');
+    document.getElementById('incidentsContainer').innerHTML = recordedIncidents.length
+      ? recordedIncidents.map(i => `• [${new Date(i.time).toLocaleTimeString()}] ${i.title}`).join('<br>')
+      : 'Sin incidencias registradas todavía.';
+    openModal('groupModal');
+  }
+
+  function handleGPXFile(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const xml = new DOMParser().parseFromString(ev.target.result, 'text/xml');
+      const pts = [...xml.querySelectorAll('trkpt, rtept')].map(el => [
+        parseFloat(el.getAttribute('lat')), parseFloat(el.getAttribute('lon'))
+      ]).filter(p => !isNaN(p[0]) && !isNaN(p[1]));
+      if (pts.length > 1) {
+        const distKm = computeTotalDistanceKm(pts);
+        const compactCoords = downsampleCoords(pts, 280);
+        const routeObj = {
+          id: 'gpx_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+          title: file.name.replace(/\.gpx$/i, ''),
+          author: userNick,
+          color: '#ea580c',
+          distanceKm: Number(distKm.toFixed(2)),
+          coords: compactCoords,
+          ts: Date.now()
+        };
+        applySharedGroupRoute(routeObj, true);
+        fitSharedRouteBounds();
+        recordIncident('GPX_LOADED', `Track GPX compartido: ${file.name} (${routeObj.distanceKm} km)`);
+        showToast(`📂 Track GPX "${routeObj.title}" rutable para todos los miembros del grupo`);
+        speakAlert('Track GPX cargado y compartido con todo el grupo');
+      } else {
+        showToast('⚠️ El archivo GPX no contiene puntos válidos');
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  function enableRealGPS(silent = false) {
+    if (!navigator.geolocation) {
+      if (!silent) showToast('GPS no soportado en este dispositivo');
+      return;
+    }
+    if (realGpsWatch !== null) navigator.geolocation.clearWatch(realGpsWatch);
+    realGpsWatch = navigator.geolocation.watchPosition(pos => {
+      const firstFix = !realGpsActive;
+      realGpsActive = true;
+      const newPos = [pos.coords.latitude, pos.coords.longitude];
+
+      if (typeof pos.coords.heading === 'number' && !isNaN(pos.coords.heading) && (pos.coords.speed || 0) > 0.8) {
+        currentHeadingDeg = Math.round(pos.coords.heading);
+      } else if (prevUserPos && (Math.abs(newPos[0] - prevUserPos[0]) > 0.00003 || Math.abs(newPos[1] - prevUserPos[1]) > 0.00003)) {
+        currentHeadingDeg = Math.round(computeBearing(prevUserPos[0], prevUserPos[1], newPos[0], newPos[1]));
+      }
+      prevUserPos = newPos;
+      userPos = newPos;
+
+      userMarker.setLatLng(userPos);
+      userMarker.setIcon(createRiderIcon(userNick + ' (tú)', '#f59e0b', true));
+
+      if (firstFix || courseUpMode) {
+        map.setView(userPos, Math.max(map.getZoom(), 16));
+      }
+      if (courseUpMode) {
+        applyMapOrientation();
+      }
+
+      recordPoint(userPos[0], userPos[1], Math.round(pos.coords.altitude || 0));
+      broadcastState('POS');
+    }, err => {
+      if (!silent) showToast('Permiso GPS pendiente o denegado: ' + err.message);
+    }, { enableHighAccuracy: true, maximumAge: 2000, timeout: 10000 });
+    if (!silent) {
+      closeModal('settingsModal');
+      showToast('📡 GPS real activado');
+    }
+  }
+
+  function updateNick(val) {
+    userNick = (val || 'Giggo').replace(/\s*\(tú\)\s*/gi, '').trim();
+    localStorage.setItem('trailsync_nick', userNick);
+    userMarker.setIcon(createRiderIcon(userNick + ' (tú)', '#f59e0b', true));
+    broadcastState('POS');
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.style.display = 'block';
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => { t.style.display = 'none'; }, 3800);
+  }
+
+  function openModal(id) { document.getElementById(id).classList.add('open'); }
+  function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+  ensureLibraries();
+</script>
+</body>
+</html>
