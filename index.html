@@ -10,7 +10,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
   <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
-  <title>TrailSync v14.20 — Diagnóstico de Señalización WebRTC y Reintento de Oferta</title>
+  <title>TrailSync v14.22 — Botón Temporal Log Audio WhatsApp en Mapa + Telemetría WebRTC Completa</title>
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
         onerror="this.onerror=null;this.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';" />
@@ -1190,6 +1190,15 @@
       <button id="updateAppBannerBtn" onclick="applyAppUpdate()">
         🔄 Actualizar app <span id="newVersionBadge"></span>
       </button>
+
+      <button type="button" id="btnTempShareAudioLog" onclick="exportAndShareAudioLogViaWhatsApp()"
+              title="Temporal: Enviar log completo de audio/WebRTC por WhatsApp y descargar archivo .txt"
+              style="display:inline-flex;align-items:center;gap:6px;background:#16a34a;color:#ffffff;border:1.5px solid #4ade80;border-radius:999px;padding:6px 12px;font-size:11.5px;font-weight:800;box-shadow:0 4px 14px rgba(0,0,0,0.45);cursor:pointer;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91C21.95 6.45 17.5 2 12.04 2zm5.82 14.01c-.24.68-1.41 1.3-1.95 1.38-.5.08-1.13.11-1.82-.11-.42-.13-.96-.31-1.65-.61-2.9-1.25-4.79-4.17-4.94-4.36-.14-.19-1.18-1.57-1.18-3 0-1.43.75-2.13 1.02-2.42.27-.29.59-.36.79-.36.2 0 .39.01.56.01.18 0 .42-.07.66.5.24.58.82 2.01.89 2.16.07.14.12.31.02.5-.1.19-.15.31-.29.48-.14.17-.31.38-.44.51-.15.14-.3.3-.13.59.17.29.76 1.25 1.63 2.03 1.12 1 2.06 1.31 2.35 1.45.29.15.46.12.63-.07.17-.19.73-.85.92-1.14.19-.29.39-.24.66-.14.27.1 1.7.8 1.99.95.29.14.48.22.55.34.07.12.07.69-.17 1.37z"/>
+        </svg>
+        <span>Log Audio WA</span>
+      </button>
     </div>
 
     <!-- TOP-CENTER: GROUP MEMBER BUBBLES -->
@@ -1817,7 +1826,7 @@
     <h2>Ajustes de ruta y App</h2>
     <div style="background:#18141a;padding:10px 12px;border-radius:12px;margin-bottom:12px;border:1px solid #334155;display:flex;align-items:center;justify-content:space-between;gap:8px;">
       <div>
-        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">14.20.0</span></div>
+        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">14.22.0</span></div>
         <div style="font-size:11px;color:#94a3b8;" id="webVerStatusLabel">Comprobando actualizaciones en la web...</div>
       </div>
       <button class="solid-btn" style="flex:0 0 auto;background:#16a34a;color:#fff;padding:8px 12px;font-size:12px;" onclick="manualCheckForUpdates()">🔄 Buscar / Actualizar</button>
@@ -1849,7 +1858,7 @@
 </div>
 
 <script>
-  const APP_VERSION = '14.20.0';
+  const APP_VERSION = '14.22.0';
   let swWaitingWorker = null;
   let remoteVersionFound = null;
 
@@ -3488,10 +3497,13 @@ function keepOriginalRouteAndNavigate() {
       if (connected.length) {
         const tasks = [];
         connected.forEach(c => {
-          tasks.push(publishSingleMqttAwait(c, leaveTopic, encrypted, { retain: false, qos: 1 }));
-          tasks.push(publishSingleMqttAwait(c, peerTopic, '', { retain: true, qos: 0 }));
+          // Publish LEAVE_GROUP on dedicated leave topic AND overwrite retained peerTopic so brokers never re-emit stale POS
+          tasks.push(publishSingleMqttAwait(c, leaveTopic, encrypted, { retain: true, qos: 1 }));
+          tasks.push(publishSingleMqttAwait(c, peerTopic, encrypted, { retain: true, qos: 1 }));
         });
         await Promise.all(tasks);
+        // Give browser WebSocket buffers 550ms to flush frames over TLS before closing sockets
+        await new Promise(r => setTimeout(r, 550));
       }
     } catch (e) {}
   }
@@ -3514,16 +3526,18 @@ function keepOriginalRouteAndNavigate() {
       await setGroupVoiceMode('off');
     }
     await publishGroupLeaveNotice();
-    returnToLobby();
+    returnToLobby(false);
     showToast('🚪 Has salido del grupo y se ha avisado a los compañeros');
   }
 
-  function returnToLobby() {
+  function returnToLobby(forceClose = true) {
     if (typeof setGroupVoiceMode === 'function' && groupVoiceMode !== 'off') {
       setGroupVoiceMode('off');
     }
     clearActiveGroupSession();
-    mqttClients.forEach(c => { try { c.end(true); } catch (e) {} });
+    mqttClients.forEach(c => {
+      try { c.end(Boolean(forceClose)); } catch (e) {}
+    });
     mqttClients = [];
     clearPeerMarkers();
     document.getElementById('app').classList.remove('active');
@@ -3533,6 +3547,12 @@ function keepOriginalRouteAndNavigate() {
     if (nEl) nEl.value = localStorage.getItem('trailsync_nick') || '';
     if (gEl) gEl.value = localStorage.getItem('trailsync_last_group_name') || '';
   }
+
+  window.addEventListener('pagehide', () => {
+    if (!isFamilySpectator && groupCode && mqttClients.length) {
+      publishGroupLeaveNotice();
+    }
+  });
 
   // Keep user inside the active group when pressing hardware/browser Back button
   window.addEventListener('popstate', () => {
@@ -3648,11 +3668,12 @@ window.addEventListener('offline', () => {
       brokers.forEach((brokerUrl, idx) => {
         try {
           const client = window.mqtt.connect(brokerUrl, {
-            clientId: `ts1420_${myPeerId}_${idx}_${Math.floor(Math.random()*999)}`,
+            clientId: `ts1422_${myPeerId}_${idx}_${Math.floor(Math.random()*999)}`,
             reconnectPeriod: 3000,
             connectTimeout: 8000
           });
           client.on('connect', () => {
+            logAudioDiag('MQTT_CONN', `broker=${brokerUrl} topic=${baseTopic}/#`);
             client.subscribe(`${baseTopic}/#`);
             if (!isFamilySpectator) {
               flushOfflineQueue();
@@ -3751,10 +3772,19 @@ window.addEventListener('offline', () => {
     if (msg.peerId === myPeerId || msg.spectatorOnly) return;
 
     if (msg.kind === 'LEAVE_GROUP') {
+      if (msg.ts && (Date.now() - msg.ts > 60000)) return;
+      const leaveKey = `${msg.peerId}_${msg.ts || 0}`;
+      if (window._seenLeaveKeys && window._seenLeaveKeys.has(leaveKey)) return;
+      if (!window._seenLeaveKeys) window._seenLeaveKeys = new Set();
+      window._seenLeaveKeys.add(leaveKey);
+
+      const hadPeer = Boolean(peers[msg.peerId] || peerMarkers[msg.peerId] || peerVoiceStates[msg.peerId]);
       const departedName = (peers[msg.peerId] && peers[msg.peerId].nick) || msg.nick || 'Un compañero';
       removePeerFromTracking(msg.peerId);
-      showToast(`🚪 ${departedName} ha salido del grupo`);
-      speakAlert(`${departedName} ha salido del grupo`);
+      if (hadPeer || (msg.ts && (Date.now() - msg.ts < 20000))) {
+        showToast(`🚪 ${departedName} ha abandonado el grupo`);
+        speakAlert(`${departedName} ha abandonado el grupo`);
+      }
       return;
     }
 
@@ -3804,8 +3834,15 @@ window.addEventListener('offline', () => {
     let hasWarning = false;
     Object.entries(peers).forEach(([id, p]) => {
       const staleSec = Math.round((Date.now() - p.lastSeen) / 1000);
+      if (staleSec > 90) {
+        const goneNick = p.nick || 'Un compañero';
+        removePeerFromTracking(id);
+        showToast(`🚪 ${goneNick} ha salido o perdido conexión`);
+        speakAlert(`${goneNick} ha salido del grupo`);
+        return;
+      }
       const distKm = haversineKm(userPos[0], userPos[1], p.lat, p.lon);
-      const isDelayed = staleSec > 120 || distKm > 1.5;
+      const isDelayed = staleSec > 45 || distKm > 1.5;
       if (isDelayed) {
         hasWarning = true;
         if (alertEnabled && !peerAlertedIds.has(id)) {
@@ -4209,13 +4246,17 @@ window.addEventListener('offline', () => {
       enterTracker(true);
     }
 
+    let heartbeatTick = 0;
     setInterval(() => {
       updateTelemetryUI();
       checkGroupSeparationAndTimeouts();
       updateGroupRadarLabel();
       updatePeerMarkers();
-      if (isRecording && !isFamilySpectator) {
-        broadcastState('POS');
+      heartbeatTick++;
+      if (!isFamilySpectator && groupCode) {
+        if (isRecording || heartbeatTick % 6 === 0) {
+          broadcastState('POS');
+        }
       }
     }, 2500);
   }
@@ -4710,6 +4751,167 @@ ${trkptsXml}
     if (vadLbl) { vadLbl.textContent = 'CERRADA'; vadLbl.style.color = '#64748b'; }
   }
 
+
+  // --- TEMPORARY COMPREHENSIVE AUDIO / WEBRTC / BLUETOOTH DIAGNOSTIC LOGGER ---
+  const audioDiagLogs = [];
+  function logAudioDiag(tag, detail = '') {
+    try {
+      const now = new Date();
+      const ts = now.toISOString().split('T')[1].replace('Z', '');
+      const line = `[${ts}] [${tag}] ${typeof detail === 'string' ? detail : JSON.stringify(detail)}`;
+      audioDiagLogs.push(line);
+      if (audioDiagLogs.length > 500) audioDiagLogs.shift();
+    } catch (e) {}
+  }
+
+  window.addEventListener('error', (ev) => {
+    logAudioDiag('WINDOW_ERR', `${ev.message || ''} @ ${ev.lineno || 0}:${ev.colno || 0}`);
+  });
+  window.addEventListener('unhandledrejection', (ev) => {
+    logAudioDiag('PROMISE_ERR', String(ev.reason && (ev.reason.message || ev.reason) || 'unknown'));
+  });
+
+  async function buildFullAudioDiagnosticReport() {
+    const lines = [];
+    lines.push('====================================================');
+    lines.push(`TRAILSYNC AUDIO/WEBRTC DIAGNOSTIC LOG (${APP_VERSION})`);
+    lines.push('====================================================');
+    lines.push(`Timestamp: ${new Date().toISOString()}`);
+    lines.push(`UserAgent: ${navigator.userAgent}`);
+    lines.push(`Platform: ${navigator.platform || 'unknown'} | Online: ${navigator.onLine}`);
+    lines.push(`Group: "${groupName}" (#${groupCode}) | Nick: "${userNick}" | myPeerId: ${myPeerId}`);
+    lines.push(`groupVoiceMode: ${groupVoiceMode} | windNoiseGateEnabled: ${windNoiseGateEnabled}`);
+    lines.push(`peers in map (${Object.keys(peers).length}): ${JSON.stringify(peers)}`);
+    lines.push(`peerVoiceStates: ${JSON.stringify(peerVoiceStates)}`);
+
+    // Audio devices enumeration
+    try {
+      if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
+        const devs = await navigator.mediaDevices.enumerateDevices();
+        const audioDevs = devs.filter(d => d.kind === 'audioinput' || d.kind === 'audiooutput');
+        lines.push(`--- Audio Devices (${audioDevs.length}) ---`);
+        audioDevs.forEach((d, i) => {
+          lines.push(`  [${i}] kind=${d.kind} label="${d.label || '(sin permiso/etiqueta)'}" id=${(d.deviceId || '').slice(0, 12)}`);
+        });
+      }
+    } catch (e) {
+      lines.push(`AudioDevices error: ${e.message}`);
+    }
+
+    // Local streams & AudioContext state
+    lines.push('--- Local Audio & WebAudio State ---');
+    lines.push(`voiceAudioCtx: ${voiceAudioCtx ? `state=${voiceAudioCtx.state}, sampleRate=${voiceAudioCtx.sampleRate}` : 'null'}`);
+    if (rawMicStream) {
+      rawMicStream.getAudioTracks().forEach((t, i) => {
+        const st = t.getSettings ? t.getSettings() : {};
+        lines.push(`  rawMicTrack[${i}]: label="${t.label}" enabled=${t.enabled} muted=${t.muted} readyState=${t.readyState} settings=${JSON.stringify(st)}`);
+      });
+    } else {
+      lines.push('  rawMicStream: null');
+    }
+    if (localVoiceStream) {
+      localVoiceStream.getAudioTracks().forEach((t, i) => {
+        lines.push(`  localVoiceTrack[${i}]: label="${t.label}" enabled=${t.enabled} muted=${t.muted} readyState=${t.readyState}`);
+      });
+    } else {
+      lines.push('  localVoiceStream: null');
+    }
+
+    // MQTT brokers state
+    lines.push('--- MQTT Brokers State ---');
+    mqttClients.forEach((c, idx) => {
+      lines.push(`  Broker[${idx}]: connected=${Boolean(c && c.connected)} reconnecting=${Boolean(c && c.reconnecting)} clientId=${c && c.options ? c.options.clientId : 'n/a'}`);
+    });
+
+    // RTCPeerConnections detailed stats & SDP/ICE state
+    lines.push(`--- RTCPeerConnections (${Object.keys(rtcPeers).length}) ---`);
+    for (const [pid, pc] of Object.entries(rtcPeers)) {
+      lines.push(`Peer ${pid}: signalingState=${pc.signalingState} connectionState=${pc.connectionState} iceConnectionState=${pc.iceConnectionState} iceGatheringState=${pc.iceGatheringState}`);
+      lines.push(`  Counters: offers=${voiceOfferCounts[pid]||0} answers=${voiceAnswerCounts[pid]||0} iceSent=${voiceIceSentCounts[pid]||0} iceRecv=${voiceIceRecvCounts[pid]||0}`);
+      lines.push(`  localDesc: ${pc.localDescription ? pc.localDescription.type + ' (' + pc.localDescription.sdp.length + ' chars)' : 'null'}`);
+      lines.push(`  remoteDesc: ${pc.remoteDescription ? pc.remoteDescription.type + ' (' + pc.remoteDescription.sdp.length + ' chars)' : 'null'}`);
+      pc.getSenders().forEach((s, i) => {
+        lines.push(`  Sender[${i}]: track=${s.track ? `${s.track.kind} enabled=${s.track.enabled} muted=${s.track.muted} state=${s.track.readyState}` : 'null'}`);
+      });
+      pc.getReceivers().forEach((r, i) => {
+        lines.push(`  Receiver[${i}]: track=${r.track ? `${r.track.kind} enabled=${r.track.enabled} muted=${r.track.muted} state=${r.track.readyState}` : 'null'}`);
+      });
+      const aEl = remoteAudioEls[pid];
+      if (aEl) {
+        lines.push(`  RemoteAudioEl: paused=${aEl.paused} muted=${aEl.muted} volume=${aEl.volume} readyState=${aEl.readyState} error=${aEl.error ? aEl.error.code : 'none'} hasSrcObj=${Boolean(aEl.srcObject)}`);
+      } else {
+        lines.push('  RemoteAudioEl: null');
+      }
+      try {
+        const stats = await pc.getStats();
+        stats.forEach(rep => {
+          if (rep.type === 'candidate-pair' && (rep.selected || rep.state === 'succeeded' || rep.state === 'in-progress' || rep.state === 'failed')) {
+            lines.push(`  ICE-Pair[${rep.id}]: state=${rep.state} nominated=${rep.nominated} bytesSent=${rep.bytesSent||0} bytesRecv=${rep.bytesReceived||0} rtt=${rep.currentRoundTripTime||'n/a'}`);
+          }
+          if (rep.type === 'local-candidate' || rep.type === 'remote-candidate') {
+            lines.push(`  ${rep.type}: protocol=${rep.protocol} type=${rep.candidateType} addr=${rep.address||rep.ip||''}:${rep.port||''}`);
+          }
+          if (rep.type === 'outbound-rtp' && rep.kind === 'audio') {
+            lines.push(`  OutboundAudio: packetsSent=${rep.packetsSent||0} bytesSent=${rep.bytesSent||0}`);
+          }
+          if (rep.type === 'inbound-rtp' && rep.kind === 'audio') {
+            lines.push(`  InboundAudio: packetsReceived=${rep.packetsReceived||0} bytesReceived=${rep.bytesReceived||0} packetsLost=${rep.packetsLost||0} audioLevel=${rep.audioLevel||'n/a'}`);
+          }
+        });
+      } catch (e) {
+        lines.push(`  getStats error: ${e.message}`);
+      }
+    }
+
+    lines.push('--- Chronological Event Trace ---');
+    audioDiagLogs.forEach(l => lines.push(l));
+    return lines.join('\n');
+  }
+
+  async function exportAndShareAudioLogViaWhatsApp() {
+    showToast('📋 Recopilando log completo de audio...');
+    const reportText = await buildFullAudioDiagnosticReport();
+    const safeNick = (userNick || 'movil').replace(/[^a-zA-Z0-9_-]/g, '_');
+    const fileName = `trailsync-audio-log-${safeNick}-${Date.now()}.txt`;
+
+    // 1. Always download the .txt file locally on the phone so the full unabridged log is saved
+    try {
+      const blob = new Blob([reportText], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 400);
+    } catch (e) {}
+
+    // 2. Try native Web Share API with .txt file first (lets user pick WhatsApp directly and sends the .txt file!)
+    try {
+      const fileObj = new File([reportText], fileName, { type: 'text/plain' });
+      if (navigator.canShare && navigator.canShare({ files: [fileObj] })) {
+        await navigator.share({
+          title: `Log Audio TrailSync (${userNick || 'Móvil'})`,
+          text: `Log diagnóstico audio TrailSync (${userNick || 'Móvil'} - #${groupCode})`,
+          files: [fileObj]
+        });
+        return;
+      }
+    } catch (e) {
+      // If user cancels or file share not supported, fall back to WhatsApp URL with full log text
+    }
+
+    // 3. Fallback: open WhatsApp directly with the diagnostic log text ready to send
+    const waText = reportText.length > 3800
+      ? reportText.slice(0, 1700) + '\n... [RESUMEN - ARCHIVO .TXT DESCARGADO] ...\n' + reportText.slice(-1900)
+      : reportText;
+    const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(waText)}`;
+    window.open(waUrl, '_blank');
+  }
+
   let rxMeterTimerId = null;
   let rxAnalysers = {};
 
@@ -4768,6 +4970,7 @@ ${trkptsXml}
       throw new Error('Navegador sin soporte de micrófono WebRTC');
     }
 
+    logAudioDiag('MIC_REQ', 'Requesting getUserMedia audio');
     rawMicStream = await navigator.mediaDevices.getUserMedia({
       audio: {
         echoCancellation: true,
@@ -4879,6 +5082,7 @@ ${trkptsXml}
     }, 60);
 
     localVoiceStream = dest.stream;
+    logAudioDiag('MIC_OK', `ctx=${voiceAudioCtx.state} sr=${voiceAudioCtx.sampleRate} tracks=${localVoiceStream.getAudioTracks().length}`);
     // Sync local audio track to any peer connection that was already created
     const mTrack = localVoiceStream.getAudioTracks()[0];
     if (mTrack) {
@@ -4986,6 +5190,7 @@ ${trkptsXml}
   function createOrGetRtcConnection(remotePeerId) {
     if (rtcPeers[remotePeerId]) return rtcPeers[remotePeerId];
     const pc = new RTCPeerConnection({ iceServers: RTC_ICE_SERVERS });
+    logAudioDiag('RTC_NEW', `peer=${remotePeerId} hasLocalStream=${Boolean(localVoiceStream)}`);
     rtcPeers[remotePeerId] = pc;
     if (!pendingIceByPeer[remotePeerId]) pendingIceByPeer[remotePeerId] = [];
 
@@ -5001,6 +5206,7 @@ ${trkptsXml}
     pc.onicecandidate = (event) => {
       if (event.candidate) {
         voiceIceSentCounts[remotePeerId] = (voiceIceSentCounts[remotePeerId] || 0) + 1;
+        logAudioDiag('ICE_LOCAL', `to=${remotePeerId} type=${event.candidate.type || ''} proto=${event.candidate.protocol || ''}`);
         sendVoiceSignal(remotePeerId, 'ICE', { candidate: event.candidate.toJSON() });
       }
     };
@@ -5019,16 +5225,20 @@ ${trkptsXml}
         remoteAudioEls[remotePeerId] = audioEl;
       }
       const streamToPlay = (event.streams && event.streams[0]) ? event.streams[0] : new MediaStream([event.track]);
+      logAudioDiag('RTC_ONTRACK', `from=${remotePeerId} trackState=${event.track ? event.track.readyState : 'none'} streams=${event.streams ? event.streams.length : 0}`);
       audioEl.srcObject = streamToPlay;
       attachRemoteAudioLevelMonitor(remotePeerId, streamToPlay);
       audioEl.play().then(() => {
+        logAudioDiag('AUDIO_PLAY_OK', `from=${remotePeerId}`);
         updateVoiceDiagStatus('escuchando en auricular');
-      }).catch(() => {
+      }).catch((err) => {
+        logAudioDiag('AUDIO_PLAY_ERR', `from=${remotePeerId} err=${err && err.message}`);
         updateVoiceDiagStatus('pulsa «Forzar salida audio»');
       });
     };
 
     pc.onconnectionstatechange = () => {
+      logAudioDiag('RTC_CONN_STATE', `peer=${remotePeerId} state=${pc.connectionState} ice=${pc.iceConnectionState}`);
       updateVoiceDiagStatus();
       if (pc.connectionState === 'connected') {
         const nick = (peerVoiceStates[remotePeerId] && peerVoiceStates[remotePeerId].nick) || (peers[remotePeerId] && peers[remotePeerId].nick) || 'Compañero';
@@ -5039,6 +5249,7 @@ ${trkptsXml}
     };
 
     pc.oniceconnectionstatechange = () => {
+      logAudioDiag('RTC_ICE_STATE', `peer=${remotePeerId} ice=${pc.iceConnectionState} gathering=${pc.iceGatheringState}`);
       updateVoiceDiagStatus();
     };
 
@@ -5058,7 +5269,8 @@ ${trkptsXml}
       if (pc.signalingState === 'have-local-offer') {
         // Re-send existing local offer if no answer arrived yet
         if (pc.localDescription) {
-          sendVoiceSignal(remotePeerId, 'OFFER', { sdp: pc.localDescription });
+          logAudioDiag('SIG_SEND_OFFER', `to=${remotePeerId}`);
+      sendVoiceSignal(remotePeerId, 'OFFER', { sdp: pc.localDescription });
           updateVoiceDiagStatus('re-enviando oferta');
         }
         return;
@@ -5075,6 +5287,7 @@ ${trkptsXml}
   }
 
   async function handleIncomingVoiceSignal(msg) {
+    if (msg && msg.peerId !== myPeerId) logAudioDiag('SIG_RECV', `from=${msg.peerId} kind=${msg.signalKind} mode=${msg.voiceMode || ''} target=${msg.targetPeerId || '*'}`);
     if (!msg || msg.peerId === myPeerId) return;
     if (msg.targetPeerId && msg.targetPeerId !== '*' && msg.targetPeerId !== myPeerId) return;
 
@@ -5141,6 +5354,7 @@ ${trkptsXml}
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
         voiceAnswerCounts[fromId] = (voiceAnswerCounts[fromId] || 0) + 1;
+        logAudioDiag('SIG_SEND_ANSWER', `to=${fromId}`);
         sendVoiceSignal(fromId, 'ANSWER', { sdp: pc.localDescription });
         updateVoiceDiagStatus('respuesta enviada');
       } catch (e) {}
@@ -5175,6 +5389,7 @@ ${trkptsXml}
   }
 
   async function setGroupVoiceMode(nextMode) {
+    logAudioDiag('VOICE_MODE', `next=${nextMode} prev=${groupVoiceMode}`);
     if (isFamilySpectator) return;
     if (nextMode === 'off') {
       if (groupVoiceMode !== 'off') {
