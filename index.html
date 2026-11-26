@@ -10,7 +10,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
   <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
-  <title>TrailSync v14.17 — Intercomunicador Bluetooth Fiable (Sin Música + Enrutado A2DP/HFP + WebRTC Directo)</title>
+  <title>TrailSync v14.19 — Visor de Cámara en Vivo para Escanear QR (z-index + Vista Previa Integrada)</title>
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
         onerror="this.onerror=null;this.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';" />
@@ -768,8 +768,7 @@
     .qr-camera-box {
       position: relative;
       width: 100%;
-      aspect-ratio: 1 / 1;
-      max-height: 290px;
+      height: 240px;
       background: #020617;
       border: 2px solid #38bdf8;
       border-radius: 14px;
@@ -780,9 +779,11 @@
       justify-content: center;
     }
     .qr-camera-box video {
+      display: block;
       width: 100%;
       height: 100%;
       object-fit: cover;
+      background: #000;
     }
     .qr-reticle {
       position: absolute;
@@ -1746,7 +1747,7 @@
 </div>
 
 <!-- MODAL: SCAN GROUP QR WITH CAMERA -->
-<div class="modal-backdrop" id="qrScannerModal">
+<div class="modal-backdrop" id="qrScannerModal" style="z-index:5500;">
   <div class="modal-card">
     <h2>📷 Escanear QR del grupo</h2>
     <p id="qrScannerStatusText" style="font-size:12.5px;color:#cbd5e1;margin-bottom:6px;">
@@ -1816,7 +1817,7 @@
     <h2>Ajustes de ruta y App</h2>
     <div style="background:#18141a;padding:10px 12px;border-radius:12px;margin-bottom:12px;border:1px solid #334155;display:flex;align-items:center;justify-content:space-between;gap:8px;">
       <div>
-        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">14.17.0</span></div>
+        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">14.19.0</span></div>
         <div style="font-size:11px;color:#94a3b8;" id="webVerStatusLabel">Comprobando actualizaciones en la web...</div>
       </div>
       <button class="solid-btn" style="flex:0 0 auto;background:#16a34a;color:#fff;padding:8px 12px;font-size:12px;" onclick="manualCheckForUpdates()">🔄 Buscar / Actualizar</button>
@@ -1848,7 +1849,7 @@
 </div>
 
 <script>
-  const APP_VERSION = '14.17.0';
+  const APP_VERSION = '14.19.0';
   let swWaitingWorker = null;
   let remoteVersionFound = null;
 
@@ -3647,7 +3648,7 @@ window.addEventListener('offline', () => {
       brokers.forEach((brokerUrl, idx) => {
         try {
           const client = window.mqtt.connect(brokerUrl, {
-            clientId: `ts1417_${myPeerId}_${idx}_${Math.floor(Math.random()*999)}`,
+            clientId: `ts1419_${myPeerId}_${idx}_${Math.floor(Math.random()*999)}`,
             reconnectPeriod: 3000,
             connectTimeout: 8000
           });
@@ -4578,7 +4579,18 @@ ${trkptsXml}
   const RTC_ICE_SERVERS = [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
-    { urls: 'stun:stun.cloudflare.com:3478' }
+    { urls: 'stun:stun.cloudflare.com:3478' },
+    { urls: 'stun:openrelay.metered.ca:80' },
+    {
+      urls: 'turn:openrelay.metered.ca:80',
+      username: 'openrelayproject',
+      credential: 'openrelayproject'
+    },
+    {
+      urls: 'turn:openrelay.metered.ca:443',
+      username: 'openrelayproject',
+      credential: 'openrelayproject'
+    }
   ];
 
   function toggleVoicePopover(forceState) {
@@ -4708,9 +4720,13 @@ ${trkptsXml}
       if (!voiceAudioCtx) voiceAudioCtx = new AudioCtx();
       if (voiceAudioCtx.state === 'suspended') voiceAudioCtx.resume().catch(() => {});
       const src = voiceAudioCtx.createMediaStreamSource(stream);
+      const rxGain = voiceAudioCtx.createGain();
+      rxGain.gain.value = 2.0;
       const an = voiceAudioCtx.createAnalyser();
       an.fftSize = 256;
-      src.connect(an);
+      src.connect(rxGain);
+      rxGain.connect(an);
+      rxGain.connect(voiceAudioCtx.destination);
       rxAnalysers[peerId] = { an, data: new Uint8Array(an.frequencyBinCount) };
 
       if (!rxMeterTimerId) {
@@ -4863,6 +4879,18 @@ ${trkptsXml}
     }, 60);
 
     localVoiceStream = dest.stream;
+    // Sync local audio track to any peer connection that was already created
+    const mTrack = localVoiceStream.getAudioTracks()[0];
+    if (mTrack) {
+      Object.values(rtcPeers).forEach(pc => {
+        try {
+          const hasSender = pc.getSenders().some(s => s.track && s.track.kind === 'audio');
+          if (!hasSender) {
+            pc.addTrack(mTrack, localVoiceStream);
+          }
+        } catch (e) {}
+      });
+    }
     return localVoiceStream;
   }
 
@@ -4876,7 +4904,7 @@ ${trkptsXml}
     }
     const parts = entries.map(([pid, pc]) => {
       const nick = (peerVoiceStates[pid] && peerVoiceStates[pid].nick) || (peers[pid] && peers[pid].nick) || pid.slice(-4);
-      const state = pc.connectionState || pc.iceConnectionState || 'new';
+      const state = `${pc.connectionState || 'new'}/ice:${pc.iceConnectionState || 'new'}`;
       return `${nick}: ${state}`;
     });
     diagEl.textContent = parts.join(' · ') + (extraNote ? ` (${extraNote})` : '');
@@ -5328,6 +5356,9 @@ ${trkptsXml}
         video: { facingMode: { ideal: 'environment' }, width: { ideal: 720 }, height: { ideal: 720 } },
         audio: false
       });
+      videoEl.setAttribute('playsinline', 'true');
+      videoEl.setAttribute('muted', 'true');
+      videoEl.muted = true;
       videoEl.srcObject = qrCameraStream;
       await videoEl.play();
       qrScannerActive = true;
