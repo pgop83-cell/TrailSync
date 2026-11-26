@@ -10,7 +10,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
   <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
-  <title>TrailSync v14.5 — Descarga Offline Completa de Alta Capacidad (Hasta ~1 GB)</title>
+  <title>TrailSync v14.10 — Recálculo Legal Automático + Navegación Libre</title>
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
         onerror="this.onerror=null;this.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';" />
@@ -564,6 +564,204 @@
     .act-group  { border: 2.5px solid #059669; color: #34d399; }
     .act-center { border: 2.5px solid #7c3aed; color: #a78bfa; }
 
+
+    /* REAL-TIME GROUP VOICE INTERCOM (OPEN CHANNEL + MUTE MIC) */
+    .voice-control-wrap {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      pointer-events: auto;
+    }
+    .circle-action.act-voice.voice-open-live {
+      background: rgba(16, 185, 129, 0.28) !important;
+      border-color: #10b981 !important;
+      color: #6ee7b7 !important;
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25);
+    }
+    .circle-action.act-voice.voice-muted {
+      background: rgba(239, 68, 68, 0.25) !important;
+      border-color: #ef4444 !important;
+      color: #fca5a5 !important;
+    }
+    .voice-status-dot {
+      position: absolute;
+      top: -2px;
+      right: -2px;
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      background: #64748b;
+      border: 2px solid #0f172a;
+      pointer-events: none;
+    }
+    .voice-status-dot.live {
+      background: #10b981;
+      box-shadow: 0 0 8px #10b981;
+    }
+    .voice-status-dot.muted {
+      background: #ef4444;
+    }
+    #voiceIntercomPopover {
+      display: none;
+      position: absolute;
+      left: 0;
+      bottom: 54px;
+      width: 248px;
+      background: rgba(15, 23, 42, 0.97);
+      border: 1.5px solid #0284c7;
+      border-radius: 16px;
+      padding: 10px;
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.6);
+      z-index: 980;
+      flex-direction: column;
+      gap: 7px;
+    }
+    #voiceIntercomPopover.open {
+      display: flex;
+    }
+    .voice-pop-title {
+      font-size: 12px;
+      font-weight: 900;
+      color: #38bdf8;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .voice-pop-sub {
+      font-size: 11px;
+      color: #cbd5e1;
+      line-height: 1.35;
+    }
+    .voice-mode-btn {
+      width: 100%;
+      border: 1px solid #334155;
+      background: #1e293b;
+      color: #f8fafc;
+      border-radius: 11px;
+      padding: 9px 11px;
+      font-size: 12.5px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      text-align: left;
+    }
+    .voice-mode-btn.selected-open {
+      background: rgba(16, 185, 129, 0.22);
+      border-color: #10b981;
+      color: #6ee7b7;
+    }
+    .voice-mode-btn.selected-muted {
+      background: rgba(239, 68, 68, 0.22);
+      border-color: #ef4444;
+      color: #fca5a5;
+    }
+    .voice-mode-btn.selected-off {
+      background: rgba(2, 132, 199, 0.2);
+      border-color: #38bdf8;
+      color: #bae6fd;
+    }
+
+
+    /* PASSIVE FAMILY SPECTATOR MODE (READ-ONLY MAP VIEW, ZERO GROUP INTERACTION) */
+    body.family-spectator-mode #btnVoice,
+    body.family-spectator-mode #voiceControlWrap,
+    body.family-spectator-mode .act-stop,
+    body.family-spectator-mode .act-sos,
+    body.family-spectator-mode .act-comp,
+    body.family-spectator-mode .act-group,
+    body.family-spectator-mode #leftMenuWrapper,
+    body.family-spectator-mode #btnRecToggle,
+    body.family-spectator-mode #headerCodeChip,
+    body.family-spectator-mode #btnHeaderBackLobby,
+    body.family-spectator-mode #btnFamilyHeader,
+    body.family-spectator-mode #btnSettingsHeader,
+    body.family-spectator-mode .telemetry-bar {
+      display: none !important;
+    }
+    .family-spectator-banner {
+      display: none;
+      position: absolute;
+      bottom: 84px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 945;
+      background: rgba(15, 23, 42, 0.94);
+      border: 1px solid #38bdf8;
+      color: #e0f2fe;
+      border-radius: 999px;
+      padding: 6px 14px;
+      font-size: 11.5px;
+      font-weight: 800;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+      white-space: nowrap;
+      pointer-events: none;
+    }
+    body.family-spectator-mode .family-spectator-banner {
+      display: block;
+    }
+
+
+    /* ROUTE LEGAL AUDIT BUTTON & SEGMENT OVERLAY */
+    .legal-check-cta {
+      width: 100%;
+      margin-top: 4px;
+      background: linear-gradient(135deg, #1d4ed8, #0284c7);
+      color: #ffffff;
+      border: 1px solid #38bdf8;
+      border-radius: 9px;
+      padding: 7px 10px;
+      font-size: 11.5px;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      box-shadow: 0 2px 8px rgba(2, 132, 199, 0.35);
+    }
+    .legal-check-cta:disabled {
+      opacity: 0.65;
+      cursor: wait;
+    }
+    .legal-pill-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      margin: 10px 0;
+    }
+    .legal-stat-box {
+      background: #18141a;
+      border-radius: 10px;
+      padding: 8px 6px;
+      text-align: center;
+      border: 1px solid #334155;
+    }
+    .legal-stat-km {
+      font-size: 14px;
+      font-weight: 900;
+      display: block;
+    }
+    .legal-stat-lbl {
+      font-size: 10.5px;
+      color: #cbd5e1;
+      margin-top: 2px;
+      display: block;
+    }
+    .legal-seg-item {
+      background: #18141a;
+      border-left: 4px solid #64748b;
+      border-radius: 9px;
+      padding: 8px 10px;
+      margin-bottom: 6px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .legal-seg-item.seg-red { border-left-color: #ef4444; }
+    .legal-seg-item.seg-amber { border-left-color: #f59e0b; }
+    .legal-seg-item.seg-green { border-left-color: #22c55e; }
+
     /* TRANSPARENT RAIN-LOCK SHIELD (SCREEN REMAINS 100% VISIBLE, ALL TOUCHES BLOCKED EXCEPT 3S HOLD ON RED PADLOCK AT BOTTOM) */
     #rain-lock-shield {
       display: none;
@@ -842,10 +1040,10 @@
 
     <div class="lobby-card">
       <label class="field-label">Tu nombre o indicativo</label>
-      <input type="text" id="lobbyNickInput" class="text-input" value="Giggo" placeholder="Ej. Giggo" />
+      <input type="text" id="lobbyNickInput" class="text-input" value="" placeholder="Escribe tu nombre o indicativo" oninput="cacheLobbyFields()" />
 
       <label class="field-label">Nombre del grupo / salida</label>
-      <input type="text" id="lobbyGroupNameInput" class="text-input" value="Biker Striker" placeholder="Ej. Biker Striker" />
+      <input type="text" id="lobbyGroupNameInput" class="text-input" value="" placeholder="Ej. Ruta Domingo" oninput="cacheLobbyFields()" />
 
       <button class="primary-cta" onclick="createAndEnterGroup()">🚀 Crear nuevo grupo en vivo</button>
     </div>
@@ -868,11 +1066,11 @@
 <div id="app">
   <header>
     <div class="header-left">
-      <button class="top-icon-btn" onclick="returnToLobby()" title="Cambiar de grupo">
+      <button class="top-icon-btn" id="btnHeaderBackLobby" onclick="confirmLeaveGroup()" title="Salir de este grupo">
         <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
       </button>
-      <span class="header-title" id="groupNameHeader">Biker Striker</span>
-      <span class="code-chip" id="headerCodeChip" onclick="shareGroupInvite()" title="Toca para invitar amigos">#BS482X</span>
+      <span class="header-title" id="groupNameHeader">Ruta en vivo</span>
+      <span class="code-chip" id="headerCodeChip" onclick="shareGroupInvite()" title="Toca para invitar amigos">#------</span>
     </div>
 
     <div class="header-icons">
@@ -890,7 +1088,7 @@
         <svg width="20" height="20" fill="#fbbf24" viewBox="0 0 24 24"><path d="M12 2a5 5 0 00-5 5v3H6a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2v-8a2 2 0 00-2-2h-1V7a5 5 0 00-5-5zm-3 5a3 3 0 116 0v3H9V7z"/></svg>
       </button>
 
-      <button class="top-icon-btn" onclick="openModal('familyModal')" title="Compartir con la familia y Google Maps">
+      <button class="top-icon-btn" id="btnFamilyHeader" onclick="openModal('familyModal')" title="Compartir con la familia y Google Maps">
         <svg width="21" height="21" fill="none" stroke="#fb7185" stroke-width="2.1" viewBox="0 0 24 24">
           <circle cx="7" cy="6" r="2.5"/><circle cx="17" cy="6" r="2.5"/><circle cx="12" cy="11" r="2"/>
           <path d="M3 19v-2a4 4 0 014-4h1M21 19v-2a4 4 0 00-4-4h-1M8.5 20v-2.5a3.5 3.5 0 017 0V20"/>
@@ -903,7 +1101,7 @@
         </svg>
       </button>
 
-      <button class="top-icon-btn" onclick="openModal('settingsModal')" title="Ajustes y versión">
+      <button class="top-icon-btn" id="btnSettingsHeader" onclick="openModal('settingsModal')" title="Ajustes y versión">
         <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.1" viewBox="0 0 24 24">
           <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l-.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9c.26.6.85 1 1.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
         </svg>
@@ -987,6 +1185,9 @@
             <button class="mini-pill-btn" onclick="closeQuickMenu();exportPlannedRouteAsGPX()" title="Guardar GPX de esta ruta">GPX</button>
             <button class="mini-pill-btn" style="color:#f87171;" onclick="closeQuickMenu();clearSharedRoute()" title="Quitar ruta">✕</button>
           </div>
+          <button type="button" class="legal-check-cta" id="btnCheckRouteLegal" onclick="closeQuickMenu();checkActiveRouteLegality(true)">
+            ⚖️ Comprobar ruta legal
+          </button>
         </div>
 
         <button class="menu-item-btn mi-route" onclick="closeQuickMenu();openRoutePlannerForCenter()">
@@ -1024,6 +1225,13 @@
       <button class="zoom-btn" onclick="registerManualZoomOverride();map.zoomOut()">−</button>
     </div>
 
+    <div class="family-spectator-banner" id="familySpectatorBanner">👁️ Vista familiar en directo (solo lectura)</div>
+
+    <button type="button" id="floatingLegalCheckPill" onclick="checkActiveRouteLegality(true)"
+            style="display:none;position:absolute;bottom:78px;left:50%;transform:translateX(-50%);z-index:942;background:rgba(15,23,42,0.95);color:#38bdf8;border:1.5px solid #0284c7;border-radius:999px;padding:6px 14px;font-size:11.5px;font-weight:800;box-shadow:0 4px 14px rgba(0,0,0,0.45);cursor:pointer;white-space:nowrap;">
+      ⚖️ Comprobar ruta legal
+    </button>
+
     <!-- LIVE TELEMETRY BAR -->
     <div class="telemetry-bar" onclick="openGroupModal()" title="Telemetría en vivo de la salida">
       <div class="telem-cell">
@@ -1050,11 +1258,53 @@
     <!-- BOTTOM 6 UNIFORM CIRCULAR TRANSPARENT COLORED ICONS (3 LEFT + 3 RIGHT) -->
     <div class="bottom-actions">
       <div class="bottom-cluster">
-        <button class="circle-action act-voice" id="btnVoice" onclick="toggleWalkie()" title="Walkie-Talkie PTT">
-          <svg fill="none" stroke="currentColor" stroke-width="2.3" viewBox="0 0 24 24">
-            <rect x="9" y="2" width="6" height="11" rx="3"/><path d="M5 10a7 7 0 0014 0M12 19v3M8 22h8"/>
-          </svg>
-        </button>
+        <div class="voice-control-wrap" id="voiceControlWrap">
+          <div id="voiceIntercomPopover">
+            <div class="voice-pop-title">
+              <span>🎧 Intercomunicador Grupo</span>
+              <span id="voicePeersBadge" style="font-size:10.5px;color:#94a3b8;">0 en voz</span>
+            </div>
+            <div class="voice-pop-sub" id="voiceStatusSub">Pulsa «Canal abierto» para hablar y escuchar en tiempo real con el grupo.</div>
+
+            <button type="button" class="voice-mode-btn" id="btnVoiceModeOpen" onclick="setGroupVoiceMode('open')">
+              <span>🎙️ Canal abierto (Tiempo real)</span>
+              <span id="badgeVoiceOpen"></span>
+            </button>
+
+            <button type="button" class="voice-mode-btn" id="btnVoiceModeMute" onclick="setGroupVoiceMode('muted')">
+              <span>🔇 Silenciar micro (Solo escuchar)</span>
+              <span id="badgeVoiceMute"></span>
+            </button>
+
+            <button type="button" class="voice-mode-btn" id="btnVoiceModeOff" onclick="setGroupVoiceMode('off')">
+              <span>📴 Salir del canal de voz</span>
+              <span id="badgeVoiceOff">✓</span>
+            </button>
+
+            <div style="background:#0f172a;border:1px solid #334155;border-radius:10px;padding:8px 9px;margin-top:2px;">
+              <label style="display:flex;align-items:center;justify-content:space-between;gap:6px;font-size:11.5px;font-weight:800;color:#e2e8f0;cursor:pointer;">
+                <span>🌬️ Filtro viento casco + Puerta voz</span>
+                <input type="checkbox" id="windNoiseGateToggle" checked onchange="toggleWindNoiseGate(this.checked)" />
+              </label>
+              <div style="display:flex;align-items:center;gap:6px;margin-top:6px;">
+                <span style="font-size:10px;color:#94a3b8;">Voz:</span>
+                <div style="flex:1;height:6px;background:#1e293b;border-radius:999px;overflow:hidden;">
+                  <div id="micLevelMeterFill" style="height:100%;width:0%;background:#10b981;transition:width 0.08s linear;"></div>
+                </div>
+                <span id="vadGateBadge" style="font-size:9.5px;font-weight:800;color:#64748b;">CERRADA</span>
+              </div>
+            </div>
+
+            <div id="remoteAudioContainer" style="display:none;"></div>
+          </div>
+
+          <button class="circle-action act-voice" id="btnVoice" onclick="handleVoiceButtonTap(event)" title="Voz en grupo: Canal abierto / Silenciar micro">
+            <svg id="btnVoiceIconSvg" fill="none" stroke="currentColor" stroke-width="2.3" viewBox="0 0 24 24">
+              <rect x="9" y="2" width="6" height="11" rx="3"/><path d="M5 10a7 7 0 0014 0M12 19v3M8 22h8"/>
+            </svg>
+            <span class="voice-status-dot" id="voiceStatusDot"></span>
+          </button>
+        </div>
 
         <button class="circle-action act-stop" onclick="openModal('stopModal')" title="Pedir parada">
           <svg fill="currentColor" viewBox="0 0 24 24">
@@ -1356,6 +1606,11 @@
       <button class="solid-btn" style="background:#334155;color:#fff;" onclick="spawnSimulatedFriend()">+ Amigo test</button>
     </div>
 
+    <div style="display:flex;gap:6px;margin-bottom:10px;">
+      <button type="button" class="solid-btn" style="flex:1;background:#10b981;color:#052e16;padding:9px;font-size:12.5px;" onclick="setGroupVoiceMode('open');openGroupModal();">🎙️ Canal abierto</button>
+      <button type="button" class="solid-btn" style="flex:1;background:#ef4444;color:#fff;padding:9px;font-size:12.5px;" onclick="setGroupVoiceMode('muted');openGroupModal();">🔇 Silenciar micro</button>
+      <button type="button" class="solid-btn" style="flex:0 0 auto;background:#334155;color:#f8fafc;padding:9px 11px;font-size:12.5px;" onclick="setGroupVoiceMode('off');openGroupModal();">📴</button>
+    </div>
     <div id="membersContainer" style="margin-bottom:12px;"></div>
     <div style="font-weight:700;font-size:13px;margin-bottom:6px;">Incidencias y chinchetas registradas:</div>
     <div id="incidentsContainer" style="font-size:12px;color:#cbd5e1;max-height:110px;overflow-y:auto;"></div>
@@ -1366,20 +1621,70 @@
   </div>
 </div>
 
+<!-- MODAL: ROUTE LEGAL AUDIT (BY SEGMENTS) -->
+<div class="modal-backdrop" id="routeLegalModal">
+  <div class="modal-card">
+    <h2>⚖️ Comprobación legal del trayecto</h2>
+    <p id="routeLegalSummaryText" style="font-size:12.5px;color:#cbd5e1;margin-bottom:8px;">
+      Analizando caminos, pistas forestales, vías pecuarias y espacios protegidos...
+    </p>
+
+    <div class="legal-pill-row">
+      <div class="legal-stat-box" style="border-color:#22c55e;">
+        <span class="legal-stat-km" style="color:#4ade80;" id="legalGreenKm">0.0 km</span>
+        <span class="legal-stat-lbl">🟢 Sin restricción</span>
+      </div>
+      <div class="legal-stat-box" style="border-color:#f59e0b;">
+        <span class="legal-stat-km" style="color:#fbbf24;" id="legalAmberKm">0.0 km</span>
+        <span class="legal-stat-lbl">🟠 Precaución / Protegido</span>
+      </div>
+      <div class="legal-stat-box" style="border-color:#ef4444;">
+        <span class="legal-stat-km" style="color:#f87171;" id="legalRedKm">0.0 km</span>
+        <span class="legal-stat-lbl">🔴 Prohibido / Restringido</span>
+      </div>
+    </div>
+
+    <div id="routeLegalSegmentsList" style="max-height:220px;overflow-y:auto;margin-bottom:10px;"></div>
+
+    <div style="background:#18141a;border:1px solid #334155;border-radius:10px;padding:8px 10px;font-size:11px;color:#94a3b8;line-height:1.4;">
+      ⚠️ <strong>Aviso normativo:</strong> Cruce automático con cartografía pública OpenStreetMap (accesos a motor, vías pecuarias y Red Natura 2000 / espacios protegidos). Respeta siempre la señalización física al inicio de cada pista y las restricciones autonómicas por incendios o ancho de vía.
+    </div>
+
+    <div id="legalDecisionActions" style="display:flex;flex-direction:column;gap:7px;margin-top:11px;">
+      <button type="button" class="solid-btn" id="btnRecalculateLegalRoute"
+              style="display:none;width:100%;background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;border:1px solid #4ade80;padding:10px 12px;font-size:13px;"
+              onclick="recalculateLegalRouteAvoidingRestricted()">
+        🟢 Recalcular ruta legal (evitar tramos restringidos)
+      </button>
+
+      <button type="button" class="solid-btn" id="btnKeepOriginalRouteAnyway"
+              style="display:none;width:100%;background:#7c2d12;color:#ffedd5;border:1px solid #f97316;padding:9px 12px;font-size:12.5px;"
+              onclick="keepOriginalRouteAndNavigate()">
+        🏍️ Mantener trayecto y navegar igualmente
+      </button>
+    </div>
+
+    <div class="btn-row" style="margin-top:8px;">
+      <button class="solid-btn" style="background:#0284c7;color:#fff;" onclick="toggleLegalOverlayVisibility()" id="btnToggleLegalLines">👁️ Ocultar colores en mapa</button>
+      <button class="solid-btn" style="background:#334155;color:#fff;" onclick="closeModal('routeLegalModal')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: SETTINGS + APP UPDATE CHECK + GROUP ALERTS -->
 <div class="modal-backdrop" id="settingsModal">
   <div class="modal-card">
     <h2>Ajustes de ruta y App</h2>
     <div style="background:#18141a;padding:10px 12px;border-radius:12px;margin-bottom:12px;border:1px solid #334155;display:flex;align-items:center;justify-content:space-between;gap:8px;">
       <div>
-        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">14.5.0</span></div>
+        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">14.10.0</span></div>
         <div style="font-size:11px;color:#94a3b8;" id="webVerStatusLabel">Comprobando actualizaciones en la web...</div>
       </div>
       <button class="solid-btn" style="flex:0 0 auto;background:#16a34a;color:#fff;padding:8px 12px;font-size:12px;" onclick="manualCheckForUpdates()">🔄 Buscar / Actualizar</button>
     </div>
 
     <label style="font-size:12px;color:#94a3b8;">Tu indicativo en el mapa</label>
-    <input id="nickInput" value="Giggo (tú)" style="width:100%;padding:10px;border-radius:10px;border:1px solid #475569;background:#161b26;color:#fff;margin:6px 0 12px;" onchange="updateNick(this.value)" />
+    <input id="nickInput" value="" placeholder="Tu indicativo en el mapa" style="width:100%;padding:10px;border-radius:10px;border:1px solid #475569;background:#161b26;color:#fff;margin:6px 0 12px;" onchange="updateNick(this.value)" />
 
     <label style="display:flex;align-items:center;gap:8px;font-size:13.5px;margin-bottom:10px;cursor:pointer;">
       <input type="checkbox" id="voiceAlertsToggle" checked /> 🔊 Avisos de voz para intercomunicador
@@ -1404,7 +1709,7 @@
 </div>
 
 <script>
-  const APP_VERSION = '14.5.0';
+  const APP_VERSION = '14.10.0';
   let swWaitingWorker = null;
   let remoteVersionFound = null;
 
@@ -1852,9 +2157,10 @@
   let realGpsWatch = null;
   let backtrackOn = false;
   let walkieActive = false;
-  let groupCode = 'BS482X';
-  let groupName = 'Biker Striker';
-  let userNick = 'Giggo';
+  let isFamilySpectator = false;
+  let groupCode = localStorage.getItem('trailsync_active_group_code') || '';
+  let groupName = localStorage.getItem('trailsync_active_group_name') || localStorage.getItem('trailsync_last_group_name') || '';
+  let userNick = localStorage.getItem('trailsync_nick') || '';
   let myPeerId = localStorage.getItem('trailsync_peer_id') || ('peer_' + Math.random().toString(36).slice(2, 10));
   localStorage.setItem('trailsync_peer_id', myPeerId);
 
@@ -1908,11 +2214,25 @@
   const familyExpParam = Number(urlParams.get('exp') || 0);
   const familyRiderParam = urlParams.get('rider');
 
+  function cacheLobbyFields() {
+    const nEl = document.getElementById('lobbyNickInput');
+    const gEl = document.getElementById('lobbyGroupNameInput');
+    if (nEl && nEl.value.trim()) localStorage.setItem('trailsync_nick', nEl.value.trim());
+    if (gEl && gEl.value.trim()) localStorage.setItem('trailsync_last_group_name', gEl.value.trim());
+  }
+
+  (function restoreCachedLobbyFields() {
+    const savedNick = localStorage.getItem('trailsync_nick') || '';
+    const savedGName = localStorage.getItem('trailsync_last_group_name') || '';
+    const nEl = document.getElementById('lobbyNickInput');
+    const gEl = document.getElementById('lobbyGroupNameInput');
+    if (nEl) nEl.value = savedNick;
+    if (gEl) gEl.value = savedGName;
+  })();
+
   if (invitedCode) {
     document.getElementById('lobbyJoinCodeInput').value = invitedCode.toUpperCase();
     document.getElementById('inviteBanner').style.display = 'block';
-    const savedNick = localStorage.getItem('trailsync_nick');
-    if (savedNick) document.getElementById('lobbyNickInput').value = savedNick;
   }
 
   function haversineKm(lat1, lon1, lat2, lon2) {
@@ -2018,11 +2338,454 @@
     placeDestinationPin(endPt[0], endPt[1], false);
 
     const distKm = routeObj.distanceKm || computeTotalDistanceKm(plannedCoords);
+    clearLegalOverlay();
     document.getElementById('sharedRouteTitle').textContent = `🧭 ${routeObj.title} (${routeObj.author})`;
     document.getElementById('sharedRouteStats').textContent = `${distKm.toFixed(1)} km · Activa en mapa`;
     document.getElementById('sharedRouteMenuCard').classList.add('visible');
+    const legalPill = document.getElementById('floatingLegalCheckPill');
+    if (legalPill && !isFamilySpectator) {
+      legalPill.style.display = 'block';
+      legalPill.textContent = '⚖️ Comprobar ruta legal';
+    }
 
     if (broadcastToGroup) publishGroupRoute(routeObj);
+  }
+
+// --- ROUTE LEGALITY CHECKER (OSM OVERPASS: MOTOR ACCESS, VIAS PECUARIAS, PROTECTED AREAS) ---
+  let legalOverlayLayer = null;
+  let legalOverlayVisible = true;
+  let lastLegalAuditResult = null;
+
+  function clearLegalOverlay() {
+    lastLegalAuditResult = null;
+    legalOverlayVisible = true;
+    if (legalOverlayLayer) legalOverlayLayer.clearLayers();
+    const btn = document.getElementById('btnCheckRouteLegal');
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = '⚖️ Comprobar ruta legal';
+    }
+  }
+
+  function toggleLegalOverlayVisibility() {
+    if (!legalOverlayLayer || !map) return;
+    legalOverlayVisible = !legalOverlayVisible;
+    const btn = document.getElementById('btnToggleLegalLines');
+    if (legalOverlayVisible) {
+      legalOverlayLayer.addTo(map);
+      if (btn) btn.textContent = '👁️ Ocultar colores en mapa';
+    } else {
+      map.removeLayer(legalOverlayLayer);
+      if (btn) btn.textContent = '👁️ Mostrar colores en mapa';
+    }
+  }
+
+  function sampleRouteForLegalAudit(coords, maxSamples = 55) {
+    if (!coords || coords.length < 2) return [];
+    const totalKm = computeTotalDistanceKm(coords);
+    const stepKm = Math.max(0.25, totalKm / maxSamples);
+    const sampled = [coords[0]];
+    let acc = 0;
+    for (let i = 1; i < coords.length; i++) {
+      const d = haversineKm(coords[i - 1][0], coords[i - 1][1], coords[i][0], coords[i][1]);
+      acc += d;
+      if (acc >= stepKm || i === coords.length - 1) {
+        sampled.push(coords[i]);
+        acc = 0;
+      }
+    }
+    return sampled;
+  }
+
+  function pointToSegmentDistMeters(lat, lon, aLat, aLon, bLat, bLon) {
+    const cosLat = Math.cos(lat * Math.PI / 180);
+    const px = lon * 111320 * cosLat, py = lat * 110540;
+    const ax = aLon * 111320 * cosLat, ay = aLat * 110540;
+    const bx = bLon * 111320 * cosLat, by = bLat * 110540;
+    const dx = bx - ax, dy = by - ay;
+    const lenSq = dx * dx + dy * dy;
+    let t = lenSq > 0 ? ((px - ax) * dx + (py - ay) * dy) / lenSq : 0;
+    t = Math.max(0, Math.min(1, t));
+    const projX = ax + t * dx, projY = ay + t * dy;
+    return Math.hypot(px - projX, py - projY);
+  }
+
+  function pointInPolygon(lat, lon, ring) {
+    let inside = false;
+    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+      const xi = ring[i].lon, yi = ring[i].lat;
+      const xj = ring[j].lon, yj = ring[j].lat;
+      const intersect = ((yi > lat) !== (yj > lat)) && (lon < (xj - xi) * (lat - yi) / ((yj - yi) || 1e-12) + xi);
+      if (intersect) inside = !inside;
+    }
+    return inside;
+  }
+
+  function classifyOsmTagsForTrail(tags, inProtectedAreaName) {
+    if (!tags) {
+      if (inProtectedAreaName) {
+        return { level: 'amber', reason: `Espacio protegido (${inProtectedAreaName}) · verificar regulación` };
+      }
+      return { level: 'green', reason: 'Vía sin restricciones registradas' };
+    }
+
+    const hw = tags.highway || '';
+    const mv = (tags.motor_vehicle || '').toLowerCase();
+    const mc = (tags.motorcycle || '').toLowerCase();
+    const acc = (tags.access || '').toLowerCase();
+    const desig = (tags.designation || '').toLowerCase();
+    const nameLower = (tags.name || '').toLowerCase();
+
+    // 1. Explicit prohibition / non-motorized paths / vias pecuarias
+    if (['no', 'private', 'forestry', 'agricultural', 'customers', 'delivery'].includes(mv) ||
+        ['no', 'private'].includes(mc) ||
+        ['no', 'private'].includes(acc)) {
+      return {
+        level: 'red',
+        reason: `Acceso motor restringido (${tags.name || hw || 'vía'}) · ${mv ? 'motor_vehicle=' + mv : (mc ? 'motorcycle=' + mc : 'access=' + acc)}`
+      };
+    }
+
+    if (['footway', 'path', 'bridleway', 'cycleway', 'pedestrian', 'steps'].includes(hw)) {
+      return {
+        level: 'red',
+        reason: `Sendero / vía no motorizada (${hw}${tags.name ? ': ' + tags.name : ''})`
+      };
+    }
+
+    if (desig.includes('cañada') || desig.includes('cordel') || desig.includes('vereda') || desig.includes('colada') ||
+        nameLower.includes('cañada real') || nameLower.includes('vía pecuaria')) {
+      return {
+        level: 'red',
+        reason: `Vía pecuaria (${tags.name || tags.designation}) · circulación a motor restringida`
+      };
+    }
+
+    // 2. Caution: Protected natural area or forest track subject to regional rules
+    if (inProtectedAreaName) {
+      return {
+        level: 'amber',
+        reason: `Dentro de espacio protegido (${inProtectedAreaName}) · ${tags.name || hw || 'tramo'}`
+      };
+    }
+
+    if (hw === 'track') {
+      const grade = tags.tracktype ? ` (${tags.tracktype})` : '';
+      return {
+        level: 'amber',
+        reason: `Pista forestal/agrícola${grade}${tags.name ? ': ' + tags.name : ''} · comprobar ancho y normativa autonómica`
+      };
+    }
+
+    return {
+      level: 'green',
+      reason: `Carretera / camino abierto (${tags.name || hw || 'vía pública'})`
+    };
+  }
+
+function keepOriginalRouteAndNavigate() {
+    closeModal('routeLegalModal');
+    const pill = document.getElementById('floatingLegalCheckPill');
+    if (pill && lastLegalAuditResult && lastLegalAuditResult.redKm > 0.05) {
+      pill.textContent = `⚠️ Ruta original activa (${lastLegalAuditResult.redKm.toFixed(1)} km restr.)`;
+    }
+    showToast('🏍️ Trayecto original mantenido. Navegación activa.');
+  }
+
+  async function recalculateLegalRouteAvoidingRestricted() {
+    if (!plannedCoords || plannedCoords.length < 2) {
+      return showToast('No hay ningún trayecto activo para recalcular');
+    }
+
+    const btnRecalc = document.getElementById('btnRecalculateLegalRoute');
+    if (btnRecalc) {
+      btnRecalc.disabled = true;
+      btnRecalc.textContent = '⏳ Recalculando alternativa legal por vías abiertas...';
+    }
+
+    const startPt = plannedCoords[0];
+    const endPt = plannedCoords[plannedCoords.length - 1];
+    const startLon = startPt[1].toFixed(6), startLat = startPt[0].toFixed(6);
+    const endLon = endPt[1].toFixed(6), endLat = endPt[0].toFixed(6);
+
+    // Build BRouter `nogos` list from detected RED (restricted) segments to force detour around illegal paths
+    const nogoItems = [];
+    if (lastLegalAuditResult && Array.isArray(lastLegalAuditResult.segments)) {
+      lastLegalAuditResult.segments
+        .filter(s => s.level === 'red' && Array.isArray(s.coords) && s.coords.length >= 2)
+        .slice(0, 18)
+        .forEach(s => {
+          const mid = s.coords[Math.floor(s.coords.length / 2)];
+          // BRouter nogo format: lon,lat,radius_meters
+          nogoItems.push(`${mid[1].toFixed(5)},${mid[0].toFixed(5)},220`);
+        });
+    }
+    const nogosParam = nogoItems.length ? `&nogos=${encodeURIComponent(nogoItems.join('|'))}` : '';
+
+    let newCoords = null;
+    let newDistKm = 0;
+
+    // Try BRouter motorized profiles that respect motor_vehicle access & exclude footway/path/bridleway, plus nogos on illegal segments
+    const legalProfiles = ['moped', 'car-eco', 'car-fast'];
+    for (const bProf of legalProfiles) {
+      try {
+        const brouterUrl = `https://brouter.de/brouter?lonlats=${startLon},${startLat}|${endLon},${endLat}&profile=${bProf}${nogosParam}&alternativeidx=0&format=geojson`;
+        const resp = await fetch(brouterUrl);
+        if (resp.ok) {
+          const geo = await resp.json();
+          const feat = geo.features && geo.features[0];
+          if (feat && feat.geometry && Array.isArray(feat.geometry.coordinates) && feat.geometry.coordinates.length >= 2) {
+            newCoords = feat.geometry.coordinates.map(c => [c[1], c[0]]);
+            if (feat.properties && feat.properties['track-length']) {
+              newDistKm = Number(feat.properties['track-length']) / 1000;
+            }
+            break;
+          }
+        }
+      } catch (e) {}
+    }
+
+    // Fallback to OSRM public motorized road/track router if BRouter fails with nogos
+    if (!newCoords || newCoords.length < 2) {
+      try {
+        const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${startLon},${startLat};${endLon},${endLat}?overview=full&geometries=geojson`;
+        const resp2 = await fetch(osrmUrl);
+        if (resp2.ok) {
+          const data2 = await resp2.json();
+          const r = data2.routes && data2.routes[0];
+          if (r && r.geometry && Array.isArray(r.geometry.coordinates) && r.geometry.coordinates.length >= 2) {
+            newCoords = r.geometry.coordinates.map(c => [c[1], c[0]]);
+            newDistKm = (r.distance || 0) / 1000;
+          }
+        }
+      } catch (e) {}
+    }
+
+    if (btnRecalc) {
+      btnRecalc.disabled = false;
+    }
+
+    if (!newCoords || newCoords.length < 2) {
+      showToast('⚠️ No se encontró una alternativa motorizada libre entre esos puntos');
+      return;
+    }
+
+    if (!newDistKm) newDistKm = computeTotalDistanceKm(newCoords);
+    const compactCoords = simplifyRoutePreservingTurns(newCoords, 4500);
+    const baseTitle = (activeSharedRoute && activeSharedRoute.title)
+      ? activeSharedRoute.title.replace(/\s*\(Alternativa legal\)$/i, '')
+      : 'Trayecto';
+
+    const legalRouteObj = {
+      id: 'rt_legal_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+      title: `${baseTitle} (Alternativa legal)`,
+      author: userNick,
+      color: '#16a34a',
+      profileKey: 'road_curvy',
+      distanceKm: Number(newDistKm.toFixed(2)),
+      coords: compactCoords,
+      ts: Date.now()
+    };
+
+    applySharedGroupRoute(legalRouteObj, true);
+    fitSharedRouteBounds();
+    recordIncident('LEGAL_REROUTE', `Ruta recalculada por vías abiertas (${legalRouteObj.distanceKm} km)`);
+    showToast(`🟢 Alternativa recalculada (${legalRouteObj.distanceKm} km). Verificando tramos...`);
+    await checkActiveRouteLegality(true);
+  }
+
+  async function checkActiveRouteLegality(openReportModal = true) {
+    if (!plannedCoords || plannedCoords.length < 2) {
+      return showToast('Primero genera una ruta o carga un archivo GPX');
+    }
+
+    const btn = document.getElementById('btnCheckRouteLegal');
+    const pill = document.getElementById('floatingLegalCheckPill');
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Analizando legalidad...'; }
+    if (pill) { pill.textContent = '⏳ Comprobando legalidad...'; }
+
+    try {
+      const sampled = sampleRouteForLegalAudit(plannedCoords, 55);
+      const bounds = L.latLngBounds(sampled).pad(0.08);
+      const s = bounds.getSouth().toFixed(5), w = bounds.getWest().toFixed(5);
+      const n = bounds.getNorth().toFixed(5), e = bounds.getEast().toFixed(5);
+
+      const overpassQuery = `[out:json][timeout:18];(
+        way["highway"](${s},${w},${n},${e});
+        way["boundary"="protected_area"](${s},${w},${n},${e});
+        way["leisure"="nature_reserve"](${s},${w},${n},${e});
+      );out body geom;`;
+
+      const endpoints = [
+        'https://overpass-api.de/api/interpreter',
+        'https://overpass.kumi.systems/api/interpreter'
+      ];
+
+      let osmElements = null;
+      for (const ep of endpoints) {
+        try {
+          const resp = await fetch(ep, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+            body: 'data=' + encodeURIComponent(overpassQuery)
+          });
+          if (resp.ok) {
+            const json = await resp.json();
+            if (json && Array.isArray(json.elements)) {
+              osmElements = json.elements;
+              break;
+            }
+          }
+        } catch (err) {}
+      }
+
+      if (!osmElements) {
+        throw new Error('No se pudo consultar la cartografía pública (revisa tu conexión)');
+      }
+
+      const highwayWays = osmElements.filter(el => el.type === 'way' && el.tags && el.tags.highway && Array.isArray(el.geometry) && el.geometry.length >= 2);
+      const protectedPolys = osmElements.filter(el => el.type === 'way' && el.tags && (el.tags.boundary === 'protected_area' || el.tags.leisure === 'nature_reserve') && Array.isArray(el.geometry) && el.geometry.length >= 4);
+
+      // Classify each sampled segment
+      const rawSegments = [];
+      for (let i = 0; i < sampled.length - 1; i++) {
+        const p1 = sampled[i], p2 = sampled[i + 1];
+        const midLat = (p1[0] + p2[0]) / 2;
+        const midLon = (p1[1] + p2[1]) / 2;
+        const segKm = haversineKm(p1[0], p1[1], p2[0], p2[1]);
+
+        let protectedName = null;
+        for (const poly of protectedPolys) {
+          if (pointInPolygon(midLat, midLon, poly.geometry)) {
+            protectedName = poly.tags.name || 'Espacio Natural Protegido';
+            break;
+          }
+        }
+
+        let bestWay = null;
+        let bestDistM = 45; // max 45m snap radius
+        for (const way of highwayWays) {
+          const g = way.geometry;
+          for (let k = 0; k < g.length - 1; k++) {
+            const dM = pointToSegmentDistMeters(midLat, midLon, g[k].lat, g[k].lon, g[k + 1].lat, g[k + 1].lon);
+            if (dM < bestDistM) {
+              bestDistM = dM;
+              bestWay = way;
+            }
+          }
+        }
+
+        const verdict = classifyOsmTagsForTrail(bestWay ? bestWay.tags : null, protectedName);
+        rawSegments.push({
+          coords: [p1, p2],
+          km: segKm,
+          level: verdict.level,
+          reason: verdict.reason
+        });
+      }
+
+      // Merge contiguous segments with same level & reason
+      const merged = [];
+      for (const seg of rawSegments) {
+        const prev = merged[merged.length - 1];
+        if (prev && prev.level === seg.level && prev.reason === seg.reason) {
+          prev.coords.push(seg.coords[1]);
+          prev.km += seg.km;
+        } else {
+          merged.push({
+            coords: [...seg.coords],
+            km: seg.km,
+            level: seg.level,
+            reason: seg.reason
+          });
+        }
+      }
+
+      // Paint color-coded segments on map
+      if (legalOverlayLayer) {
+        legalOverlayLayer.clearLayers();
+        legalOverlayVisible = true;
+        if (!map.hasLayer(legalOverlayLayer)) legalOverlayLayer.addTo(map);
+        const colorMap = { green: '#22c55e', amber: '#f59e0b', red: '#ef4444' };
+        merged.forEach(m => {
+          L.polyline(m.coords, {
+            color: colorMap[m.level] || '#22c55e',
+            weight: 9,
+            opacity: 0.92
+          }).bindPopup(`<strong>${m.level === 'red' ? '🔴 Tramo restringido' : (m.level === 'amber' ? '🟠 Precaución / Protegido' : '🟢 Sin restricción')}</strong><br>${escapeXml(m.reason)}<br>Longitud: ${m.km.toFixed(2)} km`).addTo(legalOverlayLayer);
+        });
+      }
+
+      let greenKm = 0, amberKm = 0, redKm = 0;
+      merged.forEach(m => {
+        if (m.level === 'green') greenKm += m.km;
+        else if (m.level === 'amber') amberKm += m.km;
+        else redKm += m.km;
+      });
+
+      lastLegalAuditResult = { greenKm, amberKm, redKm, segments: merged };
+
+      document.getElementById('legalGreenKm').textContent = `${greenKm.toFixed(1)} km`;
+      document.getElementById('legalAmberKm').textContent = `${amberKm.toFixed(1)} km`;
+      document.getElementById('legalRedKm').textContent = `${redKm.toFixed(1)} km`;
+
+      const summaryEl = document.getElementById('routeLegalSummaryText');
+      if (redKm > 0.05) {
+        summaryEl.innerHTML = `🔴 <strong>Atención:</strong> Se han detectado <strong>${redKm.toFixed(1)} km</strong> en senderos, vías pecuarias o caminos con acceso restringido a vehículos a motor.`;
+      } else if (amberKm > 0.05) {
+        summaryEl.innerHTML = `🟠 <strong>Precaución:</strong> No hay prohibiciones explícitas, pero <strong>${amberKm.toFixed(1)} km</strong> discurren por pistas forestales o espacios protegidos sujetos a normativa autonómica.`;
+      } else {
+        summaryEl.innerHTML = `🟢 <strong>Trayecto despejado en cartografía:</strong> Todos los tramos analizados figuran como vías abiertas sin restricciones registradas.`;
+      }
+
+      const listEl = document.getElementById('routeLegalSegmentsList');
+      listEl.innerHTML = merged.map((m, idx) => {
+        const badge = m.level === 'red' ? '🔴 RESTRINGIDO' : (m.level === 'amber' ? '🟠 PRECAUCIÓN' : '🟢 ABIERTO');
+        const midPt = m.coords[Math.floor(m.coords.length / 2)];
+        return `<div class="legal-seg-item seg-${m.level}" onclick="map.setView([${midPt[0]},${midPt[1]}],16);closeModal('routeLegalModal');">
+          <div style="display:flex;justify-content:space-between;font-weight:800;margin-bottom:2px;">
+            <span>${badge} · Tramo ${idx + 1}</span>
+            <span>${m.km.toFixed(2)} km</span>
+          </div>
+          <div style="color:#cbd5e1;font-size:11.5px;">${escapeXml(m.reason)}</div>
+        </div>`;
+      }).join('');
+
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = redKm > 0.05 ? `🔴 Revisar (${redKm.toFixed(1)} km restr.)` : '🟢 Ver informe legal';
+      }
+      if (pill) {
+        pill.textContent = redKm > 0.05
+          ? `🔴 Ruta legal: ${redKm.toFixed(1)} km restringidos`
+          : (amberKm > 0.05 ? `🟠 Ruta legal: ${amberKm.toFixed(1)} km precaución` : '🟢 Ruta legal: Sin restricciones');
+      }
+
+      const btnRecalc = document.getElementById('btnRecalculateLegalRoute');
+      const btnKeep = document.getElementById('btnKeepOriginalRouteAnyway');
+      const hasRestricted = redKm > 0.05;
+      const hasCaution = amberKm > 0.05;
+      if (btnRecalc) {
+        btnRecalc.style.display = (hasRestricted || hasCaution) ? 'block' : 'none';
+        btnRecalc.textContent = hasRestricted
+          ? `🟢 Recalcular ruta legal (evitar ${redKm.toFixed(1)} km restringidos)`
+          : '🟢 Recalcular priorizando vías abiertas';
+      }
+      if (btnKeep) {
+        btnKeep.style.display = (hasRestricted || hasCaution) ? 'block' : 'none';
+        btnKeep.textContent = hasRestricted
+          ? '🏍️ Mantener trayecto y navegar igualmente'
+          : '🏍️ Mantener trayecto actual y navegar';
+      }
+
+      if (openReportModal) {
+        openModal('routeLegalModal');
+      }
+    } catch (err) {
+      if (btn) { btn.disabled = false; btn.textContent = '⚖️ Comprobar ruta legal'; }
+      if (pill) { pill.textContent = '⚖️ Comprobar ruta legal'; }
+      showToast('⚠️ ' + (err.message || 'Error al comprobar la ruta'));
+    }
   }
 
   function fitSharedRouteBounds() {
@@ -2035,6 +2798,9 @@
     activeSharedRoute = null;
     plannedCoords = [];
     plannedLine.setLatLngs([]);
+    clearLegalOverlay();
+    const legalPill = document.getElementById('floatingLegalCheckPill');
+    if (legalPill) legalPill.style.display = 'none';
     if (destMarker) { map.removeLayer(destMarker); destMarker = null; }
     document.getElementById('sharedRouteMenuCard').classList.remove('visible');
     showToast('🗑️ Ruta retirada del mapa');
@@ -2382,50 +3148,146 @@
     }
   }
 
-  function createAndEnterGroup() {
-    userNick = (document.getElementById('lobbyNickInput').value || 'Giggo').trim();
-    groupName = (document.getElementById('lobbyGroupNameInput').value || 'Biker Striker').trim();
-    groupCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+  function getDefaultDeviceNick() {
+    const cached = (localStorage.getItem('trailsync_nick') || '').trim();
+    if (cached) return cached;
+    return 'Piloto-' + myPeerId.slice(-4).toUpperCase();
+  }
+
+  function saveActiveGroupSession() {
+    if (isFamilySpectator || !groupCode) return;
     localStorage.setItem('trailsync_nick', userNick);
+    localStorage.setItem('trailsync_active_group_code', groupCode);
+    localStorage.setItem('trailsync_active_group_name', groupName);
+    localStorage.setItem('trailsync_last_group_name', groupName);
+  }
+
+  function clearActiveGroupSession() {
+    localStorage.removeItem('trailsync_active_group_code');
+    localStorage.removeItem('trailsync_active_group_name');
+  }
+
+  function createAndEnterGroup() {
+    const rawNick = (document.getElementById('lobbyNickInput').value || '').trim();
+    if (!rawNick) {
+      document.getElementById('lobbyNickInput').focus();
+      return showToast('Escribe tu nombre o indicativo antes de entrar');
+    }
+    userNick = rawNick;
+    groupName = (document.getElementById('lobbyGroupNameInput').value || 'Ruta en grupo').trim();
+    groupCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+    isFamilySpectator = false;
+    saveActiveGroupSession();
     enterTracker();
   }
 
   function joinExistingGroup() {
-    userNick = (document.getElementById('lobbyNickInput').value || 'Amigo').trim();
+    const rawNick = (document.getElementById('lobbyNickInput').value || '').trim();
+    if (!rawNick) {
+      document.getElementById('lobbyNickInput').focus();
+      return showToast('Escribe tu nombre o indicativo antes de unirte');
+    }
+    userNick = rawNick;
     const code = (document.getElementById('lobbyJoinCodeInput').value || '').trim().toUpperCase();
     if (code.length < 4) return showToast('Introduce un código de grupo válido (mín. 4 caracteres)');
     groupCode = code;
-    groupName = invitedGroupName ? decodeURIComponent(invitedGroupName) : ('Grupo ' + code);
-    localStorage.setItem('trailsync_nick', userNick);
+    groupName = invitedGroupName ? decodeURIComponent(invitedGroupName) : (localStorage.getItem('trailsync_active_group_name') || ('Grupo ' + code));
+    isFamilySpectator = false;
+    saveActiveGroupSession();
     enterTracker();
   }
 
-  function enterTracker() {
+  function enterTracker(isAutoRestore = false) {
+    document.body.classList.toggle('family-spectator-mode', isFamilySpectator);
     document.getElementById('lobby-screen').style.display = 'none';
     document.getElementById('app').classList.add('active');
     document.getElementById('groupNameHeader').textContent = groupName;
     document.getElementById('headerCodeChip').textContent = '#' + groupCode;
     document.getElementById('floatCodeText').textContent = groupCode;
-    document.getElementById('nickInput').value = userNick + ' (tú)';
+    document.getElementById('nickInput').value = userNick;
     rideStartTime = Date.now();
+
+    if (!isFamilySpectator) {
+      saveActiveGroupSession();
+      try {
+        if (!window.history.state || !window.history.state.inTracker) {
+          window.history.pushState({ inTracker: true, groupCode }, '', window.location.pathname);
+        }
+      } catch (e) {}
+    }
+
     if (map) {
       setTimeout(() => map.invalidateSize(), 120);
-      userMarker.setIcon(createRiderIcon(userNick + ' (tú)', '#f59e0b', true));
+      if (isFamilySpectator) {
+        if (userMarker && map.hasLayer(userMarker)) map.removeLayer(userMarker);
+      } else {
+        if (userMarker && !map.hasLayer(userMarker)) userMarker.addTo(map);
+        userMarker.setIcon(createRiderIcon(userNick + ' (tú)', '#f59e0b', true));
+      }
     }
+
     clearPeerMarkers();
     connectGroupSync();
+
+    if (isFamilySpectator) {
+      isRecording = false;
+      const fBanner = document.getElementById('familySpectatorBanner');
+      if (fBanner) {
+        const who = familyRiderParam ? decodeURIComponent(familyRiderParam) : 'el grupo';
+        fBanner.textContent = `👁️ Siguiendo en vivo a ${who} (solo lectura)`;
+      }
+      updateGroupRadarLabel();
+      showToast('👁️ Vista familiar en directo (solo lectura)');
+      return;
+    }
+
     enableRealGPS(true);
     if (document.getElementById('autoWakeLockToggle')?.checked) {
       toggleWakeLock(false);
     }
     updateGroupRadarLabel();
-    speakAlert(`Conectado al grupo ${groupName}`);
+    if (!isAutoRestore) {
+      speakAlert(`Conectado al grupo ${groupName}`);
+    } else {
+      showToast(`🏍️ Reconectado a ${groupName} (#${groupCode})`);
+    }
+  }
+
+  function confirmLeaveGroup() {
+    if (isFamilySpectator) return;
+    const ok = window.confirm(`¿Quieres salir del grupo "${groupName}" (#${groupCode})?
+
+Si solo minimizas o sales de la app sin pulsar aquí, seguirás dentro de este mismo grupo al volver.`);
+    if (ok) {
+      returnToLobby();
+    }
   }
 
   function returnToLobby() {
+    if (typeof setGroupVoiceMode === 'function' && groupVoiceMode !== 'off') {
+      setGroupVoiceMode('off');
+    }
+    clearActiveGroupSession();
+    mqttClients.forEach(c => { try { c.end(true); } catch (e) {} });
+    mqttClients = [];
+    clearPeerMarkers();
     document.getElementById('app').classList.remove('active');
     document.getElementById('lobby-screen').style.display = 'flex';
+    const nEl = document.getElementById('lobbyNickInput');
+    const gEl = document.getElementById('lobbyGroupNameInput');
+    if (nEl) nEl.value = localStorage.getItem('trailsync_nick') || '';
+    if (gEl) gEl.value = localStorage.getItem('trailsync_last_group_name') || '';
   }
+
+  // Keep user inside the active group when pressing hardware/browser Back button
+  window.addEventListener('popstate', () => {
+    if (!isFamilySpectator && localStorage.getItem('trailsync_active_group_code')) {
+      try {
+        window.history.pushState({ inTracker: true, groupCode }, '', window.location.pathname);
+      } catch (e) {}
+      showToast(`Sigues en el grupo ${groupName} (#${groupCode}). Usa ← arriba si quieres salir.`);
+    }
+  });
 
   function clearPeerMarkers() {
     Object.values(peerMarkers).forEach(m => map && map.removeLayer(m));
@@ -2531,15 +3393,17 @@ window.addEventListener('offline', () => {
       brokers.forEach((brokerUrl, idx) => {
         try {
           const client = window.mqtt.connect(brokerUrl, {
-            clientId: `ts145_${myPeerId}_${idx}_${Math.floor(Math.random()*999)}`,
+            clientId: `ts1410_${myPeerId}_${idx}_${Math.floor(Math.random()*999)}`,
             reconnectPeriod: 3000,
             connectTimeout: 8000
           });
           client.on('connect', () => {
             client.subscribe(`${baseTopic}/#`);
-            flushOfflineQueue();
-            broadcastState('HELLO');
-            if (activeSharedRoute) publishGroupRoute(activeSharedRoute);
+            if (!isFamilySpectator) {
+              flushOfflineQueue();
+              broadcastState('HELLO');
+              if (activeSharedRoute) publishGroupRoute(activeSharedRoute);
+            }
           });
           client.on('message', async (_topic, payload) => {
             try { handleIncomingGroupMessage(await decryptPayload(payload.toString())); } catch (e) {}
@@ -2570,6 +3434,7 @@ window.addEventListener('offline', () => {
   }
 
   async function broadcastState(kind, extra = {}) {
+    if (isFamilySpectator) return;
     if (familyExpireAt && Date.now() > familyExpireAt) {
       stopFamilyShare();
       showToast('⏱️ El enlace temporal para la familia ha caducado');
@@ -2609,6 +3474,11 @@ window.addEventListener('offline', () => {
       return;
     }
 
+    if (msg.kind === 'VOICE_SIG') {
+      if (!isFamilySpectator) handleIncomingVoiceSignal(msg);
+      return;
+    }
+
     if (msg.kind === 'WAYPOINT' && msg.waypoint) {
       renderSharedWaypointMarker(msg.waypoint);
       if (msg.peerId !== myPeerId) {
@@ -2619,13 +3489,14 @@ window.addEventListener('offline', () => {
       return;
     }
 
-    if (msg.peerId === myPeerId) return;
+    if (msg.peerId === myPeerId || msg.spectatorOnly) return;
 
     const isNewFriend = !peers[msg.peerId];
     peers[msg.peerId] = {
       nick: msg.nick || 'Amigo',
       lat: msg.lat,
       lon: msg.lon,
+      speedKmh: typeof msg.speedKmh === 'number' ? msg.speedKmh : 0,
       lastSeen: Date.now(),
       status: msg.kind === 'SOS' ? '🆘 S.O.S.' : (msg.kind === 'STOP' ? msg.reason : 'En ruta')
     };
@@ -2643,9 +3514,12 @@ window.addEventListener('offline', () => {
     updateGroupRadarLabel();
 
     if (isNewFriend) {
-      showToast(`🏍️ ${peers[msg.peerId].nick} se ha conectado al mapa`);
-      broadcastState('POS');
-      if (activeSharedRoute) publishGroupRoute(activeSharedRoute);
+      if (!isFamilySpectator) {
+        showToast(`🏍️ ${peers[msg.peerId].nick} se ha conectado al mapa`);
+        broadcastState('POS');
+        if (activeSharedRoute) publishGroupRoute(activeSharedRoute);
+        if (groupVoiceMode !== 'off') sendVoiceSignal(msg.peerId, 'JOIN');
+      }
       if (!firstFriendAutoFitted) {
         firstFriendAutoFitted = true;
         setTimeout(() => fitAllGroupMembers(), 400);
@@ -2690,7 +3564,7 @@ window.addEventListener('offline', () => {
     Object.entries(peers).forEach(([id, p]) => {
       const staleSec = Math.round((Date.now() - p.lastSeen) / 1000);
       const isStale = staleSec > 120;
-      const distStr = calcDistanceLabel(userPos[0], userPos[1], p.lat, p.lon);
+      const distStr = isFamilySpectator ? `${p.speedKmh || 0} km/h` : calcDistanceLabel(userPos[0], userPos[1], p.lat, p.lon);
       const label = isStale ? `⚠️ ${p.nick} · hace ${Math.floor(staleSec/60)}m` : `${p.nick} · ${distStr}`;
       const icon = createRiderIcon(label, isStale ? '#dc2626' : colors[idx++ % colors.length], false, isStale);
       if (!peerMarkers[id]) {
@@ -2753,10 +3627,15 @@ window.addEventListener('offline', () => {
       courseUpMode = false;
       applyMapOrientation();
     }
-    const pts = [userPos, ...Object.values(peers).map(p => [p.lat, p.lon])];
-    if (pts.length === 1) {
-      map.setView(userPos, 16);
-      showToast('📍 Centrado en tu posición');
+    const peerPts = Object.values(peers)
+      .filter(p => typeof p.lat === 'number' && typeof p.lon === 'number')
+      .map(p => [p.lat, p.lon]);
+    const pts = isFamilySpectator ? peerPts : [userPos, ...peerPts];
+    if (pts.length === 0) {
+      showToast('Esperando señal GPS del grupo...');
+    } else if (pts.length === 1) {
+      map.setView(pts[0], 16);
+      showToast(isFamilySpectator ? '📍 Centrado en el piloto' : '📍 Centrado en tu posición');
     } else {
       map.fitBounds(L.latLngBounds(pts), { padding: [65, 65], maxZoom: 16 });
       showToast(`👥 Mostrando a los ${pts.length} miembros del grupo`);
@@ -3005,6 +3884,8 @@ window.addEventListener('offline', () => {
     unlockDeviceOrientation();
     const dzCb = document.getElementById('dynamicSpeedZoomToggle');
     if (dzCb) dzCb.checked = dynamicSpeedZoomEnabled;
+    const wgCb = document.getElementById('windNoiseGateToggle');
+    if (wgCb) wgCb.checked = windNoiseGateEnabled;
     map = L.map('map', { zoomControl: false, zoomSnap: 0.5, zoomDelta: 0.5 }).setView(userPos, 16.5);
     map.on('dragstart', () => {
       registerManualMapExplore();
@@ -3018,6 +3899,7 @@ window.addEventListener('offline', () => {
     if (startMode.dmd2Style) document.getElementById('map').classList.add('dmd2-trail-mode');
 
     plannedLine = L.polyline([], { color: '#ea580c', weight: 6 }).addTo(map);
+    legalOverlayLayer = L.layerGroup().addTo(map);
     recordedLine = L.polyline([], { color: '#16a34a', weight: 6 }).addTo(map);
     backtrackLine = L.polyline([], { color: '#4f46e5', weight: 4, dashArray: '5, 6' }).addTo(map);
     incidentLayer = L.layerGroup().addTo(map);
@@ -3025,19 +3907,36 @@ window.addEventListener('offline', () => {
     userMarker = L.marker(userPos, { icon: createRiderIcon(userNick + ' (tú)', '#f59e0b', true) }).addTo(map);
 
     map.on('contextmenu', e => {
-      if (isRainLocked) return;
+      if (isRainLocked || isFamilySpectator) return;
       placeDestinationPin(e.latlng.lat, e.latlng.lng, true);
     });
 
     refreshOfflineStats();
 
-    if (familyToken && (!familyExpParam || Date.now() < familyExpParam)) {
-      userNick = familyRiderParam ? (decodeURIComponent(familyRiderParam) + ' (Familia)') : 'Familia';
-      groupCode = familyToken.toUpperCase();
-      groupName = 'Seguimiento Familiar';
-      enterTracker();
-    } else if (invitedCode) {
+    const savedActiveCode = (localStorage.getItem('trailsync_active_group_code') || '').trim().toUpperCase();
+    const savedActiveName = (localStorage.getItem('trailsync_active_group_name') || '').trim();
+
+    if (familyToken) {
+      if (familyExpParam && Date.now() > familyExpParam) {
+        showToast('⏱️ Este enlace de seguimiento familiar ha caducado');
+      } else {
+        isFamilySpectator = true;
+        userNick = 'Espectador';
+        groupCode = familyToken.toUpperCase();
+        groupName = familyRiderParam ? `Ruta de ${decodeURIComponent(familyRiderParam)}` : 'Seguimiento Familiar';
+        enterTracker(false);
+      }
+    } else if (invitedCode && invitedCode.toUpperCase() !== savedActiveCode) {
+      if (!userNick) userNick = getDefaultDeviceNick();
+      const nEl = document.getElementById('lobbyNickInput');
+      if (nEl && !nEl.value.trim()) nEl.value = userNick;
       joinExistingGroup();
+    } else if (savedActiveCode && savedActiveCode.length >= 4) {
+      // Automatically restore the rider's active group on reload / reopen / back navigation
+      userNick = getDefaultDeviceNick();
+      groupCode = savedActiveCode;
+      groupName = savedActiveName || ('Grupo ' + savedActiveCode);
+      enterTracker(true);
     }
 
     setInterval(() => {
@@ -3045,7 +3944,7 @@ window.addEventListener('offline', () => {
       checkGroupSeparationAndTimeouts();
       updateGroupRadarLabel();
       updatePeerMarkers();
-      if (isRecording) {
+      if (isRecording && !isFamilySpectator) {
         broadcastState('POS');
       }
     }, 2500);
@@ -3397,10 +4296,463 @@ ${trkptsXml}
     speakAlert(`Parada solicitada: ${reason}`);
   }
 
+// --- REAL-TIME GROUP VOICE INTERCOM (WEBRTC MESH + OPEN CHANNEL + MUTE MIC) ---
+  // Modes: 'off' (disconnected), 'open' (live open mic + speaker), 'muted' (speaker active, local mic muted)
+  let groupVoiceMode = 'off';
+  let localVoiceStream = null;
+  let rtcPeers = {};       // peerId -> RTCPeerConnection
+  let remoteAudioEls = {}; // peerId -> HTMLAudioElement
+  let peerVoiceStates = {}; // peerId -> { mode: 'open'|'muted'|'off', nick }
+
+  const RTC_ICE_SERVERS = [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' },
+    { urls: 'stun:stun.cloudflare.com:3478' }
+  ];
+
+  function toggleVoicePopover(forceState) {
+    const pop = document.getElementById('voiceIntercomPopover');
+    if (!pop) return;
+    const next = typeof forceState === 'boolean' ? forceState : !pop.classList.contains('open');
+    pop.classList.toggle('open', next);
+    updateGroupVoiceUI();
+  }
+
+  function handleVoiceButtonTap(ev) {
+    if (ev) ev.stopPropagation();
+    const pop = document.getElementById('voiceIntercomPopover');
+    if (groupVoiceMode === 'open') {
+      setGroupVoiceMode('muted');
+      if (pop) pop.classList.add('open');
+    } else if (groupVoiceMode === 'muted') {
+      setGroupVoiceMode('open');
+      if (pop) pop.classList.add('open');
+    } else {
+      toggleVoicePopover();
+    }
+  }
+
+  document.addEventListener('click', (ev) => {
+    const wrap = document.getElementById('voiceControlWrap');
+    const pop = document.getElementById('voiceIntercomPopover');
+    if (pop && pop.classList.contains('open') && wrap && !wrap.contains(ev.target)) {
+      pop.classList.remove('open');
+    }
+  });
+
+  function updateGroupVoiceUI() {
+    const btn = document.getElementById('btnVoice');
+    const dot = document.getElementById('voiceStatusDot');
+    const svg = document.getElementById('btnVoiceIconSvg');
+    const sub = document.getElementById('voiceStatusSub');
+    const badge = document.getElementById('voicePeersBadge');
+    const bOpen = document.getElementById('btnVoiceModeOpen');
+    const bMute = document.getElementById('btnVoiceModeMute');
+    const bOff = document.getElementById('btnVoiceModeOff');
+
+    const activeVoiceCount = Object.values(peerVoiceStates).filter(s => s && s.mode !== 'off').length + (groupVoiceMode !== 'off' ? 1 : 0);
+    if (badge) badge.textContent = `${activeVoiceCount} en voz`;
+
+    if (btn) {
+      btn.classList.remove('voice-open-live', 'voice-muted');
+      if (groupVoiceMode === 'open') btn.classList.add('voice-open-live');
+      if (groupVoiceMode === 'muted') btn.classList.add('voice-muted');
+    }
+    if (dot) {
+      dot.classList.remove('live', 'muted');
+      if (groupVoiceMode === 'open') dot.classList.add('live');
+      if (groupVoiceMode === 'muted') dot.classList.add('muted');
+    }
+    if (svg) {
+      if (groupVoiceMode === 'muted') {
+        svg.innerHTML = '<line x1="2" y1="2" x2="22" y2="22"/><path d="M18.89 13.23A7.12 7.12 0 0019 12v-2M5 10v2a7 7 0 0012 5M15 9.34V5a3 3 0 00-5.68-1.33M9 9v3a3 3 0 005.12 2.12M12 19v3M8 22h8"/>';
+      } else {
+        svg.innerHTML = '<rect x="9" y="2" width="6" height="11" rx="3"/><path d="M5 10a7 7 0 0014 0M12 19v3M8 22h8"/>';
+      }
+    }
+
+    if (bOpen) bOpen.classList.toggle('selected-open', groupVoiceMode === 'open');
+    if (bMute) bMute.classList.toggle('selected-muted', groupVoiceMode === 'muted');
+    if (bOff) bOff.classList.toggle('selected-off', groupVoiceMode === 'off');
+
+    const ckOpen = document.getElementById('badgeVoiceOpen');
+    const ckMute = document.getElementById('badgeVoiceMute');
+    const ckOff = document.getElementById('badgeVoiceOff');
+    if (ckOpen) ckOpen.textContent = groupVoiceMode === 'open' ? 'ACTIVO' : '';
+    if (ckMute) ckMute.textContent = groupVoiceMode === 'muted' ? 'SILENCIADO' : '';
+    if (ckOff) ckOff.textContent = groupVoiceMode === 'off' ? '✓' : '';
+
+    if (sub) {
+      if (groupVoiceMode === 'open') {
+        sub.textContent = '🎙️ Canal abierto en vivo: hablas y escuchas al grupo en tiempo real.';
+      } else if (groupVoiceMode === 'muted') {
+        sub.textContent = '🔇 Tu micrófono está silenciado; sigues escuchando al grupo.';
+      } else {
+        sub.textContent = 'Pulsa «Canal abierto» para conversación en grupo en tiempo real.';
+      }
+    }
+  }
+
+  let rawMicStream = null;
+  let voiceAudioCtx = null;
+  let vadIntervalId = null;
+  let windNoiseGateEnabled = localStorage.getItem('trailsync_wind_gate') !== '0';
+  let vadHoldUntil = 0;
+
+  function toggleWindNoiseGate(enabled) {
+    windNoiseGateEnabled = !!enabled;
+    localStorage.setItem('trailsync_wind_gate', windNoiseGateEnabled ? '1' : '0');
+    showToast(windNoiseGateEnabled ? '🌬️ Filtro antiviento y puerta de voz activados' : '🎙️ Filtro antiviento desactivado (audio directo)');
+  }
+
+  function stopVoiceDspPipeline() {
+    if (vadIntervalId) {
+      clearInterval(vadIntervalId);
+      vadIntervalId = null;
+    }
+    if (rawMicStream) {
+      rawMicStream.getTracks().forEach(t => t.stop());
+      rawMicStream = null;
+    }
+    if (voiceAudioCtx) {
+      try { voiceAudioCtx.close(); } catch (e) {}
+      voiceAudioCtx = null;
+    }
+    const meter = document.getElementById('micLevelMeterFill');
+    const vadLbl = document.getElementById('vadGateBadge');
+    if (meter) meter.style.width = '0%';
+    if (vadLbl) { vadLbl.textContent = 'CERRADA'; vadLbl.style.color = '#64748b'; }
+  }
+
+  async function ensureLocalMicrophoneStream() {
+    if (localVoiceStream) return localVoiceStream;
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      throw new Error('Navegador sin soporte de micrófono WebRTC');
+    }
+
+    rawMicStream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation: { ideal: true },
+        noiseSuppression: { ideal: true },
+        autoGainControl: { ideal: true },
+        channelCount: 1
+      },
+      video: false
+    });
+
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) {
+      localVoiceStream = rawMicStream;
+      return localVoiceStream;
+    }
+
+    voiceAudioCtx = new AudioCtx();
+    if (voiceAudioCtx.state === 'suspended') {
+      await voiceAudioCtx.resume();
+    }
+
+    const source = voiceAudioCtx.createMediaStreamSource(rawMicStream);
+
+    // 1. Steep High-Pass Filter at 260 Hz (cuts helmet wind turbulence & exhaust rumble)
+    const highPass1 = voiceAudioCtx.createBiquadFilter();
+    highPass1.type = 'highpass';
+    highPass1.frequency.value = 260;
+    highPass1.Q.value = 0.85;
+
+    const highPass2 = voiceAudioCtx.createBiquadFilter();
+    highPass2.type = 'highpass';
+    highPass2.frequency.value = 260;
+    highPass2.Q.value = 0.85;
+
+    // 2. Low-Pass Filter at 4200 Hz (cuts high-pitched wind hiss while keeping voice intelligible)
+    const lowPass = voiceAudioCtx.createBiquadFilter();
+    lowPass.type = 'lowpass';
+    lowPass.frequency.value = 4200;
+    lowPass.Q.value = 0.7;
+
+    // 3. Voice Presence Boost (+4 dB around 1850 Hz for clarity over intercom speakers)
+    const voicePresence = voiceAudioCtx.createBiquadFilter();
+    voicePresence.type = 'peaking';
+    voicePresence.frequency.value = 1850;
+    voicePresence.Q.value = 1.1;
+    voicePresence.gain.value = 4.0;
+
+    // 4. Dynamics Compressor (tames sudden wind gusts & loud speech)
+    const compressor = voiceAudioCtx.createDynamicsCompressor();
+    compressor.threshold.value = -26;
+    compressor.knee.value = 14;
+    compressor.ratio.value = 6;
+    compressor.attack.value = 0.005;
+    compressor.release.value = 0.16;
+
+    // 5. Voice Activity Detection (VAD) Noise Gate Gain Node
+    const gateGain = voiceAudioCtx.createGain();
+    gateGain.gain.value = 1.0;
+
+    const analyser = voiceAudioCtx.createAnalyser();
+    analyser.fftSize = 512;
+    analyser.smoothingTimeConstant = 0.4;
+
+    const dest = voiceAudioCtx.createMediaStreamDestination();
+
+    source.connect(highPass1);
+    highPass1.connect(highPass2);
+    highPass2.connect(lowPass);
+    lowPass.connect(voicePresence);
+    voicePresence.connect(analyser);
+    voicePresence.connect(compressor);
+    compressor.connect(gateGain);
+    gateGain.connect(dest);
+
+    const freqData = new Uint8Array(analyser.frequencyBinCount);
+    const sampleRate = voiceAudioCtx.sampleRate || 48000;
+    const binHz = (sampleRate / 2) / freqData.length;
+    const speechStartBin = Math.max(1, Math.floor(300 / binHz));
+    const speechEndBin = Math.min(freqData.length - 1, Math.ceil(3200 / binHz));
+
+    vadIntervalId = setInterval(() => {
+      if (!voiceAudioCtx || groupVoiceMode !== 'open') {
+        gateGain.gain.setTargetAtTime(0, voiceAudioCtx.currentTime, 0.02);
+        return;
+      }
+
+      analyser.getByteFrequencyData(freqData);
+      let speechSum = 0;
+      let count = 0;
+      for (let i = speechStartBin; i <= speechEndBin; i++) {
+        speechSum += freqData[i];
+        count++;
+      }
+      const speechAvg = count > 0 ? (speechSum / count) : 0;
+      const pct = Math.min(100, Math.round((speechAvg / 115) * 100));
+
+      const meter = document.getElementById('micLevelMeterFill');
+      const vadLbl = document.getElementById('vadGateBadge');
+      if (meter) meter.style.width = pct + '%';
+
+      const now = Date.now();
+      // Threshold tuned for voice band (300–3200 Hz) after 260 Hz wind cut; holds gate open 650ms between words
+      if (!windNoiseGateEnabled || speechAvg >= 24) {
+        if (speechAvg >= 24) vadHoldUntil = now + 650;
+        gateGain.gain.setTargetAtTime(1.0, voiceAudioCtx.currentTime, 0.015);
+        if (vadLbl) {
+          vadLbl.textContent = windNoiseGateEnabled ? 'ABIERTA' : 'DIRECTO';
+          vadLbl.style.color = '#10b981';
+        }
+      } else if (now < vadHoldUntil) {
+        gateGain.gain.setTargetAtTime(1.0, voiceAudioCtx.currentTime, 0.02);
+      } else {
+        // Attenuate residual background wind by ~97% when rider is not speaking
+        gateGain.gain.setTargetAtTime(0.03, voiceAudioCtx.currentTime, 0.06);
+        if (vadLbl) {
+          vadLbl.textContent = 'FILTRANDO';
+          vadLbl.style.color = '#38bdf8';
+        }
+      }
+    }, 60);
+
+    localVoiceStream = dest.stream;
+    return localVoiceStream;
+  }
+
+  function sendVoiceSignal(targetPeerId, signalKind, payloadData = {}) {
+    broadcastState('VOICE_SIG', {
+      targetPeerId: targetPeerId || '*',
+      signalKind,
+      voiceMode: groupVoiceMode,
+      ...payloadData
+    });
+  }
+
+  function closeRtcPeer(peerId) {
+    if (rtcPeers[peerId]) {
+      try { rtcPeers[peerId].close(); } catch (e) {}
+      delete rtcPeers[peerId];
+    }
+    if (remoteAudioEls[peerId]) {
+      try {
+        remoteAudioEls[peerId].pause();
+        remoteAudioEls[peerId].srcObject = null;
+        remoteAudioEls[peerId].remove();
+      } catch (e) {}
+      delete remoteAudioEls[peerId];
+    }
+  }
+
+  function createOrGetRtcConnection(remotePeerId) {
+    if (rtcPeers[remotePeerId]) return rtcPeers[remotePeerId];
+    const pc = new RTCPeerConnection({ iceServers: RTC_ICE_SERVERS });
+    rtcPeers[remotePeerId] = pc;
+
+    if (localVoiceStream) {
+      localVoiceStream.getTracks().forEach(track => {
+        pc.addTrack(track, localVoiceStream);
+      });
+    }
+
+    pc.onicecandidate = (event) => {
+      if (event.candidate) {
+        sendVoiceSignal(remotePeerId, 'ICE', { candidate: event.candidate.toJSON() });
+      }
+    };
+
+    pc.ontrack = (event) => {
+      const container = document.getElementById('remoteAudioContainer');
+      let audioEl = remoteAudioEls[remotePeerId];
+      if (!audioEl) {
+        audioEl = document.createElement('audio');
+        audioEl.autoplay = true;
+        audioEl.playsInline = true;
+        if (container) container.appendChild(audioEl);
+        remoteAudioEls[remotePeerId] = audioEl;
+      }
+      if (event.streams && event.streams[0]) {
+        audioEl.srcObject = event.streams[0];
+        audioEl.play().catch(() => {});
+      }
+    };
+
+    pc.onconnectionstatechange = () => {
+      if (pc.connectionState === 'failed' || pc.connectionState === 'closed') {
+        closeRtcPeer(remotePeerId);
+      }
+    };
+
+    return pc;
+  }
+
+  async function initiateVoiceOfferToPeer(remotePeerId) {
+    if (groupVoiceMode === 'off' || !localVoiceStream) return;
+    try {
+      const pc = createOrGetRtcConnection(remotePeerId);
+      const offer = await pc.createOffer({ offerToReceiveAudio: true });
+      await pc.setLocalDescription(offer);
+      sendVoiceSignal(remotePeerId, 'OFFER', { sdp: pc.localDescription });
+    } catch (e) {}
+  }
+
+  async function handleIncomingVoiceSignal(msg) {
+    if (!msg || msg.peerId === myPeerId) return;
+    if (msg.targetPeerId && msg.targetPeerId !== '*' && msg.targetPeerId !== myPeerId) return;
+
+    const fromId = msg.peerId;
+    const fromNick = msg.nick || 'Compañero';
+    if (msg.voiceMode) {
+      peerVoiceStates[fromId] = { mode: msg.voiceMode, nick: fromNick };
+      updateGroupVoiceUI();
+    }
+
+    if (msg.signalKind === 'LEAVE') {
+      peerVoiceStates[fromId] = { mode: 'off', nick: fromNick };
+      closeRtcPeer(fromId);
+      updateGroupVoiceUI();
+      return;
+    }
+
+    if (msg.signalKind === 'JOIN') {
+      if (groupVoiceMode !== 'off' && localVoiceStream) {
+        if (String(myPeerId) > String(fromId)) {
+          await initiateVoiceOfferToPeer(fromId);
+        } else {
+          sendVoiceSignal(fromId, 'READY');
+        }
+      }
+      return;
+    }
+
+    if (msg.signalKind === 'READY') {
+      if (groupVoiceMode !== 'off' && localVoiceStream) {
+        await initiateVoiceOfferToPeer(fromId);
+      }
+      return;
+    }
+
+    if (msg.signalKind === 'OFFER' && msg.sdp) {
+      if (groupVoiceMode === 'off') return;
+      try {
+        await ensureLocalMicrophoneStream();
+        const pc = createOrGetRtcConnection(fromId);
+        await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+        sendVoiceSignal(fromId, 'ANSWER', { sdp: pc.localDescription });
+      } catch (e) {}
+      return;
+    }
+
+    if (msg.signalKind === 'ANSWER' && msg.sdp) {
+      const pc = rtcPeers[fromId];
+      if (pc) {
+        try {
+          await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
+        } catch (e) {}
+      }
+      return;
+    }
+
+    if (msg.signalKind === 'ICE' && msg.candidate) {
+      const pc = rtcPeers[fromId];
+      if (pc) {
+        try {
+          await pc.addIceCandidate(new RTCIceCandidate(msg.candidate));
+        } catch (e) {}
+      }
+    }
+  }
+
+  async function setGroupVoiceMode(nextMode) {
+    if (isFamilySpectator) return;
+    if (nextMode === 'off') {
+      if (groupVoiceMode !== 'off') {
+        sendVoiceSignal('*', 'LEAVE');
+      }
+      groupVoiceMode = 'off';
+      walkieActive = false;
+      Object.keys(rtcPeers).forEach(closeRtcPeer);
+      if (localVoiceStream) {
+        localVoiceStream.getTracks().forEach(t => t.stop());
+        localVoiceStream = null;
+      }
+      stopVoiceDspPipeline();
+      updateGroupVoiceUI();
+      showToast('📴 Canal de voz desconectado');
+      return;
+    }
+
+    try {
+      const stream = await ensureLocalMicrophoneStream();
+      const enableMic = (nextMode === 'open');
+      stream.getAudioTracks().forEach(track => {
+        track.enabled = enableMic;
+      });
+      const wasOff = (groupVoiceMode === 'off');
+      groupVoiceMode = nextMode;
+      walkieActive = enableMic;
+      updateGroupVoiceUI();
+
+      if (wasOff) {
+        sendVoiceSignal('*', 'JOIN');
+        Object.keys(peers).forEach(pid => {
+          if (String(myPeerId) > String(pid)) {
+            initiateVoiceOfferToPeer(pid);
+          }
+        });
+      } else {
+        sendVoiceSignal('*', 'STATE');
+      }
+
+      if (nextMode === 'open') {
+        showToast('🎙️ Canal abierto en vivo: hablando con el grupo');
+      } else {
+        showToast('🔇 Micro silenciado (sigues escuchando al grupo)');
+      }
+    } catch (err) {
+      showToast('⚠️ Permite el acceso al micrófono para hablar con el grupo');
+    }
+  }
+
   function toggleWalkie() {
-    walkieActive = !walkieActive;
-    document.getElementById('btnVoice').style.background = walkieActive ? 'rgba(2,132,199,0.28)' : 'rgba(15, 23, 42, 0.72)';
-    showToast(walkieActive ? '🎙️ Canal PTT abierto' : '🔇 Canal PTT en espera');
+    setGroupVoiceMode(groupVoiceMode === 'open' ? 'muted' : 'open');
   }
 
   function toggleBacktrack() {
@@ -3413,6 +4765,10 @@ ${trkptsXml}
   function recenterUser() {
     userExploringMap = false;
     manualZoomOverrideUntil = 0;
+    if (isFamilySpectator) {
+      fitAllGroupMembers();
+      return;
+    }
     if (courseUpMode) {
       const targetZ = dynamicSpeedZoomEnabled ? getTargetZoomForSpeed(smoothedSpeedKmh) : Math.max(map.getZoom(), 16);
       map.setView(userPos, targetZ, { animate: true });
@@ -3448,13 +4804,18 @@ ${trkptsXml}
     document.getElementById('statsSummary').textContent =
       `${totalMembers} conectados · ${totalDistanceKm.toFixed(1)} km · +${Math.round(totalAscentM)} m · ${recordedIncidents.length} hitos`;
 
+    const myVoiceTag = groupVoiceMode === 'open' ? ' · 🎙️ Canal abierto' : (groupVoiceMode === 'muted' ? ' · 🔇 Micro silenciado' : '');
     const allMembers = [
-      { name: userNick + ' (tú)', status: `${realGpsActive ? 'GPS en vivo' : 'Ubicación activa'} · ${Math.round(currentSpeedKmh)} km/h`, coords: userPos },
-      ...Object.values(peers).map(p => ({
-        name: p.nick,
-        status: `${p.status} · a ${calcDistanceLabel(userPos[0], userPos[1], p.lat, p.lon)} · hace ${Math.max(1, Math.round((Date.now() - p.lastSeen)/1000))}s`,
-        coords: [p.lat, p.lon]
-      }))
+      { name: userNick + ' (tú)', status: `${realGpsActive ? 'GPS en vivo' : 'Ubicación activa'} · ${Math.round(currentSpeedKmh)} km/h${myVoiceTag}`, coords: userPos },
+      ...Object.entries(peers).map(([pid, p]) => {
+        const vs = peerVoiceStates[pid]?.mode;
+        const vTag = vs === 'open' ? ' · 🎙️ En voz' : (vs === 'muted' ? ' · 🔇 Silenciado' : '');
+        return {
+          name: p.nick,
+          status: `${p.status} · a ${calcDistanceLabel(userPos[0], userPos[1], p.lat, p.lon)} · hace ${Math.max(1, Math.round((Date.now() - p.lastSeen)/1000))}s${vTag}`,
+          coords: [p.lat, p.lon]
+        };
+      })
     ];
     document.getElementById('membersContainer').innerHTML = allMembers.map(m =>
       `<div onclick="map.setView([${m.coords[0]},${m.coords[1]}],16);closeModal('groupModal');" style="padding:9px 10px;background:#18141a;border-radius:10px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;">
@@ -3565,10 +4926,14 @@ ${trkptsXml}
   }
 
   function updateNick(val) {
-    userNick = (val || 'Giggo').replace(/\s*\(tú\)\s*/gi, '').trim();
+    const cleaned = (val || '').replace(/\s*\(tú\)\s*/gi, '').trim();
+    if (!cleaned) return;
+    userNick = cleaned;
     localStorage.setItem('trailsync_nick', userNick);
-    userMarker.setIcon(createRiderIcon(userNick + ' (tú)', '#f59e0b', true));
-    broadcastState('POS');
+    if (!isFamilySpectator) {
+      userMarker.setIcon(createRiderIcon(userNick + ' (tú)', '#f59e0b', true));
+      broadcastState('POS');
+    }
   }
 
   function showToast(msg) {
