@@ -10,7 +10,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
   <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
-  <title>TrailSync v12 — Grupo, BRouter, DMD2 Trail y Actualización PWA</title>
+  <title>TrailSync v14 — Grupo, Telemetría, Waypoints, Alertas y Bloqueo Lluvia</title>
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
         onerror="this.onerror=null;this.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';" />
@@ -73,27 +73,28 @@
     .header-left { display: flex; align-items: center; gap: 6px; min-width: 0; }
     .header-title {
       font-size: 15px; font-weight: 800; color: #f1f5f9;
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 110px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 102px;
     }
     .code-chip {
       background: #252e42; color: #fb923c; font-size: 11px; font-weight: 800;
       padding: 3px 7px; border-radius: 7px; cursor: pointer; border: 1px solid #3b4763;
     }
-    .header-icons { display: flex; align-items: center; gap: 2px; }
+    .header-icons { display: flex; align-items: center; gap: 1px; }
     .top-icon-btn {
-      width: 35px; height: 35px; border-radius: 10px; border: none;
+      width: 34px; height: 34px; border-radius: 10px; border: none;
       background: transparent; color: #cbd5e1;
       display: flex; align-items: center; justify-content: center;
       cursor: pointer; position: relative;
     }
     .top-icon-btn:active { background: rgba(255,255,255,0.1); }
+    .top-icon-btn.active-toggle { background: rgba(251, 191, 36, 0.18); color: #fbbf24; }
     .rec-square { width: 14px; height: 14px; background: #ef4444; border-radius: 3px; }
     .rec-play {
       width: 0; height: 0; border-top: 7px solid transparent;
       border-bottom: 7px solid transparent; border-left: 12px solid #22c55e;
     }
 
-    /* NEW APP VERSION UPDATE BUTTON (SHOWN WHEN NEW WEB VERSION IS DETECTED) */
+    /* NEW APP VERSION UPDATE BUTTON */
     #updateAppBannerBtn {
       display: none;
       background: linear-gradient(90deg, #16a34a, #059669);
@@ -137,6 +138,12 @@
     }
     #map.dmd2-trail-mode .leaflet-tile-pane {
       filter: contrast(1.18) saturate(1.28) brightness(0.98);
+    }
+    #map.sunlight-boost-mode .leaflet-tile-pane {
+      filter: contrast(1.42) brightness(1.14) saturate(1.15);
+    }
+    #map.night-ride-mode .leaflet-tile-pane {
+      filter: invert(0.9) hue-rotate(180deg) contrast(1.12) brightness(0.88);
     }
 
     /* ACTIVE SHARED GROUP ROUTE BANNER */
@@ -188,6 +195,9 @@
       font-size: 11.5px; font-weight: 800; padding: 4px 10px; border-radius: 999px;
       cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.3);
     }
+    .group-radar-pill.alert-warn {
+      border-color: #ef4444; color: #fecaca; background: rgba(127,29,29,0.94);
+    }
     .layer-pill {
       background: rgba(22,27,38,0.92); color: #f8fafc; border: 1.5px solid #64748b;
       font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 999px;
@@ -198,16 +208,40 @@
       font-size: 10.5px; font-weight: 700; padding: 3px 9px; border-radius: 999px;
       cursor: pointer;
     }
+    .queue-pill {
+      display: none;
+      background: rgba(120, 53, 15, 0.94); color: #fde68a; border: 1px solid #f59e0b;
+      font-size: 10.5px; font-weight: 800; padding: 3px 9px; border-radius: 999px;
+      cursor: pointer;
+    }
     #family-active-pill {
       display: none; background: rgba(22,27,38,0.92); color: #fb923c; border: 1px solid #fb923c;
       font-size: 10.5px; font-weight: 700; padding: 3px 9px; border-radius: 999px;
       cursor: pointer;
     }
 
+    /* LIVE TELEMETRY STRIP */
+    .telemetry-bar {
+      position: absolute; bottom: 72px; left: 50%; transform: translateX(-50%);
+      z-index: 910;
+      background: rgba(15, 23, 42, 0.90);
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      border-radius: 14px;
+      padding: 5px 11px;
+      display: flex; align-items: center; gap: 11px;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.38);
+      pointer-events: auto;
+      backdrop-filter: blur(4px);
+    }
+    .telem-cell { display: flex; flex-direction: column; align-items: center; min-width: 44px; }
+    .telem-val { font-size: 13px; font-weight: 900; color: #f8fafc; line-height: 1.15; }
+    .telem-lbl { font-size: 9px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.3px; }
+    .telem-sep { width: 1px; height: 22px; background: rgba(148,163,184,0.25); }
+
     /* TOP-RIGHT SCALE + GOOGLE MAPS STYLE COMPASS BUTTON */
     .top-right-stack {
       position: absolute; top: 10px; right: 10px; z-index: 900;
-      display: flex; flex-direction: column; align-items: flex-end; gap: 10px;
+      display: flex; flex-direction: column; align-items: flex-end; gap: 9px;
       transition: top 0.2s ease;
     }
     .top-right-stack.shifted { top: 64px; }
@@ -218,7 +252,7 @@
     }
 
     .gmaps-compass-btn {
-      width: 48px; height: 48px;
+      width: 46px; height: 46px;
       border-radius: 15px;
       background: #bce3f5;
       border: none;
@@ -248,6 +282,62 @@
       box-shadow: 0 1px 4px rgba(0,0,0,0.4);
     }
 
+    /* QUICK DISPLAY CONTRAST BUTTON (SOL / NOCHE / NORMAL) */
+    .display-mode-btn {
+      width: 46px; height: 38px;
+      border-radius: 12px;
+      background: rgba(22, 27, 38, 0.92);
+      color: #fbbf24;
+      border: 1.5px solid #475569;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.28);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      cursor: pointer; font-size: 13px; font-weight: 800; line-height: 1;
+    }
+    .display-mode-btn span { font-size: 8px; color: #cbd5e1; margin-top: 2px; }
+
+
+    /* TOP-RIGHT GROUP MEMBER BUBBLES (SAME PILL STYLE, CLICK TO JUMP TO MEMBER) */
+    #groupMembersBubbles {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 6px;
+      margin-top: 2px;
+      max-height: 36vh;
+      overflow-y: auto;
+      pointer-events: auto;
+    }
+    .member-jump-pill {
+      background: rgba(22, 27, 38, 0.92);
+      color: #f8fafc;
+      border: 1.5px solid #34d399;
+      border-radius: 999px;
+      padding: 5px 12px;
+      font-size: 11.5px;
+      font-weight: 800;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      cursor: pointer;
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.35);
+      white-space: nowrap;
+      transition: transform 0.12s ease, background 0.15s ease;
+    }
+    .member-jump-pill:active {
+      transform: scale(0.95);
+    }
+    .member-jump-pill.stale-member {
+      border-color: #ef4444;
+      background: rgba(127, 29, 29, 0.92);
+      color: #fecaca;
+    }
+    .member-jump-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
     /* FLOATING LEGEND BOX */
     #mapLegendBox {
       display: none;
@@ -259,9 +349,9 @@
     .legend-row { display: flex; align-items: center; gap: 7px; }
     .legend-swatch { width: 16px; height: 4px; border-radius: 2px; display: inline-block; }
 
-    /* SINGLE FLOATING "MENÚ" BUTTON + EXPANDABLE 4-ACTION POPOVER */
+    /* SINGLE FLOATING "MENÚ" BUTTON + EXPANDABLE POPOVER */
     .left-menu-wrapper {
-      position: absolute; left: 12px; bottom: 78px; z-index: 950;
+      position: absolute; left: 12px; bottom: 122px; z-index: 950;
       display: flex; flex-direction: column; align-items: flex-start; gap: 8px;
     }
     .btn-single-menu {
@@ -269,12 +359,12 @@
       color: #f8fafc;
       border: 2px solid #f97316;
       border-radius: 16px;
-      padding: 12px 18px;
-      font-size: 14.5px;
+      padding: 10px 15px;
+      font-size: 14px;
       font-weight: 800;
       display: inline-flex;
       align-items: center;
-      gap: 9px;
+      gap: 8px;
       box-shadow: 0 6px 18px rgba(0,0,0,0.45);
       cursor: pointer;
       transition: transform 0.12s ease, background 0.15s ease;
@@ -285,12 +375,12 @@
     .menu-popover-card {
       display: none;
       flex-direction: column;
-      gap: 8px;
+      gap: 7px;
       background: rgba(22, 27, 38, 0.97);
       border: 1.5px solid #334155;
       border-radius: 18px;
       padding: 10px;
-      width: 245px;
+      width: 248px;
       box-shadow: 0 12px 30px rgba(0,0,0,0.55);
     }
     .menu-popover-card.open { display: flex; }
@@ -299,8 +389,8 @@
       width: 100%;
       border: none;
       border-radius: 12px;
-      padding: 11px 12px;
-      font-size: 13.5px;
+      padding: 10px 12px;
+      font-size: 13px;
       font-weight: 800;
       display: flex;
       align-items: center;
@@ -311,19 +401,20 @@
     }
     .menu-item-btn:active { transform: scale(0.97); }
     .mi-route   { background: #f97316; color: #ffffff; }
+    .mi-pin     { background: #eab308; color: #111827; }
     .mi-invite  { background: #16a34a; color: #ffffff; }
     .mi-offline { background: #0f172a; color: #38bdf8; border: 1.5px solid #38bdf8; }
     .mi-gpx     { background: #d32f2f; color: #ffffff; }
 
     /* ZOOM CONTROLS */
     .zoom-box {
-      position: absolute; right: 12px; bottom: 78px; z-index: 900;
+      position: absolute; right: 12px; bottom: 122px; z-index: 900;
       background: rgba(26,32,44,0.92); border-radius: 14px;
       display: flex; flex-direction: column; overflow: hidden;
       box-shadow: 0 4px 14px rgba(0,0,0,0.35);
     }
     .zoom-btn {
-      width: 44px; height: 44px; border: none; background: transparent;
+      width: 44px; height: 42px; border: none; background: transparent;
       color: #f8fafc; font-size: 22px; font-weight: 600; cursor: pointer;
       display: flex; align-items: center; justify-content: center;
     }
@@ -338,18 +429,84 @@
     .circle-action {
       pointer-events: auto;
       width: 48px; height: 48px; min-width: 48px; min-height: 48px;
-      border-radius: 50%; background: transparent;
+      border-radius: 50%; background: rgba(15, 23, 42, 0.72);
       display: flex; align-items: center; justify-content: center;
       cursor: pointer; transition: transform 0.12s ease, background 0.15s ease;
     }
     .circle-action:active { transform: scale(0.92); }
     .circle-action svg { width: 23px; height: 23px; }
-    .act-voice  { border: 2.5px solid #0284c7; color: #0284c7; }
-    .act-stop   { border: 2.5px solid #f97316; color: #f97316; }
-    .act-sos    { border: 2.5px solid #dc2626; color: #dc2626; font-weight: 900; font-size: 13px; }
-    .act-comp   { border: 2.5px solid #4f46e5; color: #4f46e5; }
-    .act-group  { border: 2.5px solid #059669; color: #059669; }
-    .act-center { border: 2.5px solid #7c3aed; color: #7c3aed; }
+    .act-voice  { border: 2.5px solid #0284c7; color: #38bdf8; }
+    .act-stop   { border: 2.5px solid #f97316; color: #fb923c; }
+    .act-sos    { border: 2.5px solid #dc2626; color: #f87171; font-weight: 900; font-size: 13px; }
+    .act-comp   { border: 2.5px solid #4f46e5; color: #818cf8; }
+    .act-group  { border: 2.5px solid #059669; color: #34d399; }
+    .act-center { border: 2.5px solid #7c3aed; color: #a78bfa; }
+
+    /* TRANSPARENT RAIN-LOCK SHIELD (SCREEN REMAINS 100% VISIBLE, ALL TOUCHES BLOCKED EXCEPT 3S HOLD ON RED PADLOCK AT BOTTOM) */
+    #rain-lock-shield {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 5000;
+      background: transparent;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    #rain-lock-shield.open {
+      display: block;
+    }
+    .rain-lock-bottom-dock {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      pointer-events: auto;
+    }
+    .rain-lock-btn {
+      position: relative;
+      width: 68px;
+      height: 68px;
+      border-radius: 50%;
+      background: rgba(153, 27, 27, 0.94);
+      border: 3px solid #ef4444;
+      box-shadow: 0 6px 24px rgba(220, 38, 38, 0.65);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+      transition: transform 0.12s ease;
+    }
+    .rain-lock-btn.holding {
+      transform: scale(1.1);
+      background: rgba(185, 28, 28, 0.98);
+    }
+    .rain-lock-ring {
+      position: absolute;
+      inset: -6px;
+      width: 74px;
+      height: 74px;
+      transform: rotate(-90deg);
+      pointer-events: none;
+    }
+    .rain-lock-hint {
+      background: rgba(15, 23, 42, 0.88);
+      color: #fecaca;
+      border: 1px solid rgba(239, 68, 68, 0.6);
+      font-size: 11px;
+      font-weight: 800;
+      padding: 3px 10px;
+      border-radius: 999px;
+      white-space: nowrap;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.45);
+    }
 
     /* MODALS & BOTTOM SHEETS */
     .modal-backdrop {
@@ -445,6 +602,18 @@
     .prof-name { font-size: 12.5px; font-weight: 800; line-height: 1.2; }
     .prof-sub { font-size: 10px; color: #a8a29e; margin-top: 3px; line-height: 1.2; }
 
+    /* WAYPOINT QUICK PINS GRID */
+    .wp-grid {
+      display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 10px;
+    }
+    .wp-card-btn {
+      background: #18141a; border: 1.5px solid #3f3842; border-radius: 14px;
+      padding: 12px 10px; color: #f8fafc; cursor: pointer;
+      display: flex; align-items: center; gap: 9px; text-align: left;
+      font-size: 13px; font-weight: 800;
+    }
+    .wp-card-btn:active { transform: scale(0.96); border-color: #f97316; }
+
     .legend-toggle-row {
       display: flex; align-items: center; justify-content: space-between;
       margin-top: 14px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.08);
@@ -495,13 +664,6 @@
     }
     .progress-bar-fill { height: 100%; width: 0%; background: #22c55e; transition: width 0.2s ease; }
 
-    #lock-overlay {
-      display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.92);
-      z-index: 3000; flex-direction: column; align-items: center; justify-content: center;
-      text-align: center; padding: 24px;
-    }
-    #lock-overlay.open { display: flex; }
-
     .rider-badge { display: flex; flex-direction: column; align-items: center; }
     .rider-dot {
       width: 36px; height: 36px; border-radius: 50%;
@@ -515,17 +677,26 @@
       white-space: nowrap; box-shadow: 0 2px 6px rgba(0,0,0,0.4);
       border: 1px solid rgba(255,255,255,0.15);
     }
+    .rider-tag.stale-peer {
+      background: #7f1d1d; border-color: #ef4444; color: #fecaca;
+    }
     .dest-pin-badge {
       background: #dc2626; color: #fff; border: 2.5px solid #fff;
       border-radius: 50%; width: 32px; height: 32px;
       display: flex; align-items: center; justify-content: center;
       font-size: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.5);
     }
+    .wp-pin-badge {
+      background: #111827; color: #fff; border: 2px solid #f59e0b;
+      border-radius: 999px; padding: 3px 8px;
+      font-size: 11.5px; font-weight: 800; white-space: nowrap;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.5);
+    }
     .toast {
       position: fixed; top: 68px; left: 50%; transform: translateX(-50%);
       background: rgba(15,23,42,0.96); color: #f8fafc; border: 1px solid #475569;
       padding: 9px 14px; border-radius: 12px; font-size: 12.5px; font-weight: 700;
-      z-index: 2500; display: none; box-shadow: 0 6px 20px rgba(0,0,0,0.45);
+      z-index: 5500; display: none; box-shadow: 0 6px 20px rgba(0,0,0,0.45);
       max-width: 90vw; text-align: center;
     }
   </style>
@@ -536,7 +707,7 @@
 <div id="lobby-screen">
   <div>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-      <div class="lobby-title">🧭 TrailSync <span class="free-pill">v12 · DMD2 + BROUTER</span></div>
+      <div class="lobby-title">🧭 TrailSync <span class="free-pill">v14 · TELEMETRÍA + LLUVIA</span></div>
     </div>
 
     <div id="inviteBanner" class="invite-banner">
@@ -544,7 +715,7 @@
     </div>
 
     <p style="color:#94a3b8;font-size:13px;margin:0 0 14px;line-height:1.45;">
-      Incluye capa cartográfica estilo <strong>DMD2 Trail / Pistas</strong> con descarga offline, rutas <strong>BRouter</strong> compartidas con el grupo y detector automático de actualizaciones de la app.
+      Capa <strong>DMD2 Trail / Pistas</strong> offline, rutas <strong>BRouter</strong>, telemetría en vivo, chinchetas compartidas, alertas de grupo, cola sin cobertura y bloqueo táctil bajo lluvia.
     </p>
 
     <div class="lobby-card">
@@ -567,7 +738,7 @@
   </div>
 
   <div style="text-align:center;font-size:11px;color:#64748b;">
-    Versión 12.0 · Capa DMD2 Trail Offline · BRouter 6 Perfiles · Auto-Actualización PWA
+    Versión 14.0 · Wake Lock + Telemetría GPX · Alertas Grupo · Cola Offline MQTT · Bloqueo Lluvia 3s
   </div>
 </div>
 
@@ -587,7 +758,13 @@
         <div class="rec-square" id="recIconShape"></div>
       </button>
 
-      <button class="top-icon-btn" onclick="lockScreen()" title="Bloquear pantalla táctil">
+      <button class="top-icon-btn" id="btnWakeLock" onclick="toggleWakeLock(true)" title="Pantalla siempre encendida (Wake Lock)">
+        <svg width="19" height="19" fill="none" stroke="currentColor" stroke-width="2.1" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41m11.32-11.32l1.41-1.41"/>
+        </svg>
+      </button>
+
+      <button class="top-icon-btn" onclick="lockScreen()" title="Bloquear pantalla táctil por lluvia (mantiene mapa visible)">
         <svg width="20" height="20" fill="#fbbf24" viewBox="0 0 24 24"><path d="M12 2a5 5 0 00-5 5v3H6a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2v-8a2 2 0 00-2-2h-1V7a5 5 0 00-5-5zm-3 5a3 3 0 116 0v3H9V7z"/></svg>
       </button>
 
@@ -640,21 +817,12 @@
     </div>
 
     <div class="top-pills" id="topPillsStack">
-      <!-- UPDATE APP BUTTON: APPEARS AUTOMATICALLY WHEN NEW WEB VERSION IS DETECTED -->
       <button id="updateAppBannerBtn" onclick="applyAppUpdate()">
         🔄 Actualizar app <span id="newVersionBadge"></span>
       </button>
-
-      <div class="live-pill" id="livePill" onclick="toggleLiveRecording()">EN VIVO</div>
-      <div class="group-radar-pill" id="groupRadarPill" onclick="fitAllGroupMembers()">
-        👥 <span id="connectedCountLabel">Conectando grupo...</span> · Ver todos
-      </div>
-      <div class="layer-pill" id="layerNamePill" onclick="openLayersModal()">🗺️ Capa: DMD2 Trail / Pistas ▾</div>
-      <div class="offline-pill" id="offlineStatusPill" onclick="openOfflineModal()">🗺️ Mapas Offline: <span id="peninsulaBadge">0 teselas</span></div>
-      <div id="family-active-pill" onclick="openModal('familyModal')">👨‍👩‍👧‍👦 Familia activa</div>
     </div>
 
-    <!-- TOP-RIGHT: SCALE + GOOGLE MAPS COMPASS BUTTON -->
+    <!-- TOP-RIGHT: SCALE + GOOGLE MAPS COMPASS + DISPLAY CONTRAST -->
     <div class="top-right-stack" id="topRightStack">
       <div class="scale-box">0,3 km</div>
 
@@ -668,6 +836,13 @@
         <span class="compass-mode-badge" id="compassModeBadge">NORTE</span>
       </button>
 
+      <button class="display-mode-btn" id="displayModeBtn" onclick="cycleDisplayContrastMode()" title="Cambiar contraste: Normal / Sol directo / Noche">
+        <div id="displayModeIcon">☀️</div>
+        <span id="displayModeLabel">NORMAL</span>
+      </button>
+
+      <div id="groupMembersBubbles" aria-label="Miembros del grupo"></div>
+
       <!-- FLOATING LEGEND -->
       <div id="mapLegendBox">
         <div style="font-weight:800;margin-bottom:4px;color:#fb923c;">Leyenda del mapa</div>
@@ -678,11 +853,15 @@
       </div>
     </div>
 
-    <!-- SINGLE FLOATING "MENÚ" BUTTON WITH THE 4 ACTIONS INSIDE -->
+    <!-- SINGLE FLOATING "MENÚ" BUTTON WITH ACTIONS INSIDE -->
     <div class="left-menu-wrapper" id="leftMenuWrapper">
       <div class="menu-popover-card" id="quickMenuPopover">
         <button class="menu-item-btn mi-route" onclick="closeQuickMenu();openRoutePlannerForCenter()">
           <span>🧭</span> <span>Crear ruta a punto</span>
+        </button>
+
+        <button class="menu-item-btn mi-pin" onclick="closeQuickMenu();openModal('waypointModal')">
+          <span>📌</span> <span>Marcar punto / peligro</span>
         </button>
 
         <button class="menu-item-btn mi-invite" onclick="closeQuickMenu();shareGroupInvite()">
@@ -711,6 +890,29 @@
     <div class="zoom-box">
       <button class="zoom-btn" onclick="map.zoomIn()">+</button>
       <button class="zoom-btn" onclick="map.zoomOut()">−</button>
+    </div>
+
+    <!-- LIVE TELEMETRY BAR -->
+    <div class="telemetry-bar" onclick="openGroupModal()" title="Telemetría en vivo de la salida">
+      <div class="telem-cell">
+        <span class="telem-val" id="telemSpeed">0</span>
+        <span class="telem-lbl">km/h</span>
+      </div>
+      <div class="telem-sep"></div>
+      <div class="telem-cell">
+        <span class="telem-val" id="telemDist">0.0</span>
+        <span class="telem-lbl">km</span>
+      </div>
+      <div class="telem-sep"></div>
+      <div class="telem-cell">
+        <span class="telem-val" id="telemAscent">+0m</span>
+        <span class="telem-lbl">desnivel</span>
+      </div>
+      <div class="telem-sep"></div>
+      <div class="telem-cell">
+        <span class="telem-val" id="telemTime">00:00</span>
+        <span class="telem-lbl">tiempo</span>
+      </div>
     </div>
 
     <!-- BOTTOM 6 UNIFORM CIRCULAR TRANSPARENT COLORED ICONS -->
@@ -752,12 +954,63 @@
   </div>
 </div>
 
-<!-- LOCK SCREEN OVERLAY -->
-<div id="lock-overlay">
-  <div style="font-size:44px;margin-bottom:10px;">🔒</div>
-  <h3 style="margin:0 0 8px;">Pantalla bloqueada en ruta</h3>
-  <p style="color:#94a3b8;font-size:13px;max-width:260px;">Evita toques accidentales con lluvia o guantes. El GPS y la grabación siguen activos.</p>
-  <button class="solid-btn" style="background:#f59e0b;color:#111;max-width:220px;margin-top:16px;" onclick="unlockScreen()">Desbloquear</button>
+<!-- TRANSPARENT RAIN-LOCK SHIELD: MAP STAYS 100% VISIBLE, ALL TOUCHES IGNORED EXCEPT HOLDING RED PADLOCK FOR 3 SECONDS -->
+<div id="rain-lock-shield"
+     onpointerdown="blockRainTouch(event)"
+     ontouchstart="blockRainTouch(event)"
+     onmousedown="blockRainTouch(event)"
+     onclick="blockRainTouch(event)">
+  <div class="rain-lock-bottom-dock"
+       onpointerdown="event.stopPropagation()"
+       ontouchstart="event.stopPropagation()"
+       onmousedown="event.stopPropagation()"
+       onclick="event.stopPropagation()">
+    <div class="rain-lock-hint" id="rainLockHint">🔒 Pantalla bloqueada · Mantén 3s para desbloquear</div>
+    <button type="button"
+            class="rain-lock-btn"
+            id="rainUnlockHoldBtn"
+            onpointerdown="startUnlockHold(event)"
+            onpointerup="cancelUnlockHold()"
+            onpointerleave="cancelUnlockHold()"
+            onpointercancel="cancelUnlockHold()"
+            ontouchstart="startUnlockHold(event)"
+            ontouchend="cancelUnlockHold()"
+            ontouchcancel="cancelUnlockHold()"
+            oncontextmenu="return false;"
+            title="Mantén pulsado 3 segundos para desbloquear">
+      <svg class="rain-lock-ring" viewBox="0 0 74 74">
+        <circle cx="37" cy="37" r="33" fill="none" stroke="rgba(255,255,255,0.22)" stroke-width="4"/>
+        <circle id="rainUnlockArc" cx="37" cy="37" r="33" fill="none" stroke="#ffffff" stroke-width="4.5"
+                stroke-dasharray="207.35" stroke-dashoffset="207.35" stroke-linecap="round"/>
+      </svg>
+      <!-- RED CLOSED PADLOCK ICON -->
+      <svg width="30" height="30" viewBox="0 0 24 24" fill="#fca5a5" stroke="#ffffff" stroke-width="1.4">
+        <path d="M12 2a5 5 0 00-5 5v3H6a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2v-8a2 2 0 00-2-2h-1V7a5 5 0 00-5-5zm-3 5a3 3 0 116 0v3H9V7zm3 7a1.75 1.75 0 011 3.18V19h-2v-1.82A1.75 1.75 0 0112 14z"/>
+      </svg>
+    </button>
+  </div>
+</div>
+
+<!-- MODAL: MARCAR PUNTO / PELIGRO EN EL MAPA DEL GRUPO -->
+<div class="modal-backdrop sheet-mode" id="waypointModal" onclick="if(event.target===this)closeModal('waypointModal')">
+  <div class="layers-sheet">
+    <div class="sheet-handle" onclick="closeModal('waypointModal')"></div>
+    <h2>📌 Marcar punto compartido en el mapa</h2>
+    <p style="font-size:12.5px;color:#aca3af;margin:0 0 12px;">
+      Coloca una chincheta visible para todo el grupo en tu posición actual y guárdala en el archivo GPX.
+    </p>
+    <div class="wp-grid">
+      <button class="wp-card-btn" onclick="dropSharedWaypoint('🚧 Pista cortada', '🚧')">🚧 Pista cortada</button>
+      <button class="wp-card-btn" onclick="dropSharedWaypoint('⚠️ Barro / Piedra suelta', '⚠️')">⚠️ Barro / Peligro</button>
+      <button class="wp-card-btn" onclick="dropSharedWaypoint('🔀 Cruce clave', '🔀')">🔀 Cruce clave</button>
+      <button class="wp-card-btn" onclick="dropSharedWaypoint('💧 Fuente / Agua', '💧')">💧 Fuente / Agua</button>
+      <button class="wp-card-btn" onclick="dropSharedWaypoint('⛽ Gasolinera', '⛽')">⛽ Gasolinera</button>
+      <button class="wp-card-btn" onclick="dropSharedWaypoint('🏁 Punto reagrupamiento', '🏁')">🏁 Reagrupamiento</button>
+    </div>
+    <div style="text-align:right;margin-top:8px;">
+      <button style="background:none;border:none;color:#94a3b8;font-weight:700;font-size:14px;cursor:pointer;" onclick="closeModal('waypointModal')">Cerrar</button>
+    </div>
+  </div>
 </div>
 
 <!-- BOTTOM SHEET: DMD2 / BROUTER ROUTE PROFILE SELECTOR -->
@@ -817,7 +1070,7 @@
   </div>
 </div>
 
-<!-- BOTTOM SHEET: CAPAS DEL MAPA (CON DMD2 TRAIL / PISTAS) -->
+<!-- BOTTOM SHEET: CAPAS DEL MAPA -->
 <div class="modal-backdrop sheet-mode" id="layersModal" onclick="if(event.target===this)closeModal('layersModal')">
   <div class="layers-sheet">
     <div class="sheet-handle" onclick="closeModal('layersModal')"></div>
@@ -964,7 +1217,7 @@
     </div>
 
     <div id="membersContainer" style="margin-bottom:12px;"></div>
-    <div style="font-weight:700;font-size:13px;margin-bottom:6px;">Incidencias registradas en este trayecto:</div>
+    <div style="font-weight:700;font-size:13px;margin-bottom:6px;">Incidencias y chinchetas registradas:</div>
     <div id="incidentsContainer" style="font-size:12px;color:#cbd5e1;max-height:110px;overflow-y:auto;"></div>
     <div class="btn-row" style="margin-top:14px;">
       <button class="solid-btn" style="background:#f97316;color:#fff;" onclick="exportRecordedGPX()">💾 Descargar GPX</button>
@@ -973,13 +1226,13 @@
   </div>
 </div>
 
-<!-- MODAL: SETTINGS + APP UPDATE CHECK -->
+<!-- MODAL: SETTINGS + APP UPDATE CHECK + GROUP ALERTS -->
 <div class="modal-backdrop" id="settingsModal">
   <div class="modal-card">
     <h2>Ajustes de ruta y App</h2>
     <div style="background:#18141a;padding:10px 12px;border-radius:12px;margin-bottom:12px;border:1px solid #334155;display:flex;align-items:center;justify-content:space-between;gap:8px;">
       <div>
-        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">12.0.0</span></div>
+        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">14.0.0</span></div>
         <div style="font-size:11px;color:#94a3b8;" id="webVerStatusLabel">Comprobando actualizaciones en la web...</div>
       </div>
       <button class="solid-btn" style="flex:0 0 auto;background:#16a34a;color:#fff;padding:8px 12px;font-size:12px;" onclick="manualCheckForUpdates()">🔄 Buscar / Actualizar</button>
@@ -987,9 +1240,19 @@
 
     <label style="font-size:12px;color:#94a3b8;">Tu indicativo en el mapa</label>
     <input id="nickInput" value="Giggo (tú)" style="width:100%;padding:10px;border-radius:10px;border:1px solid #475569;background:#161b26;color:#fff;margin:6px 0 12px;" onchange="updateNick(this.value)" />
-    <label style="display:flex;align-items:center;gap:8px;font-size:13.5px;margin-bottom:12px;cursor:pointer;">
+
+    <label style="display:flex;align-items:center;gap:8px;font-size:13.5px;margin-bottom:10px;cursor:pointer;">
       <input type="checkbox" id="voiceAlertsToggle" checked /> 🔊 Avisos de voz para intercomunicador
     </label>
+
+    <label style="display:flex;align-items:center;gap:8px;font-size:13.5px;margin-bottom:10px;cursor:pointer;">
+      <input type="checkbox" id="groupSeparationAlertToggle" checked /> 🚨 Alertar si un compañero se retrasa (&gt;2 min o &gt;1.5 km)
+    </label>
+
+    <label style="display:flex;align-items:center;gap:8px;font-size:13.5px;margin-bottom:12px;cursor:pointer;">
+      <input type="checkbox" id="autoWakeLockToggle" checked onchange="if(this.checked)toggleWakeLock(false)" /> ☀️ Mantener pantalla siempre encendida en ruta
+    </label>
+
     <button class="solid-btn" style="background:#0284c7;color:#fff;width:100%;margin-bottom:8px;" onclick="enableRealGPS()">📡 Activar GPS real del dispositivo</button>
     <button class="solid-btn" style="background:#10b981;color:#052e16;width:100%;margin-bottom:8px;" onclick="exportRecordedGPX()">💾 Exportar GPX recorrido + incidencias</button>
     <button class="solid-btn" style="background:#334155;color:#fff;width:100%;" onclick="closeModal('settingsModal')">Cerrar</button>
@@ -997,7 +1260,7 @@
 </div>
 
 <script>
-  const APP_VERSION = '12.0.1';
+  const APP_VERSION = '14.0.0';
   let swWaitingWorker = null;
   let remoteVersionFound = null;
 
@@ -1026,7 +1289,131 @@
     initApp();
   }
 
-  // --- PWA UPDATE DETECTOR (DETECTS NEW WEB DEPLOYMENTS ON NETLIFY / HOSTING) ---
+  // --- WAKE LOCK (KEEP SCREEN AWAKE WHILE RIDING) ---
+  let wakeLockSentinel = null;
+  async function toggleWakeLock(userClicked = false) {
+    const btn = document.getElementById('btnWakeLock');
+    if (!('wakeLock' in navigator)) {
+      if (userClicked) showToast('⚠️ Tu navegador no soporta Wake Lock automático');
+      return;
+    }
+    if (wakeLockSentinel && userClicked) {
+      try { await wakeLockSentinel.release(); } catch (e) {}
+      wakeLockSentinel = null;
+      btn?.classList.remove('active-toggle');
+      showToast('🌙 Bloqueo de pantalla activa desactivado');
+      return;
+    }
+    try {
+      wakeLockSentinel = await navigator.wakeLock.request('screen');
+      btn?.classList.add('active-toggle');
+      wakeLockSentinel.addEventListener('release', () => {
+        btn?.classList.remove('active-toggle');
+      });
+      if (userClicked) showToast('☀️ Pantalla fijada siempre encendida (Wake Lock)');
+    } catch (e) {
+      if (userClicked) showToast('⚠️ No se pudo activar Wake Lock: ' + e.message);
+    }
+  }
+
+  // --- DISPLAY CONTRAST MODE (NORMAL / SOL DIRECTO / NOCHE) ---
+  const DISPLAY_MODES = [
+    { key: 'normal', icon: '☀️', label: 'NORMAL', cls: '' },
+    { key: 'sun',    icon: '🔆', label: 'SOL',    cls: 'sunlight-boost-mode' },
+    { key: 'night',  icon: '🌙', label: 'NOCHE',  cls: 'night-ride-mode' }
+  ];
+  let displayModeIdx = 0;
+
+  function cycleDisplayContrastMode() {
+    displayModeIdx = (displayModeIdx + 1) % DISPLAY_MODES.length;
+    const m = DISPLAY_MODES[displayModeIdx];
+    const mapEl = document.getElementById('map');
+    mapEl.classList.remove('sunlight-boost-mode', 'night-ride-mode');
+    if (m.cls) mapEl.classList.add(m.cls);
+    document.getElementById('displayModeIcon').textContent = m.icon;
+    document.getElementById('displayModeLabel').textContent = m.label;
+    showToast(`👁️ Modo visualización: ${m.label}`);
+  }
+
+  // --- TRANSPARENT RAIN-LOCK SHIELD (3-SECOND HOLD ON BOTTOM RED PADLOCK TO UNLOCK) ---
+  let isRainLocked = false;
+  let unlockHoldTimer = null;
+  let unlockHoldRaf = null;
+  let unlockHoldStart = 0;
+  const UNLOCK_HOLD_DURATION_MS = 3000;
+  const RING_CIRCUMFERENCE = 207.35;
+
+  function lockScreen() {
+    isRainLocked = true;
+    closeQuickMenu();
+    resetUnlockHoldVisuals();
+    document.getElementById('rain-lock-shield').classList.add('open');
+    showToast('🌧️ Táctil bloqueado por lluvia. Mantén 3s el candado rojo inferior para desbloquear.');
+  }
+
+  function unlockScreen() {
+    isRainLocked = false;
+    cancelUnlockHold();
+    document.getElementById('rain-lock-shield').classList.remove('open');
+    showToast('🔓 Pantalla táctil desbloqueada');
+  }
+
+  function blockRainTouch(e) {
+    if (!isRainLocked) return;
+    e.preventDefault();
+    e.stopPropagation();
+  }
+
+  function resetUnlockHoldVisuals() {
+    const arc = document.getElementById('rainUnlockArc');
+    const btn = document.getElementById('rainUnlockHoldBtn');
+    const hint = document.getElementById('rainLockHint');
+    if (arc) arc.style.strokeDashoffset = String(RING_CIRCUMFERENCE);
+    if (btn) btn.classList.remove('holding');
+    if (hint) hint.textContent = '🔒 Pantalla bloqueada · Mantén 3s para desbloquear';
+  }
+
+  function startUnlockHold(e) {
+    if (e) { e.preventDefault(); e.stopPropagation(); }
+    cancelUnlockHold();
+    unlockHoldStart = performance.now();
+    const btn = document.getElementById('rainUnlockHoldBtn');
+    const arc = document.getElementById('rainUnlockArc');
+    const hint = document.getElementById('rainLockHint');
+    if (btn) btn.classList.add('holding');
+
+    const step = (now) => {
+      const elapsed = now - unlockHoldStart;
+      const progress = Math.min(1, elapsed / UNLOCK_HOLD_DURATION_MS);
+      if (arc) {
+        arc.style.strokeDashoffset = String(RING_CIRCUMFERENCE * (1 - progress));
+      }
+      if (hint) {
+        const rem = Math.max(0.1, (UNLOCK_HOLD_DURATION_MS - elapsed) / 1000).toFixed(1);
+        hint.textContent = `⏳ Desbloqueando en ${rem}s...`;
+      }
+      if (progress >= 1) {
+        unlockScreen();
+      } else {
+        unlockHoldRaf = requestAnimationFrame(step);
+      }
+    };
+    unlockHoldRaf = requestAnimationFrame(step);
+  }
+
+  function cancelUnlockHold() {
+    if (unlockHoldRaf) {
+      cancelAnimationFrame(unlockHoldRaf);
+      unlockHoldRaf = null;
+    }
+    if (unlockHoldTimer) {
+      clearTimeout(unlockHoldTimer);
+      unlockHoldTimer = null;
+    }
+    resetUnlockHoldVisuals();
+  }
+
+  // --- PWA UPDATE DETECTOR ---
   function showAppUpdateButton(newVerText = '') {
     const btn = document.getElementById('updateAppBannerBtn');
     const badge = document.getElementById('newVersionBadge');
@@ -1044,7 +1431,7 @@
         if (data.version && data.version !== APP_VERSION) {
           remoteVersionFound = data.version;
           showAppUpdateButton('v' + data.version);
-          showToast(`🆕 Nueva versión v${data.version} disponible en la web. Pulsa "Actualizar app".`);
+          showToast(`🆕 Nueva versión v${data.version} disponible. Pulsa "Actualizar app".`);
           return true;
         } else {
           const statusLbl = document.getElementById('webVerStatusLabel');
@@ -1072,20 +1459,15 @@
 
   async function manualCheckForUpdates() {
     const found = await checkWebVersionUpdate(true);
-    if (found) {
-      applyAppUpdate();
-    }
+    if (found) applyAppUpdate();
   }
 
   async function applyAppUpdate() {
     showToast('🔄 Actualizando aplicación a la última versión...');
     try {
-      if (swWaitingWorker) {
-        swWaitingWorker.postMessage({ type: 'SKIP_WAITING' });
-      }
+      if (swWaitingWorker) swWaitingWorker.postMessage({ type: 'SKIP_WAITING' });
       if ('caches' in window) {
         const keys = await caches.keys();
-        // Keep downloaded offline map tiles (`trailsync-peninsula-tiles-v2`), delete old app shell caches
         await Promise.all(keys.filter(k => k !== TILE_CACHE_NAME).map(k => caches.delete(k)));
       }
       if ('serviceWorker' in navigator) {
@@ -1093,14 +1475,15 @@
         await Promise.all(regs.map(r => r.update()));
       }
     } catch (e) {}
-    setTimeout(() => {
-      window.location.reload();
-    }, 350);
+    setTimeout(() => { window.location.reload(); }, 350);
   }
 
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') {
       checkWebVersionUpdate(false);
+      if (document.getElementById('autoWakeLockToggle')?.checked && !wakeLockSentinel) {
+        toggleWakeLock(false);
+      }
     }
   });
 
@@ -1109,13 +1492,8 @@
     if (e) e.stopPropagation();
     const pop = document.getElementById('quickMenuPopover');
     const btn = document.getElementById('btnMainMenu');
-    const isOpen = pop.classList.contains('open');
-    if (isOpen) {
-      closeQuickMenu();
-    } else {
-      pop.classList.add('open');
-      btn.classList.add('open');
-    }
+    if (pop.classList.contains('open')) closeQuickMenu();
+    else { pop.classList.add('open'); btn.classList.add('open'); }
   }
 
   function closeQuickMenu() {
@@ -1125,9 +1503,7 @@
 
   function closeQuickMenuIfOutside(e) {
     const wrapper = document.getElementById('leftMenuWrapper');
-    if (wrapper && !wrapper.contains(e.target)) {
-      closeQuickMenu();
-    }
+    if (wrapper && !wrapper.contains(e.target)) closeQuickMenu();
   }
 
   const TILE_CACHE_NAME = 'trailsync-peninsula-tiles-v2';
@@ -1226,7 +1602,6 @@
     }
   ];
 
-  // DMD2 / BROUTER 6 PROFILES
   const BROUTER_PROFILES = {
     road_fast:    { label: 'Carretera · Rápida',         brouter: 'car-fast',      color: '#0284c7' },
     road_fun:     { label: 'Carretera · Divertida',      brouter: 'car-eco',       color: '#0ea5e9' },
@@ -1238,7 +1613,7 @@
 
   let selectedLayerKey = localStorage.getItem('trailsync_selected_layer') || 'dmd2_trail';
 
-  let map, baseTileLayer, plannedLine, recordedLine, backtrackLine, incidentLayer, userMarker, destMarker;
+  let map, baseTileLayer, plannedLine, recordedLine, backtrackLine, incidentLayer, sharedWaypointsLayer, userMarker, destMarker;
   let isRecording = true;
   let realGpsActive = false;
   let realGpsWatch = null;
@@ -1261,14 +1636,24 @@
 
   let recordedTrack = [];
   let recordedIncidents = [];
+  let sharedWaypointIds = new Set();
   let peers = {};
   let peerMarkers = {};
+  let peerAlertedIds = new Set();
   let mqttClients = [];
   let bcChannel = null;
   let familyShareUrl = '';
   let familyExpireAt = 0;
   let sosTimer = null;
   let firstFriendAutoFitted = false;
+
+  // TELEMETRY & OFFLINE MQTT QUEUE
+  let rideStartTime = Date.now();
+  let totalDistanceKm = 0;
+  let totalAscentM = 0;
+  let lastAltitudeM = null;
+  let currentSpeedKmh = 0;
+  let offlineMessageQueue = JSON.parse(localStorage.getItem('trailsync_offline_queue') || '[]');
 
   let plannedCoords = [];
 
@@ -1297,6 +1682,31 @@
     if (savedNick) document.getElementById('lobbyNickInput').value = savedNick;
   }
 
+  function haversineKm(lat1, lon1, lat2, lon2) {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  }
+
+  function updateTelemetryUI() {
+    const speedEl = document.getElementById('telemSpeed');
+    const distEl = document.getElementById('telemDist');
+    const ascEl = document.getElementById('telemAscent');
+    const timeEl = document.getElementById('telemTime');
+    if (speedEl) speedEl.textContent = Math.round(currentSpeedKmh);
+    if (distEl) distEl.textContent = totalDistanceKm.toFixed(1);
+    if (ascEl) ascEl.textContent = `+${Math.round(totalAscentM)}m`;
+    if (timeEl) {
+      const elapsedSec = Math.max(0, Math.floor((Date.now() - rideStartTime) / 1000));
+      const hh = Math.floor(elapsedSec / 3600);
+      const mm = String(Math.floor((elapsedSec % 3600) / 60)).padStart(2, '0');
+      const ss = String(elapsedSec % 60).padStart(2, '0');
+      timeEl.textContent = hh > 0 ? `${hh}:${mm}` : `${mm}:${ss}`;
+    }
+  }
+
   function downsampleCoords(coords, maxPts = 280) {
     if (!Array.isArray(coords) || coords.length <= maxPts) return coords;
     const step = (coords.length - 1) / (maxPts - 1);
@@ -1314,11 +1724,7 @@
     if (!coords || coords.length < 2) return 0;
     let total = 0;
     for (let i = 1; i < coords.length; i++) {
-      const R = 6371;
-      const dLat = (coords[i][0] - coords[i-1][0]) * Math.PI / 180;
-      const dLon = (coords[i][1] - coords[i-1][1]) * Math.PI / 180;
-      const a = Math.sin(dLat/2)**2 + Math.cos(coords[i-1][0]*Math.PI/180)*Math.cos(coords[i][0]*Math.PI/180)*Math.sin(dLon/2)**2;
-      total += R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      total += haversineKm(coords[i-1][0], coords[i-1][1], coords[i][0], coords[i][1]);
     }
     return total;
   }
@@ -1348,9 +1754,7 @@
     document.getElementById('topPillsStack').classList.add('shifted');
     document.getElementById('topRightStack').classList.add('shifted');
 
-    if (broadcastToGroup) {
-      publishGroupRoute(routeObj);
-    }
+    if (broadcastToGroup) publishGroupRoute(routeObj);
   }
 
   function fitSharedRouteBounds() {
@@ -1377,11 +1781,9 @@
       html: `<div class="rider-upright-wrapper"><div class="dest-pin-badge">🏁</div></div>`,
       iconSize: [32, 32], iconAnchor: [16, 16]
     });
-    if (!destMarker) {
-      destMarker = L.marker(pendingDestCoords, { icon: destIcon }).addTo(map);
-    } else {
-      destMarker.setLatLng(pendingDestCoords);
-    }
+    if (!destMarker) destMarker = L.marker(pendingDestCoords, { icon: destIcon }).addTo(map);
+    else destMarker.setLatLng(pendingDestCoords);
+
     if (openSheet) {
       document.getElementById('destCoordsSummary').textContent =
         `Destino: ${lat.toFixed(5)}, ${lon.toFixed(5)} · Elige cómo quieres llegar (Carretera u Off-Road):`;
@@ -1395,6 +1797,38 @@
     const targetLat = Math.abs(c.lat - userPos[0]) < 0.0002 ? userPos[0] + 0.015 : c.lat;
     const targetLon = Math.abs(c.lng - userPos[1]) < 0.0002 ? userPos[1] + 0.015 : c.lng;
     placeDestinationPin(targetLat, targetLon, true);
+  }
+
+  // --- SHARED WAYPOINTS / INCIDENTS ON MAP ---
+  function renderSharedWaypointMarker(wp) {
+    if (!wp || sharedWaypointIds.has(wp.id)) return;
+    sharedWaypointIds.add(wp.id);
+    const icon = L.divIcon({
+      className: '',
+      html: `<div class="rider-upright-wrapper"><div class="wp-pin-badge">${wp.label} · ${wp.author}</div></div>`,
+      iconSize: [140, 28], iconAnchor: [70, 14]
+    });
+    L.marker([wp.lat, wp.lon], { icon })
+      .addTo(sharedWaypointsLayer)
+      .bindPopup(`<strong>${wp.label}</strong><br>Marcado por: ${wp.author}<br>${new Date(wp.ts).toLocaleTimeString()}`);
+  }
+
+  function dropSharedWaypoint(label, emoji) {
+    const wp = {
+      id: 'wp_' + myPeerId + '_' + Date.now(),
+      label,
+      emoji,
+      author: userNick,
+      lat: userPos[0],
+      lon: userPos[1],
+      ts: Date.now()
+    };
+    renderSharedWaypointMarker(wp);
+    recordIncident('WAYPOINT', `${label} (${userNick})`, false);
+    broadcastState('WAYPOINT', { waypoint: wp });
+    closeModal('waypointModal');
+    showToast(`📌 Marcado "${label}" en el mapa del grupo`);
+    speakAlert(`Marcado ${label} en el mapa`);
   }
 
   async function calculateBrouterRoute(profileKey) {
@@ -1543,11 +1977,8 @@
   function handleDeviceCompass(e) {
     if (!courseUpMode) return;
     let heading = null;
-    if (typeof e.webkitCompassHeading === 'number') {
-      heading = e.webkitCompassHeading;
-    } else if (e.absolute && typeof e.alpha === 'number') {
-      heading = (360 - e.alpha) % 360;
-    }
+    if (typeof e.webkitCompassHeading === 'number') heading = e.webkitCompassHeading;
+    else if (e.absolute && typeof e.alpha === 'number') heading = (360 - e.alpha) % 360;
     if (heading !== null && !isNaN(heading)) {
       currentHeadingDeg = Math.round(heading);
       applyMapOrientation();
@@ -1602,7 +2033,7 @@
       plannedLine.setStyle({ weight: 6, color: baseRouteColor });
     }
 
-    document.getElementById('layerNamePill').textContent = `🗺️ Capa: ${mode.title} ▾`;
+    const lp1 = document.getElementById('layerNamePill'); if (lp1) lp1.textContent = `🗺️ Capa: ${mode.title} ▾`;
     renderLayersMenu();
     closeModal('layersModal');
     showToast(`🗺️ Capa activada: ${mode.title}`);
@@ -1650,6 +2081,7 @@
     document.getElementById('headerCodeChip').textContent = '#' + groupCode;
     document.getElementById('floatCodeText').textContent = groupCode;
     document.getElementById('nickInput').value = userNick + ' (tú)';
+    rideStartTime = Date.now();
     if (map) {
       setTimeout(() => map.invalidateSize(), 120);
       userMarker.setIcon(createRiderIcon(userNick + ' (tú)', '#f59e0b', true));
@@ -1657,6 +2089,9 @@
     clearPeerMarkers();
     connectGroupSync();
     enableRealGPS(true);
+    if (document.getElementById('autoWakeLockToggle')?.checked) {
+      toggleWakeLock(false);
+    }
     updateGroupRadarLabel();
     speakAlert(`Conectado al grupo ${groupName}`);
   }
@@ -1670,10 +2105,11 @@
     Object.values(peerMarkers).forEach(m => map && map.removeLayer(m));
     peerMarkers = {};
     peers = {};
+    peerAlertedIds.clear();
     firstFriendAutoFitted = false;
   }
 
-  // --- MULTI-BROKER REDUNDANT E2E SYNC ---
+  // --- MULTI-BROKER REDUNDANT E2E SYNC + OFFLINE MQTT QUEUE ---
   async function getGroupCryptoKey(code) {
     const enc = new TextEncoder();
     const keyMaterial = await crypto.subtle.importKey('raw', enc.encode(code), 'PBKDF2', false, ['deriveKey']);
@@ -1701,6 +2137,46 @@
     return JSON.parse(new TextDecoder().decode(plain));
   }
 
+  function updateOfflineQueueBadge() {
+    const pill = document.getElementById('offlineQueuePill');
+    const cnt = document.getElementById('offlineQueueCount');
+    if (!pill || !cnt) return;
+    if (offlineMessageQueue.length > 0) {
+      cnt.textContent = offlineMessageQueue.length;
+      pill.style.display = 'inline-block';
+    } else {
+      pill.style.display = 'none';
+    }
+  }
+
+  function enqueueOfflineMessage(topic, encryptedPayload, kind) {
+    if (kind === 'POS') {
+      // Keep only the latest POS per offline period plus discrete events (SOS, STOP, WAYPOINT)
+      offlineMessageQueue = offlineMessageQueue.filter(item => item.kind !== 'POS');
+    }
+    offlineMessageQueue.push({ topic, payload: encryptedPayload, kind, ts: Date.now() });
+    if (offlineMessageQueue.length > 60) offlineMessageQueue = offlineMessageQueue.slice(-60);
+    localStorage.setItem('trailsync_offline_queue', JSON.stringify(offlineMessageQueue));
+    updateOfflineQueueBadge();
+  }
+
+  function flushOfflineQueue() {
+    const connectedClients = mqttClients.filter(c => c && c.connected);
+    if (!connectedClients.length || !offlineMessageQueue.length) return;
+    const pending = [...offlineMessageQueue];
+    offlineMessageQueue = [];
+    localStorage.setItem('trailsync_offline_queue', '[]');
+    updateOfflineQueueBadge();
+    pending.forEach(item => {
+      connectedClients.forEach(c => {
+        c.publish(item.topic, item.payload, { retain: true, qos: 0 });
+      });
+    });
+    showToast(`📡 ${pending.length} mensajes guardados sin cobertura sincronizados con el grupo`);
+  }
+
+  window.addEventListener('online', () => flushOfflineQueue());
+
   function connectGroupSync() {
     const baseTopic = `trailsync/e2e/v7/${groupCode}`;
     if ('BroadcastChannel' in window) {
@@ -1716,12 +2192,13 @@
       brokers.forEach((brokerUrl, idx) => {
         try {
           const client = window.mqtt.connect(brokerUrl, {
-            clientId: `ts12_${myPeerId}_${idx}_${Math.floor(Math.random()*999)}`,
+            clientId: `ts14_${myPeerId}_${idx}_${Math.floor(Math.random()*999)}`,
             reconnectPeriod: 3000,
             connectTimeout: 8000
           });
           client.on('connect', () => {
             client.subscribe(`${baseTopic}/#`);
+            flushOfflineQueue();
             broadcastState('HELLO');
             if (activeSharedRoute) publishGroupRoute(activeSharedRoute);
           });
@@ -1745,11 +2222,12 @@
     if (bcChannel) bcChannel.postMessage(msg);
     const encrypted = await encryptPayload(msg);
     const routeTopic = `trailsync/e2e/v7/${groupCode}/shared_route`;
-    mqttClients.forEach(c => {
-      if (c && c.connected) {
-        c.publish(routeTopic, encrypted, { retain: true, qos: 0 });
-      }
-    });
+    const connected = mqttClients.filter(c => c && c.connected);
+    if (connected.length) {
+      connected.forEach(c => c.publish(routeTopic, encrypted, { retain: true, qos: 0 }));
+    } else {
+      enqueueOfflineMessage(routeTopic, encrypted, 'SHARED_ROUTE');
+    }
   }
 
   async function broadcastState(kind, extra = {}) {
@@ -1764,17 +2242,19 @@
       lat: userPos[0],
       lon: userPos[1],
       heading: currentHeadingDeg,
+      speedKmh: Math.round(currentSpeedKmh),
       ts: Date.now(),
       ...extra
     };
     if (bcChannel) bcChannel.postMessage(msg);
     const encrypted = await encryptPayload(msg);
     const peerTopic = `trailsync/e2e/v7/${groupCode}/${myPeerId}`;
-    mqttClients.forEach(c => {
-      if (c && c.connected) {
-        c.publish(peerTopic, encrypted, { retain: true, qos: 0 });
-      }
-    });
+    const connected = mqttClients.filter(c => c && c.connected);
+    if (connected.length) {
+      connected.forEach(c => c.publish(peerTopic, encrypted, { retain: true, qos: 0 }));
+    } else {
+      enqueueOfflineMessage(peerTopic, encrypted, kind);
+    }
   }
 
   function handleIncomingGroupMessage(msg) {
@@ -1790,6 +2270,16 @@
       return;
     }
 
+    if (msg.kind === 'WAYPOINT' && msg.waypoint) {
+      renderSharedWaypointMarker(msg.waypoint);
+      if (msg.peerId !== myPeerId) {
+        recordIncident('WAYPOINT', `${msg.waypoint.label} (${msg.waypoint.author})`, false);
+        showToast(`📌 ${msg.waypoint.author} marcó: ${msg.waypoint.label}`);
+        speakAlert(`${msg.waypoint.author} marcó ${msg.waypoint.label}`);
+      }
+      return;
+    }
+
     if (msg.peerId === myPeerId) return;
 
     const isNewFriend = !peers[msg.peerId];
@@ -1800,6 +2290,15 @@
       lastSeen: Date.now(),
       status: msg.kind === 'SOS' ? '🆘 S.O.S.' : (msg.kind === 'STOP' ? msg.reason : 'En ruta')
     };
+    peerAlertedIds.delete(msg.peerId);
+
+    if (msg.kind === 'SOS') {
+      showToast(`🆘 ¡ALERTA S.O.S. DE ${peers[msg.peerId].nick.toUpperCase()}!`);
+      speakAlert(`Atención, alerta SOS de ${peers[msg.peerId].nick}`);
+    } else if (msg.kind === 'STOP') {
+      showToast(`✋ ${peers[msg.peerId].nick} pide parada: ${msg.reason || ''}`);
+      speakAlert(`${peers[msg.peerId].nick} pide parada: ${msg.reason || ''}`);
+    }
 
     updatePeerMarkers();
     updateGroupRadarLabel();
@@ -1816,21 +2315,45 @@
   }
 
   function calcDistanceLabel(lat1, lon1, lat2, lon2) {
-    const R = 6371000;
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
-    const d = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const d = haversineKm(lat1, lon1, lat2, lon2) * 1000;
     return d < 1000 ? `${Math.round(d)} m` : `${(d / 1000).toFixed(1)} km`;
+  }
+
+  function checkGroupSeparationAndTimeouts() {
+    const alertEnabled = document.getElementById('groupSeparationAlertToggle')?.checked;
+    let hasWarning = false;
+    Object.entries(peers).forEach(([id, p]) => {
+      const staleSec = Math.round((Date.now() - p.lastSeen) / 1000);
+      const distKm = haversineKm(userPos[0], userPos[1], p.lat, p.lon);
+      const isDelayed = staleSec > 120 || distKm > 1.5;
+      if (isDelayed) {
+        hasWarning = true;
+        if (alertEnabled && !peerAlertedIds.has(id)) {
+          peerAlertedIds.add(id);
+          const reason = staleSec > 120
+            ? `${p.nick} lleva más de 2 minutos sin emitir posición`
+            : `${p.nick} se ha quedado a ${distKm.toFixed(1)} km del grupo`;
+          showToast(`🚨 ${reason}`);
+          speakAlert(`Atención: ${reason}`);
+        }
+      }
+    });
+    const radarEl = document.getElementById('groupRadarPill');
+    if (radarEl) {
+      if (hasWarning) radarEl.classList.add('alert-warn');
+      else radarEl.classList.remove('alert-warn');
+    }
   }
 
   function updatePeerMarkers() {
     const colors = ['#0284c7', '#10b981', '#8b5cf6', '#ec4899', '#06b6d4', '#eab308'];
     let idx = 0;
     Object.entries(peers).forEach(([id, p]) => {
+      const staleSec = Math.round((Date.now() - p.lastSeen) / 1000);
+      const isStale = staleSec > 120;
       const distStr = calcDistanceLabel(userPos[0], userPos[1], p.lat, p.lon);
-      const label = `${p.nick} · ${distStr}`;
-      const icon = createRiderIcon(label, colors[idx++ % colors.length], false);
+      const label = isStale ? `⚠️ ${p.nick} · hace ${Math.floor(staleSec/60)}m` : `${p.nick} · ${distStr}`;
+      const icon = createRiderIcon(label, isStale ? '#dc2626' : colors[idx++ % colors.length], false, isStale);
       if (!peerMarkers[id]) {
         peerMarkers[id] = L.marker([p.lat, p.lon], { icon }).addTo(map);
       } else {
@@ -1840,6 +2363,22 @@
     });
   }
 
+  function focusGroupMemberFromBubble(peerId, lat, lon, nick) {
+    if (!map || isNaN(lat) || isNaN(lon)) return;
+    if (courseUpMode) {
+      courseUpMode = false;
+      applyMapOrientation();
+    }
+    map.flyTo([lat, lon], Math.max(map.getZoom(), 16), {
+      animate: true,
+      duration: 0.7
+    });
+    if (peerId && peerMarkers[peerId]) {
+      peerMarkers[peerId].openPopup();
+    }
+    showToast(`📍 ${nick}`);
+  }
+
   function updateGroupRadarLabel() {
     const count = Object.keys(peers).length + 1;
     const anyConnected = mqttClients.some(c => c && c.connected);
@@ -1847,8 +2386,27 @@
     if (el) {
       el.textContent = count > 1
         ? `${count} en el mapa`
-        : (anyConnected ? '1 en mapa (esperando amigos)' : 'Conectando grupo...');
+        : (anyConnected ? '1 en mapa (esperando amigos)' : 'Sin red (cola local)');
     }
+
+    const bubblesContainer = document.getElementById('groupMembersBubbles');
+    if (!bubblesContainer) return;
+
+    const palette = ['#0284c7', '#10b981', '#8b5cf6', '#ec4899', '#06b6d4', '#eab308'];
+    const entries = Object.entries(peers).filter(([, p]) => typeof p.lat === 'number' && typeof p.lon === 'number');
+
+    bubblesContainer.innerHTML = entries.map(([id, p], idx) => {
+      const staleSec = Math.round((Date.now() - p.lastSeen) / 1000);
+      const isStale = staleSec > 120;
+      const color = isStale ? '#ef4444' : palette[idx % palette.length];
+      const distStr = calcDistanceLabel(userPos[0], userPos[1], p.lat, p.lon);
+      const safeNick = escapeXml(p.nick || 'Amigo');
+      const escapedJsNick = safeNick.replace(/'/g, "\'");
+      return `<button type="button" class="member-jump-pill ${isStale ? 'stale-member' : ''}" style="border-color:${color};" onclick="focusGroupMemberFromBubble('${id}', ${p.lat}, ${p.lon}, '${escapedJsNick}')">
+        <span class="member-jump-dot" style="background:${color};"></span>
+        <span>${isStale ? '⚠️ ' : ''}${safeNick} · ${distStr}</span>
+      </button>`;
+    }).join('');
   }
 
   function fitAllGroupMembers() {
@@ -1880,14 +2438,14 @@
     fitAllGroupMembers();
   }
 
-  function createRiderIcon(label, bgColor, isSelf = false) {
+  function createRiderIcon(label, bgColor, isSelf = false, isStale = false) {
     const innerContent = isSelf
       ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="#ffffff" style="transform:rotate(${currentHeadingDeg}deg);transition:transform 0.3s ease;"><polygon points="12,3 20,20 12,16 4,20"/></svg>`
-      : (label[0] || 'G').toUpperCase();
+      : (label.replace(/^⚠️\s*/, '')[0] || 'G').toUpperCase();
     return L.divIcon({
       className: '',
-      html: `<div class="rider-upright-wrapper"><div class="rider-badge"><div class="rider-dot" style="background:${bgColor};">${innerContent}</div><div class="rider-tag">${label}</div></div></div>`,
-      iconSize: [126, 58], iconAnchor: [63, 20]
+      html: `<div class="rider-upright-wrapper"><div class="rider-badge"><div class="rider-dot" style="background:${bgColor};">${innerContent}</div><div class="rider-tag ${isStale ? 'stale-peer' : ''}">${label}</div></div></div>`,
+      iconSize: [134, 58], iconAnchor: [67, 20]
     });
   }
 
@@ -1921,7 +2479,6 @@
 
         const loadFromNetworkOrFallback = () => {
           if (modeObj.cacheOnly) {
-            // In Offline-only mode, check both DMD2 Trail and OSM Base cache URLs
             const altCacheUrl = OSM_BASE_TILE_URL.replace('{z}', coords.z).replace('{x}', coords.x).replace('{y}', coords.y);
             if ('caches' in window) {
               caches.open(TILE_CACHE_NAME).then(c => c.match(altCacheUrl)).then(altResp => {
@@ -2006,13 +2563,13 @@
       }).catch(() => {});
     }
 
-    // Check manifest.json on server for newer APP_VERSION
     checkWebVersionUpdate(false);
+    updateOfflineQueueBadge();
 
     const startMode = getActiveLayerObj();
     map = L.map('map', { zoomControl: false }).setView(userPos, 15);
     baseTileLayer = buildOfflineTileLayer(startMode).addTo(map);
-    document.getElementById('layerNamePill').textContent = `🗺️ Capa: ${startMode.title} ▾`;
+    const lp2 = document.getElementById('layerNamePill'); if (lp2) lp2.textContent = `🗺️ Capa: ${startMode.title} ▾`;
     if (startMode.pistaStyle) document.getElementById('map').classList.add('offline-pista-mode');
     if (startMode.dmd2Style) document.getElementById('map').classList.add('dmd2-trail-mode');
 
@@ -2020,9 +2577,11 @@
     recordedLine = L.polyline([], { color: '#16a34a', weight: 6 }).addTo(map);
     backtrackLine = L.polyline([], { color: '#4f46e5', weight: 4, dashArray: '5, 6' }).addTo(map);
     incidentLayer = L.layerGroup().addTo(map);
+    sharedWaypointsLayer = L.layerGroup().addTo(map);
     userMarker = L.marker(userPos, { icon: createRiderIcon(userNick + ' (tú)', '#f59e0b', true) }).addTo(map);
 
     map.on('contextmenu', e => {
+      if (isRainLocked) return;
       placeDestinationPin(e.latlng.lat, e.latlng.lng, true);
     });
 
@@ -2038,6 +2597,8 @@
     }
 
     setInterval(() => {
+      updateTelemetryUI();
+      checkGroupSeparationAndTimeouts();
       updateGroupRadarLabel();
       updatePeerMarkers();
       if (isRecording) {
@@ -2046,7 +2607,7 @@
     }, 2500);
   }
 
-  // --- OFFLINE TILE DOWNLOADER (SUPPORTS DMD2 TRAIL + BASE MAP) ---
+  // --- OFFLINE TILE DOWNLOADER ---
   function lon2tile(lon, z) { return Math.floor((lon + 180) / 360 * Math.pow(2, z)); }
   function lat2tile(lat, z) { return Math.floor((1 - Math.log(Math.tan(lat * Math.PI / 180) + 1 / Math.cos(lat * Math.PI / 180)) / Math.PI) / 2 * Math.pow(2, z)); }
 
@@ -2143,25 +2704,41 @@
     const cache = await caches.open(TILE_CACHE_NAME);
     const keys = await cache.keys();
     const ready = localStorage.getItem('peninsulaOfflineReady') === '1' || keys.length > 200;
-    document.getElementById('peninsulaBadge').textContent = ready ? `Lista (${keys.length} teselas)` : `${keys.length} teselas`;
+    const pb = document.getElementById('peninsulaBadge'); if (pb) pb.textContent = ready ? `Lista (${keys.length} teselas)` : `${keys.length} teselas`;
     const el = document.getElementById('offlineStorageInfo');
     if (el) el.textContent = `${keys.length} teselas (~${(keys.length * 0.025).toFixed(1)} MB) · ${ready ? 'Offline activo' : 'Pendiente'}`;
   }
 
   function openOfflineModal() { refreshOfflineStats(); openModal('offlineModal'); }
 
-  // --- RECORDING, GPX, FAMILY + GOOGLE MAPS, SOS, STOP ---
+  // --- RECORDING, TELEMETRY, GPX, FAMILY + GOOGLE MAPS, SOS, STOP ---
   function recordPoint(lat, lon, ele = 65) {
     if (!isRecording) return;
+    if (recordedTrack.length > 0) {
+      const prev = recordedTrack[recordedTrack.length - 1];
+      const segKm = haversineKm(prev.lat, prev.lon, lat, lon);
+      if (segKm > 0.002 && segKm < 2.0) {
+        totalDistanceKm += segKm;
+      }
+    }
+    if (typeof ele === 'number' && !isNaN(ele) && ele > 0) {
+      if (lastAltitudeM !== null && ele > lastAltitudeM && (ele - lastAltitudeM) < 80) {
+        totalAscentM += (ele - lastAltitudeM);
+      }
+      lastAltitudeM = ele;
+    }
     recordedTrack.push({ lat, lon, ele, time: new Date().toISOString() });
     recordedLine.setLatLngs(recordedTrack.map(p => [p.lat, p.lon]));
     if (backtrackOn) backtrackLine.setLatLngs(recordedTrack.map(p => [p.lat, p.lon]));
+    updateTelemetryUI();
   }
 
-  function recordIncident(type, title) {
+  function recordIncident(type, title, dropMarkerOnMap = true) {
     const inc = { type, title, lat: userPos[0], lon: userPos[1], time: new Date().toISOString() };
     recordedIncidents.push(inc);
-    L.marker([inc.lat, inc.lon]).addTo(incidentLayer).bindPopup(`<strong>${title}</strong><br>${new Date(inc.time).toLocaleTimeString()}`);
+    if (dropMarkerOnMap) {
+      L.marker([inc.lat, inc.lon]).addTo(incidentLayer).bindPopup(`<strong>${title}</strong><br>${new Date(inc.time).toLocaleTimeString()}`);
+    }
   }
 
   function toggleLiveRecording() {
@@ -2169,16 +2746,14 @@
     const shape = document.getElementById('recIconShape');
     if (isRecording) {
       isRecording = false;
-      pill.textContent = 'DETENIDO';
-      pill.classList.add('paused');
+      if (pill) { pill.textContent = 'DETENIDO'; pill.classList.add('paused'); }
       shape.className = 'rec-play';
       recordIncident('STOP_TRACK', 'Fin de grabación en vivo');
       exportRecordedGPX();
       showToast('💾 Ruta detenida y archivo .GPX descargado');
     } else {
       isRecording = true;
-      pill.textContent = 'EN VIVO';
-      pill.classList.remove('paused');
+      if (pill) { pill.textContent = 'EN VIVO'; pill.classList.remove('paused'); }
       shape.className = 'rec-square';
       recordIncident('RESUME_TRACK', 'Reanudación de grabación');
       showToast('● Grabación en vivo reanudada');
@@ -2193,10 +2768,10 @@
       `      <trkpt lat="${p.lat.toFixed(6)}" lon="${p.lon.toFixed(6)}">\n        <ele>${p.ele}</ele>\n        <time>${p.time}</time>\n      </trkpt>`
     ).join('\n');
     const gpx = `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="TrailSync GPX Group Tracker" xmlns="http://www.topografix.com/GPX/1/1">
+<gpx version="1.1" creator="TrailSync GPX Group Tracker v14" xmlns="http://www.topografix.com/GPX/1/1">
   <metadata>
     <name>${escapeXml(groupName)} - ${new Date().toLocaleDateString()}</name>
-    <desc>Puntos: ${recordedTrack.length} | Incidencias: ${recordedIncidents.length}</desc>
+    <desc>Distancia: ${totalDistanceKm.toFixed(2)} km | Desnivel+: ${Math.round(totalAscentM)} m | Puntos: ${recordedTrack.length} | Waypoints: ${recordedIncidents.length}</desc>
     <time>${new Date().toISOString()}</time>
   </metadata>
 ${wptsXml}
@@ -2236,7 +2811,7 @@ ${trkptsXml}
     navigator.clipboard?.writeText(familyShareUrl);
     document.getElementById('familyShareBox').style.display = 'block';
     document.getElementById('familyShareStatus').textContent = `✅ Enlace activo (${durationLabel}) y copiado.`;
-    document.getElementById('family-active-pill').style.display = 'inline-block';
+    const fap1 = document.getElementById('family-active-pill'); if (fap1) fap1.style.display = 'inline-block';
     broadcastState('POS');
     recordIncident('FAMILY_SHARE', `Enlace familiar activo (${durationLabel})`);
   }
@@ -2251,7 +2826,7 @@ ${trkptsXml}
     familyShareUrl = '';
     familyExpireAt = 0;
     document.getElementById('familyShareBox').style.display = 'none';
-    document.getElementById('family-active-pill').style.display = 'none';
+    const fap2 = document.getElementById('family-active-pill'); if (fap2) fap2.style.display = 'none';
   }
 
   function triggerSOS() {
@@ -2301,14 +2876,14 @@ ${trkptsXml}
 
   function toggleWalkie() {
     walkieActive = !walkieActive;
-    document.getElementById('btnVoice').style.background = walkieActive ? 'rgba(2,132,199,0.28)' : 'transparent';
+    document.getElementById('btnVoice').style.background = walkieActive ? 'rgba(2,132,199,0.28)' : 'rgba(15, 23, 42, 0.72)';
     showToast(walkieActive ? '🎙️ Canal PTT abierto' : '🔇 Canal PTT en espera');
   }
 
   function toggleBacktrack() {
     backtrackOn = !backtrackOn;
     backtrackLine.setLatLngs(backtrackOn ? recordedTrack.map(p => [p.lat, p.lon]) : []);
-    document.getElementById('btnCompass').style.background = backtrackOn ? 'rgba(79,70,229,0.25)' : 'transparent';
+    document.getElementById('btnCompass').style.background = backtrackOn ? 'rgba(79,70,229,0.32)' : 'rgba(15, 23, 42, 0.72)';
     showToast(backtrackOn ? '↩️ Rastro de regreso activado' : '🧭 Rastro de regreso oculto');
   }
 
@@ -2322,9 +2897,6 @@ ${trkptsXml}
       map.setView(userPos, 16);
     }
   }
-
-  function lockScreen() { document.getElementById('lock-overlay').classList.add('open'); }
-  function unlockScreen() { document.getElementById('lock-overlay').classList.remove('open'); }
 
   function buildInviteUrl() {
     return `${window.location.origin}${window.location.pathname}?grupo=${groupCode}&nombre=${encodeURIComponent(groupName)}`;
@@ -2347,10 +2919,10 @@ ${trkptsXml}
     document.getElementById('directInviteUrlInput').value = buildInviteUrl();
     const totalMembers = Object.keys(peers).length + 1;
     document.getElementById('statsSummary').textContent =
-      `${totalMembers} conectados en el mapa · ${recordedTrack.length} puntos · ${recordedIncidents.length} incidencias`;
+      `${totalMembers} conectados · ${totalDistanceKm.toFixed(1)} km · +${Math.round(totalAscentM)} m · ${recordedIncidents.length} hitos`;
 
     const allMembers = [
-      { name: userNick + ' (tú)', status: realGpsActive ? 'GPS en vivo' : 'Ubicación activa', coords: userPos },
+      { name: userNick + ' (tú)', status: `${realGpsActive ? 'GPS en vivo' : 'Ubicación activa'} · ${Math.round(currentSpeedKmh)} km/h`, coords: userPos },
       ...Object.values(peers).map(p => ({
         name: p.nick,
         status: `${p.status} · a ${calcDistanceLabel(userPos[0], userPos[1], p.lat, p.lon)} · hace ${Math.max(1, Math.round((Date.now() - p.lastSeen)/1000))}s`,
@@ -2365,7 +2937,7 @@ ${trkptsXml}
     ).join('');
     document.getElementById('incidentsContainer').innerHTML = recordedIncidents.length
       ? recordedIncidents.map(i => `• [${new Date(i.time).toLocaleTimeString()}] ${i.title}`).join('<br>')
-      : 'Sin incidencias registradas todavía.';
+      : 'Sin incidencias ni chinchetas registradas todavía.';
     openModal('groupModal');
   }
 
@@ -2413,6 +2985,13 @@ ${trkptsXml}
       realGpsActive = true;
       const newPos = [pos.coords.latitude, pos.coords.longitude];
 
+      if (typeof pos.coords.speed === 'number' && !isNaN(pos.coords.speed) && pos.coords.speed >= 0) {
+        currentSpeedKmh = pos.coords.speed * 3.6;
+      } else if (prevUserPos) {
+        const dtHours = 2.5 / 3600;
+        currentSpeedKmh = haversineKm(prevUserPos[0], prevUserPos[1], newPos[0], newPos[1]) / dtHours;
+      }
+
       if (typeof pos.coords.heading === 'number' && !isNaN(pos.coords.heading) && (pos.coords.speed || 0) > 0.8) {
         currentHeadingDeg = Math.round(pos.coords.heading);
       } else if (prevUserPos && (Math.abs(newPos[0] - prevUserPos[0]) > 0.00003 || Math.abs(newPos[1] - prevUserPos[1]) > 0.00003)) {
@@ -2427,9 +3006,7 @@ ${trkptsXml}
       if (firstFix || courseUpMode) {
         map.setView(userPos, Math.max(map.getZoom(), 16));
       }
-      if (courseUpMode) {
-        applyMapOrientation();
-      }
+      if (courseUpMode) applyMapOrientation();
 
       recordPoint(userPos[0], userPos[1], Math.round(pos.coords.altitude || 0));
       broadcastState('POS');
