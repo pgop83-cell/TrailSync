@@ -10,7 +10,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
   <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
-  <title>TrailSync v14.19 — Visor de Cámara en Vivo para Escanear QR (z-index + Vista Previa Integrada)</title>
+  <title>TrailSync v14.20 — Diagnóstico de Señalización WebRTC y Reintento de Oferta</title>
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
         onerror="this.onerror=null;this.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';" />
@@ -1817,7 +1817,7 @@
     <h2>Ajustes de ruta y App</h2>
     <div style="background:#18141a;padding:10px 12px;border-radius:12px;margin-bottom:12px;border:1px solid #334155;display:flex;align-items:center;justify-content:space-between;gap:8px;">
       <div>
-        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">14.19.0</span></div>
+        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">14.20.0</span></div>
         <div style="font-size:11px;color:#94a3b8;" id="webVerStatusLabel">Comprobando actualizaciones en la web...</div>
       </div>
       <button class="solid-btn" style="flex:0 0 auto;background:#16a34a;color:#fff;padding:8px 12px;font-size:12px;" onclick="manualCheckForUpdates()">🔄 Buscar / Actualizar</button>
@@ -1849,7 +1849,7 @@
 </div>
 
 <script>
-  const APP_VERSION = '14.19.0';
+  const APP_VERSION = '14.20.0';
   let swWaitingWorker = null;
   let remoteVersionFound = null;
 
@@ -3648,7 +3648,7 @@ window.addEventListener('offline', () => {
       brokers.forEach((brokerUrl, idx) => {
         try {
           const client = window.mqtt.connect(brokerUrl, {
-            clientId: `ts1419_${myPeerId}_${idx}_${Math.floor(Math.random()*999)}`,
+            clientId: `ts1420_${myPeerId}_${idx}_${Math.floor(Math.random()*999)}`,
             reconnectPeriod: 3000,
             connectTimeout: 8000
           });
@@ -4897,17 +4897,23 @@ ${trkptsXml}
   function updateVoiceDiagStatus(extraNote = '') {
     const diagEl = document.getElementById('voiceLinkDiagText');
     if (!diagEl) return;
+    const mqttUp = mqttClients.filter(c => c && c.connected).length;
     const entries = Object.entries(rtcPeers);
     if (!entries.length) {
-      diagEl.textContent = extraNote || (groupVoiceMode === 'off' ? 'Canal apagado' : 'Esperando enlace WebRTC con compañeros...');
+      const base = extraNote || (groupVoiceMode === 'off' ? 'Canal apagado' : 'Esperando enlace WebRTC con compañeros...');
+      diagEl.textContent = `${base} [MQTT:${mqttUp}/${mqttClients.length}]`;
       return;
     }
     const parts = entries.map(([pid, pc]) => {
       const nick = (peerVoiceStates[pid] && peerVoiceStates[pid].nick) || (peers[pid] && peers[pid].nick) || pid.slice(-4);
       const state = `${pc.connectionState || 'new'}/ice:${pc.iceConnectionState || 'new'}`;
-      return `${nick}: ${state}`;
+      const ofC = voiceOfferCounts[pid] || 0;
+      const anC = voiceAnswerCounts[pid] || 0;
+      const icS = voiceIceSentCounts[pid] || 0;
+      const icR = voiceIceRecvCounts[pid] || 0;
+      return `${nick}: ${state} (O:${ofC}/A:${anC}/IC:${icS}>${icR})`;
     });
-    diagEl.textContent = parts.join(' · ') + (extraNote ? ` (${extraNote})` : '');
+    diagEl.textContent = parts.join(' · ') + ` [MQTT:${mqttUp}]` + (extraNote ? ` (${extraNote})` : '');
   }
 
   function flushPendingIceForPeer(peerId, pc) {
@@ -4994,6 +5000,7 @@ ${trkptsXml}
 
     pc.onicecandidate = (event) => {
       if (event.candidate) {
+        voiceIceSentCounts[remotePeerId] = (voiceIceSentCounts[remotePeerId] || 0) + 1;
         sendVoiceSignal(remotePeerId, 'ICE', { candidate: event.candidate.toJSON() });
       }
     };
@@ -5038,17 +5045,33 @@ ${trkptsXml}
     return pc;
   }
 
+  let voiceOfferCounts = {};
+  let voiceAnswerCounts = {};
+  let voiceIceSentCounts = {};
+  let voiceIceRecvCounts = {};
+
   async function initiateVoiceOfferToPeer(remotePeerId) {
     if (groupVoiceMode === 'off') return;
     try {
       await ensureLocalMicrophoneStream();
       const pc = createOrGetRtcConnection(remotePeerId);
+      if (pc.signalingState === 'have-local-offer') {
+        // Re-send existing local offer if no answer arrived yet
+        if (pc.localDescription) {
+          sendVoiceSignal(remotePeerId, 'OFFER', { sdp: pc.localDescription });
+          updateVoiceDiagStatus('re-enviando oferta');
+        }
+        return;
+      }
       if (pc.signalingState !== 'stable') return;
       const offer = await pc.createOffer({ offerToReceiveAudio: true });
       await pc.setLocalDescription(offer);
+      voiceOfferCounts[remotePeerId] = (voiceOfferCounts[remotePeerId] || 0) + 1;
       sendVoiceSignal(remotePeerId, 'OFFER', { sdp: pc.localDescription });
       updateVoiceDiagStatus('oferta enviada');
-    } catch (e) {}
+    } catch (e) {
+      updateVoiceDiagStatus('error oferta');
+    }
   }
 
   async function handleIncomingVoiceSignal(msg) {
@@ -5117,6 +5140,7 @@ ${trkptsXml}
         flushPendingIceForPeer(fromId, pc);
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
+        voiceAnswerCounts[fromId] = (voiceAnswerCounts[fromId] || 0) + 1;
         sendVoiceSignal(fromId, 'ANSWER', { sdp: pc.localDescription });
         updateVoiceDiagStatus('respuesta enviada');
       } catch (e) {}
@@ -5140,6 +5164,7 @@ ${trkptsXml}
       const pc = rtcPeers[fromId];
       if (pc && pc.remoteDescription) {
         try {
+          voiceIceRecvCounts[fromId] = (voiceIceRecvCounts[fromId] || 0) + 1;
           await pc.addIceCandidate(new RTCIceCandidate(msg.candidate));
         } catch (e) {}
       } else {
