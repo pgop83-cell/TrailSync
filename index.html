@@ -10,7 +10,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
   <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
-  <title>TrailSync v14.31.1 — Notificación al Grupo al Entrar en Zona Prohibida o Restringida</title>
+  <title>TrailSync v15.0.2 — Inicio limpio sin salto automático, Botón Legal Central y Actualización/Caché en Inicio</title>
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
         onerror="this.onerror=null;this.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';" />
@@ -94,8 +94,9 @@
       border-bottom: 7px solid transparent; border-left: 12px solid #22c55e;
     }
 
-    /* NEW APP VERSION UPDATE BUTTON */
-    #updateAppBannerBtn {
+    /* NEW APP VERSION UPDATE BUTTON (MAP + LOBBY) */
+    #updateAppBannerBtn,
+    #lobbyUpdateAppBtn {
       display: none;
       background: linear-gradient(90deg, #16a34a, #059669);
       color: #ffffff;
@@ -109,6 +110,33 @@
       align-items: center;
       gap: 6px;
       animation: pulseUpdate 1.8s infinite;
+    }
+    .lobby-bottom-tools {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 7px;
+      margin-top: 10px;
+      width: 100%;
+    }
+    .lobby-cache-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(30, 41, 59, 0.94);
+      color: #e2e8f0;
+      border: 1.5px solid #475569;
+      border-radius: 999px;
+      padding: 6px 13px;
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+      transition: transform 0.12s ease, border-color 0.15s ease;
+    }
+    .lobby-cache-btn:active {
+      transform: scale(0.95);
+      border-color: #38bdf8;
     }
     @keyframes pulseUpdate {
       0%, 100% { transform: scale(1); }
@@ -563,6 +591,32 @@
     .act-comp   { border: 2.5px solid #4f46e5; color: #818cf8; }
     .act-group  { border: 2.5px solid #059669; color: #34d399; }
     .act-center { border: 2.5px solid #7c3aed; color: #a78bfa; }
+    .act-legal  {
+      display: none;
+      border: 2.5px solid #0284c7;
+      color: #38bdf8;
+      position: relative;
+    }
+    .act-legal.legal-ok {
+      border-color: #22c55e;
+      color: #4ade80;
+      background: rgba(20, 83, 45, 0.78);
+    }
+    .act-legal.legal-warn {
+      border-color: #f59e0b;
+      color: #fbbf24;
+      background: rgba(120, 53, 15, 0.78);
+    }
+    .act-legal.legal-danger {
+      border-color: #ef4444;
+      color: #f87171;
+      background: rgba(127, 29, 29, 0.84);
+    }
+    .act-legal.legal-loading {
+      border-color: #38bdf8;
+      color: #bae6fd;
+      animation: pulseUpdate 1.1s infinite;
+    }
 
 
     /* REAL-TIME GROUP VOICE INTERCOM (OPEN CHANNEL + MUTE MIC) */
@@ -1076,7 +1130,7 @@
 <div id="lobby-screen">
   <div>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-      <div class="lobby-title">🧭 TrailSync <span class="free-pill">v14 · TELEMETRÍA + LLUVIA</span></div>
+      <div class="lobby-title">🧭 TrailSync <span class="free-pill">v15 · GPS + GRUPO</span></div>
     </div>
 
     <div id="inviteBanner" class="invite-banner">
@@ -1094,14 +1148,14 @@
       <label class="field-label">Nombre del grupo / salida</label>
       <input type="text" id="lobbyGroupNameInput" class="text-input" value="" placeholder="Ej. Ruta Domingo" oninput="cacheLobbyFields()" />
 
-      <button class="primary-cta" onclick="createAndEnterGroup()">🚀 Crear nuevo grupo en vivo</button>
+      <button type="button" class="primary-cta" onclick="createAndEnterGroup()">🚀 Crear nuevo grupo en vivo</button>
     </div>
 
     <div class="lobby-card">
       <label class="field-label">¿Ya tienes código de grupo?</label>
       <div style="display:flex;gap:8px;">
         <input type="text" id="lobbyJoinCodeInput" class="text-input" style="margin-bottom:0;text-transform:uppercase;letter-spacing:2px;" maxlength="8" placeholder="EJ. BS482X" />
-        <button class="secondary-cta" style="width:auto;padding:0 20px;" onclick="joinExistingGroup()">Unirse</button>
+        <button type="button" class="secondary-cta" style="width:auto;padding:0 20px;" onclick="joinExistingGroup()">Unirse</button>
       </div>
       <button type="button" class="secondary-cta" style="margin-top:10px;background:#0f172a;border:1.5px solid #38bdf8;color:#38bdf8;display:flex;align-items:center;justify-content:center;gap:8px;" onclick="openQrScannerModal()">
         <span>📷</span> <span>Unirse escaneando QR con cámara</span>
@@ -1109,8 +1163,18 @@
     </div>
   </div>
 
-  <div style="text-align:center;font-size:11px;color:#64748b;">
-    Versión 14.0 · Wake Lock + Telemetría GPX · Alertas Grupo · Cola Offline MQTT · Bloqueo Lluvia 3s
+  <div>
+    <div class="lobby-bottom-tools">
+      <button type="button" id="lobbyUpdateAppBtn" onclick="applyAppUpdate()" title="Actualizar a la última versión disponible">
+        🔄 Actualizar app <span id="lobbyNewVersionBadge"></span>
+      </button>
+      <button type="button" id="lobbyClearCacheBtn" class="lobby-cache-btn" onclick="resetAppCacheAndReload()" title="Limpiar caché y datos temporales de la aplicación">
+        🧹 Limpiar caché app
+      </button>
+    </div>
+    <div style="text-align:center;font-size:11px;color:#64748b;margin-top:8px;">
+      Versión 15.0.2 · Wake Lock + Telemetría GPX · Alertas Grupo · Cola Offline MQTT · Bloqueo Lluvia 3s
+    </div>
   </div>
 </div>
 
@@ -1267,6 +1331,10 @@
           <span>🇪🇸🇵🇹</span> <span>Descargar mapa offline</span>
         </button>
 
+        <button class="menu-item-btn mi-gpx" onclick="closeQuickMenu();openLocalRoutesRepoModal()">
+          <span>📚</span> <span>Mis rutas guardadas</span>
+        </button>
+
         <label class="menu-item-btn mi-gpx" style="margin:0;">
           <span>📂</span> <span>Cargar GPX al grupo</span>
           <input type="file" accept=".gpx,application/gpx+xml,text/xml" style="display:none" onchange="closeQuickMenu();handleGPXFile(event)" />
@@ -1288,10 +1356,7 @@
 
     <div class="family-spectator-banner" id="familySpectatorBanner">👁️ Vista familiar en directo (solo lectura)</div>
 
-    <button type="button" id="floatingLegalCheckPill" onclick="checkActiveRouteLegality(true)"
-            style="display:none;position:absolute;bottom:78px;left:50%;transform:translateX(-50%);z-index:942;background:rgba(15,23,42,0.95);color:#38bdf8;border:1.5px solid #0284c7;border-radius:999px;padding:6px 14px;font-size:11.5px;font-weight:800;box-shadow:0 4px 14px rgba(0,0,0,0.45);cursor:pointer;white-space:nowrap;">
-      ⚖️ Comprobar ruta legal
-    </button>
+
 
     <!-- LIVE TELEMETRY BAR -->
     <div class="telemetry-bar" onclick="openGroupModal()" title="Telemetría en vivo de la salida">
@@ -1392,6 +1457,13 @@
         <button class="circle-action act-sos" onclick="triggerSOS()" title="Emergencia SOS">SOS</button>
       </div>
 
+      <button type="button" class="circle-action act-legal" id="floatingLegalCheckPill" onclick="checkActiveRouteLegality(true)" title="Comprobar ruta legal" aria-label="Comprobar ruta legal">
+        <svg fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+          <path d="M12 3v18M8 21h8M4 7h16"/>
+          <path d="M6 7l-3 6h6l-3-6zM18 7l-3 6h6l-3-6z"/>
+        </svg>
+      </button>
+
       <div class="bottom-cluster">
         <button class="circle-action act-comp" id="btnCompass" onclick="toggleBacktrack()" title="Volver por rastro (Backtrack)">
           <svg fill="none" stroke="currentColor" stroke-width="2.3" viewBox="0 0 24 24">
@@ -1413,7 +1485,9 @@
           </svg>
         </button>
       </div>
-    </div>
+    
+
+</div>
   </div>
 </div>
 
@@ -1814,13 +1888,77 @@
   </div>
 </div>
 
+<!-- MODAL: LOCAL ROUTES REPOSITORY (LOAD, VIEW DETAILS/PHOTOS, SHARE OR DELETE) -->
+<div class="modal-backdrop" id="localRoutesRepoModal">
+  <div class="modal-card">
+    <h2>📚 Repositorio de rutas guardadas</h2>
+    <p style="font-size:12.5px;color:#cbd5e1;margin-bottom:10px;">
+      Consulta tus rutas guardadas con su descripción y fotos, cárgalas en el mapa o elimina las que ya no necesites.
+    </p>
+
+    <div id="localRepoRoutesContainer" style="max-height:360px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;margin-bottom:10px;"></div>
+
+    <div class="btn-row">
+      <button type="button" class="solid-btn" style="background:#334155;color:#fff;" onclick="closeModal('localRoutesRepoModal')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: SAVE FINISHED ROUTE (NAME, DESCRIPTION, PHOTOS & OPTIONAL EXPORT) -->
+<div class="modal-backdrop" id="saveFinishedRouteModal">
+  <div class="modal-card">
+    <h2>💾 ¿Guardar ruta realizada?</h2>
+    <p id="saveRouteSummaryMetrics" style="font-size:12.5px;color:#cbd5e1;margin-bottom:10px;">
+      Has detenido la grabación. Indica los datos si quieres guardar esta ruta en tu historial o descargar el paquete.
+    </p>
+
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px;">
+      <div>
+        <label style="display:block;font-size:11.5px;color:#94a3b8;margin-bottom:3px;font-weight:700;">Nombre de la ruta *</label>
+        <input id="saveRouteNameInput" type="text" placeholder="Ej. Pistas Guriezo - Castro Urdiales"
+               style="width:100%;box-sizing:border-box;background:#111622;color:#f8fafc;border:1px solid #334155;border-radius:9px;padding:8px 10px;font-size:13px;" />
+      </div>
+
+      <div>
+        <label style="display:block;font-size:11.5px;color:#94a3b8;margin-bottom:3px;font-weight:700;">Descripción y notas del recorrido</label>
+        <textarea id="saveRouteDescInput" rows="3" placeholder="Estado de las pistas, puntos de interés, dificultad, observaciones..."
+                  style="width:100%;box-sizing:border-box;background:#111622;color:#f8fafc;border:1px solid #334155;border-radius:9px;padding:8px 10px;font-size:12.5px;resize:vertical;"></textarea>
+      </div>
+
+      <div>
+        <label style="display:block;font-size:11.5px;color:#94a3b8;margin-bottom:4px;font-weight:700;">Fotos de la ruta (opcional)</label>
+        <input id="saveRoutePhotosInput" type="file" accept="image/*" multiple onchange="handleSaveRoutePhotosSelect(event)"
+               style="width:100%;font-size:12px;color:#cbd5e1;" />
+        <div id="saveRoutePhotosPreview" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;"></div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:7px;margin-top:8px;">
+      <button type="button" class="solid-btn" style="width:100%;background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;border:1px solid #4ade80;padding:10px 12px;font-size:13px;" onclick="confirmSaveFinishedRoute(true)">
+        💾 Guardar ruta + descargar .GPX y fotos
+      </button>
+      <button type="button" class="solid-btn" style="width:100%;background:#0284c7;color:#fff;padding:9px 12px;font-size:12.5px;" onclick="confirmSaveFinishedRoute(false)">
+        📁 Guardar solo en mis rutas locales
+      </button>
+      <button type="button" class="solid-btn" style="width:100%;background:#334155;color:#cbd5e1;padding:8px 12px;font-size:12px;" onclick="discardSaveFinishedRoute()">
+        No guardar (solo finalizar)
+      </button>
+    </div>
+
+    <div id="savedLocalRoutesSection" style="margin-top:12px;border-top:1px solid #334155;padding-top:10px;display:none;">
+      <div style="font-size:12px;font-weight:800;color:#f8fafc;margin-bottom:6px;">📚 Rutas guardadas en este dispositivo</div>
+      <div id="savedLocalRoutesList" style="max-height:150px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;"></div>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: SETTINGS + APP UPDATE CHECK + GROUP ALERTS -->
 <div class="modal-backdrop" id="settingsModal">
   <div class="modal-card">
     <h2>Ajustes de ruta y App</h2>
     <div style="background:#18141a;padding:10px 12px;border-radius:12px;margin-bottom:12px;border:1px solid #334155;display:flex;align-items:center;justify-content:space-between;gap:8px;">
       <div>
-        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">14.31.1</span></div>
+        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">15.0.1</span></div>
         <div style="font-size:11px;color:#94a3b8;" id="webVerStatusLabel">Comprobando actualizaciones en la web...</div>
       </div>
       <button class="solid-btn" style="flex:0 0 auto;background:#16a34a;color:#fff;padding:8px 12px;font-size:12px;" onclick="manualCheckForUpdates()">🔄 Buscar / Actualizar</button>
@@ -1852,7 +1990,56 @@
 </div>
 
 <script>
-  const APP_VERSION = '14.31.1';
+  function safeStorageGet(key, fallback = '') {
+    try {
+      const v = localStorage.getItem(key);
+      return v === null ? fallback : v;
+    } catch (e) {
+      return fallback;
+    }
+  }
+  function safeStorageSet(key, val) {
+    try {
+      localStorage.setItem(key, String(val));
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+  function safeStorageRemove(key) {
+    try {
+      localStorage.removeItem(key);
+    } catch (e) {}
+  }
+  async function resetAppCacheAndReload() {
+    try { safeStorageRemove('trailsync_active_group_code'); safeStorageRemove('trailsync_active_group_name'); } catch (e) {}
+    try {
+      if ('serviceWorker' in navigator) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map(r => r.unregister()));
+      }
+      if ('caches' in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map(k => caches.delete(k)));
+      }
+    } catch (e) {}
+    location.replace(location.pathname + '?reset=' + Date.now());
+  }
+  window.addEventListener('error', (ev) => {
+    try {
+      if (ev && ev.message) {
+        const t = document.getElementById('toast');
+        if (t) {
+          t.textContent = '⚠️ Aviso: ' + ev.message;
+          t.style.display = 'block';
+          clearTimeout(t._timer);
+          t._timer = setTimeout(() => { t.style.display = 'none'; }, 4000);
+        }
+      }
+    } catch (e) {}
+  });
+
+  const APP_VERSION = '15.0.2';
   let swWaitingWorker = null;
   let remoteVersionFound = null;
 
@@ -2098,9 +2285,13 @@
   function showAppUpdateButton(newVerText = '') {
     const btn = document.getElementById('updateAppBannerBtn');
     const badge = document.getElementById('newVersionBadge');
+    const lobbyBtn = document.getElementById('lobbyUpdateAppBtn');
+    const lobbyBadge = document.getElementById('lobbyNewVersionBadge');
     const statusLbl = document.getElementById('webVerStatusLabel');
     if (badge && newVerText) badge.textContent = `(${newVerText})`;
+    if (lobbyBadge && newVerText) lobbyBadge.textContent = `(${newVerText})`;
     if (btn) btn.style.display = 'inline-flex';
+    if (lobbyBtn) lobbyBtn.style.display = 'inline-flex';
     if (statusLbl) statusLbl.textContent = `¡Nueva versión disponible${newVerText ? ' (' + newVerText + ')' : ''}! Pulsa Actualizar.`;
   }
 
@@ -2307,6 +2498,13 @@
   let myPeerId = localStorage.getItem('trailsync_peer_id') || ('peer_' + Math.random().toString(36).slice(2, 10));
   localStorage.setItem('trailsync_peer_id', myPeerId);
 
+  
+  let hasValidGpsFix = false;
+  let gpsFixSource = 'none';
+  let gpsLastAccuracyM = null;
+  let gpsFallbackTimer = null;
+  let rideStartedAndPositioned = false;
+
   let userPos = [43.3485, -3.3145];
   let prevUserPos = null;
   let currentHeadingDeg = 0;
@@ -2365,19 +2563,21 @@
   const familyRiderParam = urlParams.get('rider');
 
   function cacheLobbyFields() {
-    const nEl = document.getElementById('lobbyNickInput');
-    const gEl = document.getElementById('lobbyGroupNameInput');
-    if (nEl && nEl.value.trim()) localStorage.setItem('trailsync_nick', nEl.value.trim());
-    if (gEl && gEl.value.trim()) localStorage.setItem('trailsync_last_group_name', gEl.value.trim());
+    try {
+      const nEl = document.getElementById('lobbyNickInput');
+      const gEl = document.getElementById('lobbyGroupNameInput');
+      if (nEl && nEl.value.trim()) safeStorageSet('trailsync_nick', nEl.value.trim());
+      if (gEl && gEl.value.trim()) safeStorageSet('trailsync_last_group_name', gEl.value.trim());
+    } catch (e) {}
   }
 
   (function restoreCachedLobbyFields() {
-    const savedNick = localStorage.getItem('trailsync_nick') || '';
-    const savedGName = localStorage.getItem('trailsync_last_group_name') || '';
     const nEl = document.getElementById('lobbyNickInput');
     const gEl = document.getElementById('lobbyGroupNameInput');
-    if (nEl) nEl.value = savedNick;
-    if (gEl) gEl.value = savedGName;
+    const cEl = document.getElementById('lobbyJoinCodeInput');
+    if (nEl) nEl.value = '';
+    if (gEl) gEl.value = '';
+    if (cEl && !invitedCode) cEl.value = '';
   })();
 
   if (invitedCode) {
@@ -2494,8 +2694,9 @@
     document.getElementById('sharedRouteMenuCard').classList.add('visible');
     const legalPill = document.getElementById('floatingLegalCheckPill');
     if (legalPill && !isFamilySpectator) {
-      legalPill.style.display = 'block';
-      legalPill.textContent = '⚖️ Comprobar ruta legal';
+      legalPill.style.display = 'flex';
+      legalPill.classList.remove('legal-ok', 'legal-warn', 'legal-danger', 'legal-loading');
+      legalPill.title = 'Comprobar ruta legal';
     }
 
     if (broadcastToGroup) publishGroupRoute(routeObj);
@@ -2514,6 +2715,11 @@
     if (btn) {
       btn.disabled = false;
       btn.textContent = '⚖️ Comprobar ruta legal';
+    }
+    const pill = document.getElementById('floatingLegalCheckPill');
+    if (pill) {
+      pill.classList.remove('legal-ok', 'legal-warn', 'legal-danger', 'legal-loading');
+      pill.title = 'Comprobar ruta legal';
     }
   }
 
@@ -2637,7 +2843,9 @@ function keepOriginalRouteAndNavigate() {
     closeModal('routeLegalModal');
     const pill = document.getElementById('floatingLegalCheckPill');
     if (pill && lastLegalAuditResult && lastLegalAuditResult.redKm > 0.05) {
-      pill.textContent = `⚠️ Ruta original activa (${lastLegalAuditResult.redKm.toFixed(1)} km restr.)`;
+      pill.classList.remove('legal-ok', 'legal-warn', 'legal-loading');
+      pill.classList.add('legal-danger');
+      pill.title = `Ruta original activa (${lastLegalAuditResult.redKm.toFixed(1)} km restr.)`;
     }
     showToast('🏍️ Trayecto original mantenido. Navegación activa.');
   }
@@ -2771,7 +2979,11 @@ function keepOriginalRouteAndNavigate() {
       const clamped = Math.max(0, Math.min(100, Math.round(pct)));
       const text = `⏳ Legalidad ${clamped}% · ${label}`;
       if (btn) { btn.disabled = true; btn.textContent = text; }
-      if (pill) { pill.textContent = text; }
+      if (pill) {
+        pill.classList.remove('legal-ok', 'legal-warn', 'legal-danger');
+        pill.classList.add('legal-loading');
+        pill.title = text;
+      }
     };
 
     setLegalProgress(5, 'Preparando tramos...');
@@ -2975,9 +3187,17 @@ function keepOriginalRouteAndNavigate() {
         btn.textContent = redKm > 0.05 ? `🔴 Revisar (${redKm.toFixed(1)} km restr.)` : '🟢 Ver informe legal';
       }
       if (pill) {
-        pill.textContent = redKm > 0.05
-          ? `🔴 Ruta legal: ${redKm.toFixed(1)} km restringidos`
-          : (amberKm > 0.05 ? `🟠 Ruta legal: ${amberKm.toFixed(1)} km precaución` : '🟢 Ruta legal: Sin restricciones');
+        pill.classList.remove('legal-ok', 'legal-warn', 'legal-danger', 'legal-loading');
+        if (redKm > 0.05) {
+          pill.classList.add('legal-danger');
+          pill.title = `Ruta legal: ${redKm.toFixed(1)} km restringidos`;
+        } else if (amberKm > 0.05) {
+          pill.classList.add('legal-warn');
+          pill.title = `Ruta legal: ${amberKm.toFixed(1)} km precaución`;
+        } else {
+          pill.classList.add('legal-ok');
+          pill.title = 'Ruta legal: Sin restricciones';
+        }
       }
 
       const btnRecalc = document.getElementById('btnRecalculateLegalRoute');
@@ -3002,7 +3222,10 @@ function keepOriginalRouteAndNavigate() {
       }
     } catch (err) {
       if (btn) { btn.disabled = false; btn.textContent = '⚖️ Comprobar ruta legal'; }
-      if (pill) { pill.textContent = '⚖️ Comprobar ruta legal'; }
+      if (pill) {
+        pill.classList.remove('legal-ok', 'legal-warn', 'legal-danger', 'legal-loading');
+        pill.title = 'Comprobar ruta legal';
+      }
       showToast('⚠️ ' + (err.message || 'Error al comprobar la ruta'));
     }
   }
@@ -3388,36 +3611,58 @@ function keepOriginalRouteAndNavigate() {
   }
 
   function createAndEnterGroup() {
-    const rawNick = (document.getElementById('lobbyNickInput').value || '').trim();
-    if (!rawNick) {
-      document.getElementById('lobbyNickInput').focus();
-      return showToast('Escribe tu nombre o indicativo antes de entrar');
+    try {
+      const nickEl = document.getElementById('lobbyNickInput');
+      const rawNick = ((nickEl && nickEl.value) || '').trim();
+      if (!rawNick) {
+        if (nickEl) nickEl.focus();
+        return showToast('Escribe tu nombre o indicativo antes de entrar');
+      }
+      userNick = rawNick;
+      const gEl = document.getElementById('lobbyGroupNameInput');
+      groupName = ((gEl && gEl.value) || 'Ruta en grupo').trim() || 'Ruta en grupo';
+      groupCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+      isFamilySpectator = false;
+      saveActiveGroupSession();
+      enterTracker();
+    } catch (e) {
+      const lobby = document.getElementById('lobby-screen');
+      const appEl = document.getElementById('app');
+      if (lobby) lobby.style.display = 'none';
+      if (appEl) appEl.classList.add('active');
     }
-    userNick = rawNick;
-    groupName = (document.getElementById('lobbyGroupNameInput').value || 'Ruta en grupo').trim();
-    groupCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-    isFamilySpectator = false;
-    saveActiveGroupSession();
-    enterTracker();
   }
 
   function joinExistingGroup() {
-    const rawNick = (document.getElementById('lobbyNickInput').value || '').trim();
-    if (!rawNick) {
-      document.getElementById('lobbyNickInput').focus();
-      return showToast('Escribe tu nombre o indicativo antes de unirte');
+    try {
+      const nickEl = document.getElementById('lobbyNickInput');
+      const rawNick = ((nickEl && nickEl.value) || '').trim();
+      if (!rawNick) {
+        if (nickEl) nickEl.focus();
+        return showToast('Escribe tu nombre o indicativo antes de unirte');
+      }
+      userNick = rawNick;
+      const codeEl = document.getElementById('lobbyJoinCodeInput');
+      const code = ((codeEl && codeEl.value) || '').trim().toUpperCase();
+      if (code.length < 4) return showToast('Introduce un código de grupo válido (mín. 4 caracteres)');
+      groupCode = code;
+      groupName = invitedGroupName ? decodeURIComponent(invitedGroupName) : (safeStorageGet('trailsync_active_group_name', '') || ('Grupo ' + code));
+      isFamilySpectator = false;
+      saveActiveGroupSession();
+      enterTracker();
+    } catch (e) {
+      const lobby = document.getElementById('lobby-screen');
+      const appEl = document.getElementById('app');
+      if (lobby) lobby.style.display = 'none';
+      if (appEl) appEl.classList.add('active');
     }
-    userNick = rawNick;
-    const code = (document.getElementById('lobbyJoinCodeInput').value || '').trim().toUpperCase();
-    if (code.length < 4) return showToast('Introduce un código de grupo válido (mín. 4 caracteres)');
-    groupCode = code;
-    groupName = invitedGroupName ? decodeURIComponent(invitedGroupName) : (localStorage.getItem('trailsync_active_group_name') || ('Grupo ' + code));
-    isFamilySpectator = false;
-    saveActiveGroupSession();
-    enterTracker();
   }
 
   function enterTracker(isAutoRestore = false) {
+    hasValidGpsFix = false;
+    gpsFixSource = 'none';
+    rideStartedAndPositioned = false;
+    firstFriendAutoFitted = false;
     document.body.classList.toggle('family-spectator-mode', isFamilySpectator);
     document.getElementById('lobby-screen').style.display = 'none';
     document.getElementById('app').classList.add('active');
@@ -3593,6 +3838,15 @@ function keepOriginalRouteAndNavigate() {
   }
 
   async function leaveGroupNow() {
+    if (recordedTrack.length >= 5 || totalDistanceKm >= 0.2) {
+      isRecording = false;
+      const pill = document.getElementById('livePill');
+      const shape = document.getElementById('recIconShape');
+      if (pill) { pill.textContent = 'DETENIDO'; pill.classList.add('paused'); }
+      if (shape) shape.className = 'rec-play';
+      openSaveFinishedRoutePrompt(true);
+      return;
+    }
     if (typeof setGroupVoiceMode === 'function' && groupVoiceMode !== 'off') {
       await setGroupVoiceMode('off');
     }
@@ -3615,8 +3869,10 @@ function keepOriginalRouteAndNavigate() {
     document.getElementById('lobby-screen').style.display = 'flex';
     const nEl = document.getElementById('lobbyNickInput');
     const gEl = document.getElementById('lobbyGroupNameInput');
-    if (nEl) nEl.value = localStorage.getItem('trailsync_nick') || '';
-    if (gEl) gEl.value = localStorage.getItem('trailsync_last_group_name') || '';
+    const cEl = document.getElementById('lobbyJoinCodeInput');
+    if (nEl) nEl.value = '';
+    if (gEl) gEl.value = '';
+    if (cEl) cEl.value = '';
   }
 
   window.addEventListener('pagehide', () => {
@@ -3739,7 +3995,7 @@ window.addEventListener('offline', () => {
       brokers.forEach((brokerUrl, idx) => {
         try {
           const client = window.mqtt.connect(brokerUrl, {
-            clientId: `ts1431_${myPeerId}_${idx}_${Math.floor(Math.random()*999)}`,
+            clientId: `ts1500_${myPeerId}_${idx}_${Math.floor(Math.random()*999)}`,
             reconnectPeriod: 3000,
             connectTimeout: 8000
           });
@@ -3790,6 +4046,7 @@ window.addEventListener('offline', () => {
 
   async function broadcastState(kind, extra = {}) {
     if (isFamilySpectator) return;
+    if (!hasValidGpsFix && kind !== 'LEAVE_GROUP' && kind !== 'VOICE_SIG') return;
     if (familyExpireAt && Date.now() > familyExpireAt) {
       stopFamilyShare();
       showToast('⏱️ El enlace temporal para la familia ha caducado');
@@ -3800,6 +4057,9 @@ window.addEventListener('offline', () => {
       kind,
       lat: userPos[0],
       lon: userPos[1],
+      gpsSource: gpsFixSource,
+      hasFix: hasValidGpsFix,
+      rideStarted: rideStartedAndPositioned,
       heading: currentHeadingDeg,
       speedKmh: Math.round(currentSpeedKmh),
       ts: Date.now(),
@@ -3901,12 +4161,13 @@ window.addEventListener('offline', () => {
 
     if (isNewFriend) {
       if (!isFamilySpectator) {
-        showToast(`🏍️ ${peers[msg.peerId].nick} se ha conectado al mapa`);
-        broadcastState('POS');
+        showToast(`🏍️ ${peers[msg.peerId].nick} ha entrado al grupo`);
+        speakAlert(`${peers[msg.peerId].nick} ha entrado al grupo`);
+        if (hasValidGpsFix) broadcastState('POS');
         if (activeSharedRoute) publishGroupRoute(activeSharedRoute);
         if (groupVoiceMode !== 'off') sendVoiceSignal(msg.peerId, 'JOIN');
       }
-      if (!firstFriendAutoFitted) {
+      if (!firstFriendAutoFitted && hasValidGpsFix && msg.hasFix !== false) {
         firstFriendAutoFitted = true;
         setTimeout(() => fitAllGroupMembers(), 400);
       }
@@ -3921,6 +4182,11 @@ window.addEventListener('offline', () => {
   function checkGroupSeparationAndTimeouts() {
     const alertEnabled = document.getElementById('groupSeparationAlertToggle')?.checked;
     let hasWarning = false;
+    if (!hasRideStartedAndPositioned()) {
+      const radarEl = document.getElementById('groupRadarPill');
+      if (radarEl) radarEl.classList.remove('alert-warn');
+      return;
+    }
     Object.entries(peers).forEach(([id, p]) => {
       const staleSec = Math.round((Date.now() - p.lastSeen) / 1000);
       if (staleSec > 90) {
@@ -3930,6 +4196,8 @@ window.addEventListener('offline', () => {
         speakAlert(`${goneNick} ha salido del grupo`);
         return;
       }
+      const isDefaultPeerPos = (Math.abs(p.lat - 43.3485) < 0.0001 && Math.abs(p.lon - (-3.3145)) < 0.0001);
+      if (isDefaultPeerPos) return;
       const distKm = haversineKm(userPos[0], userPos[1], p.lat, p.lon);
       const isDelayed = staleSec > 45 || distKm > 1.5;
       if (isDelayed) {
@@ -4341,17 +4609,12 @@ window.addEventListener('offline', () => {
         groupName = familyRiderParam ? `Ruta de ${decodeURIComponent(familyRiderParam)}` : 'Seguimiento Familiar';
         enterTracker(false);
       }
-    } else if (invitedCode && invitedCode.toUpperCase() !== savedActiveCode) {
-      if (!userNick) userNick = getDefaultDeviceNick();
-      const nEl = document.getElementById('lobbyNickInput');
-      if (nEl && !nEl.value.trim()) nEl.value = userNick;
-      joinExistingGroup();
-    } else if (savedActiveCode && savedActiveCode.length >= 4) {
-      // Automatically restore the rider's active group on reload / reopen / back navigation
-      userNick = getDefaultDeviceNick();
-      groupCode = savedActiveCode;
-      groupName = savedActiveName || ('Grupo ' + savedActiveCode);
-      enterTracker(true);
+    } else if (invitedCode) {
+      // Show start screen with invite banner and code prefilled so the user can enter their name and tap Unirse
+      const cEl = document.getElementById('lobbyJoinCodeInput');
+      if (cEl) cEl.value = invitedCode.toUpperCase();
+      const bEl = document.getElementById('inviteBanner');
+      if (bEl) bEl.style.display = 'block';
     }
 
     let heartbeatTick = 0;
@@ -4584,6 +4847,267 @@ window.addEventListener('offline', () => {
     }
   }
 
+
+  // --- POST-ROUTE SAVE PROMPT (NAME, DESCRIPTION, PHOTOS & OPTIONAL GPX/PHOTO EXPORT) ---
+  let pendingRoutePhotos = [];
+  let leaveGroupAfterSavePrompt = false;
+
+  function getSavedLocalRoutes() {
+    try {
+      const raw = JSON.parse(localStorage.getItem('trailsync_saved_routes_v1') || '[]');
+      return Array.isArray(raw) ? raw : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function setSavedLocalRoutes(list) {
+    try {
+      localStorage.setItem('trailsync_saved_routes_v1', JSON.stringify(list.slice(0, 25)));
+    } catch (e) {
+      // Fallback without photos if storage quota is tight
+      try {
+        const compact = list.slice(0, 25).map(r => ({ ...r, photoThumbs: [] }));
+        localStorage.setItem('trailsync_saved_routes_v1', JSON.stringify(compact));
+      } catch (e2) {}
+    }
+  }
+
+  function createCompressedThumbDataUrl(file) {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          const maxDim = 480;
+          let w = img.naturalWidth || 480;
+          let h = img.naturalHeight || 480;
+          if (w > maxDim || h > maxDim) {
+            if (w >= h) { h = Math.round((h * maxDim) / w); w = maxDim; }
+            else { w = Math.round((w * maxDim) / h); h = maxDim; }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL('image/jpeg', 0.72));
+        };
+        img.onerror = () => resolve(null);
+        img.src = reader.result;
+      };
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function handleSaveRoutePhotosSelect(ev) {
+    const files = Array.from((ev && ev.target && ev.target.files) || []);
+    const preview = document.getElementById('saveRoutePhotosPreview');
+    pendingRoutePhotos = [];
+    if (preview) preview.innerHTML = '';
+
+    for (const f of files.slice(0, 6)) {
+      const thumbUrl = await createCompressedThumbDataUrl(f);
+      pendingRoutePhotos.push({ file: f, name: f.name, thumbUrl });
+      if (preview && thumbUrl) {
+        const imgEl = document.createElement('img');
+        imgEl.src = thumbUrl;
+        imgEl.alt = f.name;
+        imgEl.style.cssText = 'width:58px;height:58px;object-fit:cover;border-radius:8px;border:1px solid #475569;';
+        preview.appendChild(imgEl);
+      }
+    }
+  }
+
+  function buildSavedRouteCardHtml(r, idx, detailed = false) {
+    const thumbs = Array.isArray(r.photoThumbs) ? r.photoThumbs : [];
+    const descHtml = (detailed && r.description)
+      ? `<div style="font-size:11.5px;color:#cbd5e1;margin-top:4px;line-height:1.35;">${escapeXml(r.description)}</div>`
+      : '';
+    const photosHtml = (detailed && thumbs.length)
+      ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;">${thumbs.map(src => `<img src="${src}" alt="" style="width:54px;height:54px;object-fit:cover;border-radius:7px;border:1px solid #475569;" />`).join('')}</div>`
+      : '';
+
+    return `<div style="background:#18141a;border:1px solid #334155;border-radius:10px;padding:8px 10px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+        <div style="min-width:0;flex:1;">
+          <div style="font-size:12.5px;font-weight:800;color:#f8fafc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeXml(r.name)}</div>
+          <div style="font-size:11px;color:#94a3b8;margin-top:2px;">${Number(r.distanceKm || 0).toFixed(1)} km · +${Math.round(r.ascentM || 0)} m · 📷 ${thumbs.length} · ${escapeXml(r.dateStr || '')}</div>
+          ${descHtml}
+        </div>
+        <div style="display:flex;gap:5px;flex:0 0 auto;">
+          <button type="button" class="solid-btn" style="background:#0284c7;color:#fff;padding:5px 9px;font-size:11px;" onclick="loadSavedLocalRouteOntoMap(${idx})">🗺️ Cargar</button>
+          <button type="button" class="solid-btn" style="background:#991b1b;color:#fecaca;border:1px solid #ef4444;padding:5px 8px;font-size:11px;" title="Eliminar ruta guardada" onclick="deleteSavedLocalRoute(${idx})">🗑️</button>
+        </div>
+      </div>
+      ${photosHtml}
+    </div>`;
+  }
+
+  function renderSavedLocalRoutesList() {
+    const routes = getSavedLocalRoutes();
+
+    const sec = document.getElementById('savedLocalRoutesSection');
+    const listEl = document.getElementById('savedLocalRoutesList');
+    if (sec && listEl) {
+      if (!routes.length) {
+        sec.style.display = 'none';
+      } else {
+        sec.style.display = 'block';
+        listEl.innerHTML = routes.map((r, idx) => buildSavedRouteCardHtml(r, idx, false)).join('');
+      }
+    }
+
+    const repoContainer = document.getElementById('localRepoRoutesContainer');
+    if (repoContainer) {
+      if (!routes.length) {
+        repoContainer.innerHTML = `<div style="background:#18141a;border:1px solid #334155;border-radius:10px;padding:14px;text-align:center;color:#94a3b8;font-size:12.5px;">
+          Todavía no tienes rutas guardadas en este dispositivo.<br>Al detener una grabación podrás guardarla con nombre, descripción y fotos.
+        </div>`;
+      } else {
+        repoContainer.innerHTML = routes.map((r, idx) => buildSavedRouteCardHtml(r, idx, true)).join('');
+      }
+    }
+  }
+
+  function openLocalRoutesRepoModal() {
+    renderSavedLocalRoutesList();
+    openModal('localRoutesRepoModal');
+  }
+
+  function deleteSavedLocalRoute(idx) {
+    const routes = getSavedLocalRoutes();
+    const target = routes[idx];
+    if (!target) return;
+    if (!window.confirm(`¿Eliminar la ruta "${target.name}" de tus rutas guardadas?`)) return;
+    routes.splice(idx, 1);
+    setSavedLocalRoutes(routes);
+    renderSavedLocalRoutesList();
+    showToast(`🗑️ Ruta "${target.name}" eliminada del repositorio`);
+  }
+
+  function loadSavedLocalRouteOntoMap(idx) {
+    const routes = getSavedLocalRoutes();
+    const item = routes[idx];
+    if (!item || !Array.isArray(item.coords) || item.coords.length < 2) {
+      return showToast('⚠️ Esta ruta guardada no tiene puntos suficientes');
+    }
+    applySharedGroupRoute({
+      id: item.id,
+      title: item.name,
+      author: userNick,
+      color: '#ea580c',
+      distanceKm: item.distanceKm,
+      coords: item.coords,
+      ts: Date.now()
+    }, false);
+    fitSharedRouteBounds();
+    closeModal('saveFinishedRouteModal');
+    closeModal('localRoutesRepoModal');
+    showToast(`🧭 Ruta "${item.name}" cargada en el mapa`);
+  }
+
+  function openSaveFinishedRoutePrompt(afterLeaveGroup = false) {
+    leaveGroupAfterSavePrompt = Boolean(afterLeaveGroup);
+    pendingRoutePhotos = [];
+    const nameInput = document.getElementById('saveRouteNameInput');
+    const descInput = document.getElementById('saveRouteDescInput');
+    const photosInput = document.getElementById('saveRoutePhotosInput');
+    const preview = document.getElementById('saveRoutePhotosPreview');
+    const metricsEl = document.getElementById('saveRouteSummaryMetrics');
+
+    const defaultTitle = (activeSharedRoute && activeSharedRoute.title)
+      ? activeSharedRoute.title
+      : `${groupName} (${new Date().toLocaleDateString()})`;
+    if (nameInput) nameInput.value = defaultTitle;
+    if (descInput) descInput.value = '';
+    if (photosInput) photosInput.value = '';
+    if (preview) preview.innerHTML = '';
+
+    const ptsCount = recordedTrack.length > 1 ? recordedTrack.length : plannedCoords.length;
+    const distShown = recordedTrack.length > 1 ? totalDistanceKm : computeTotalDistanceKm(plannedCoords);
+    if (metricsEl) {
+      metricsEl.textContent = `Recorrido: ${distShown.toFixed(1)} km · +${Math.round(totalAscentM)} m · ${ptsCount} puntos. ¿Quieres guardar esta ruta con nombre, descripción y fotos?`;
+    }
+
+    renderSavedLocalRoutesList();
+    openModal('saveFinishedRouteModal');
+  }
+
+  async function finalizeAfterSavePrompt() {
+    closeModal('saveFinishedRouteModal');
+    if (leaveGroupAfterSavePrompt) {
+      leaveGroupAfterSavePrompt = false;
+      if (typeof setGroupVoiceMode === 'function' && groupVoiceMode !== 'off') {
+        await setGroupVoiceMode('off');
+      }
+      await publishGroupLeaveNotice();
+      returnToLobby(false);
+      showToast('🚪 Has salido del grupo y se ha avisado a los compañeros');
+    }
+  }
+
+  async function discardSaveFinishedRoute() {
+    showToast('⏹️ Ruta finalizada sin guardar');
+    await finalizeAfterSavePrompt();
+  }
+
+  async function confirmSaveFinishedRoute(downloadFiles = true) {
+    const rawName = (document.getElementById('saveRouteNameInput')?.value || '').trim();
+    const routeTitle = rawName || `${groupName} (${new Date().toLocaleDateString()})`;
+    const routeDesc = (document.getElementById('saveRouteDescInput')?.value || '').trim();
+
+    const coordsToSave = recordedTrack.length > 1
+      ? recordedTrack.map(p => [p.lat, p.lon])
+      : [...plannedCoords];
+    const distKm = recordedTrack.length > 1
+      ? totalDistanceKm
+      : computeTotalDistanceKm(coordsToSave);
+
+    const entry = {
+      id: 'saved_' + Date.now(),
+      name: routeTitle,
+      description: routeDesc,
+      distanceKm: Number(distKm.toFixed(2)),
+      ascentM: Math.round(totalAscentM),
+      dateStr: new Date().toLocaleDateString(),
+      coords: simplifyRoutePreservingTurns(coordsToSave, 3500),
+      photoThumbs: pendingRoutePhotos.map(p => p.thumbUrl).filter(Boolean)
+    };
+
+    const existing = getSavedLocalRoutes();
+    existing.unshift(entry);
+    setSavedLocalRoutes(existing);
+
+    if (downloadFiles) {
+      exportRecordedGPX({
+        customName: routeTitle,
+        customDesc: routeDesc,
+        photoNames: pendingRoutePhotos.map(p => p.name)
+      });
+      // Also download attached route photos with matching route prefix so nothing is lost
+      const safeBase = routeTitle.replace(/[^a-zA-Z0-9_-]+/g, '_');
+      pendingRoutePhotos.forEach((p, idx) => {
+        if (!p.file) return;
+        const ext = (p.name.split('.').pop() || 'jpg').toLowerCase();
+        const url = URL.createObjectURL(p.file);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${safeBase}_foto_${idx + 1}.${ext}`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      });
+      showToast(`💾 Ruta "${routeTitle}" guardada y descargada (.GPX + ${pendingRoutePhotos.length} fotos)`);
+    } else {
+      showToast(`📁 Ruta "${routeTitle}" guardada en tu dispositivo`);
+    }
+
+    await finalizeAfterSavePrompt();
+  }
+
   function toggleLiveRecording() {
     const pill = document.getElementById('livePill');
     const shape = document.getElementById('recIconShape');
@@ -4592,34 +5116,47 @@ window.addEventListener('offline', () => {
       if (pill) { pill.textContent = 'DETENIDO'; pill.classList.add('paused'); }
       shape.className = 'rec-play';
       recordIncident('STOP_TRACK', 'Fin de grabación en vivo');
-      exportRecordedGPX();
-      showToast('💾 Ruta detenida y archivo .GPX descargado');
+      openSaveFinishedRoutePrompt(false);
     } else {
       isRecording = true;
+      rideStartedAndPositioned = hasValidGpsFix;
       if (pill) { pill.textContent = 'EN VIVO'; pill.classList.remove('paused'); }
       shape.className = 'rec-square';
       recordIncident('RESUME_TRACK', 'Reanudación de grabación');
-      showToast('● Grabación en vivo reanudada');
+      showToast(hasValidGpsFix ? '● Grabación en vivo reanudada' : '● Grabación iniciada (esperando señal GPS)');
     }
   }
 
-  function exportRecordedGPX() {
+  function exportRecordedGPX(meta = {}) {
+    const titleText = (meta.customName || `${groupName} - ${new Date().toLocaleDateString()}`).trim();
+    const userDesc = (meta.customDesc || '').trim();
+    const photosNote = Array.isArray(meta.photoNames) && meta.photoNames.length
+      ? ` | Fotos adjuntas (${meta.photoNames.length}): ${meta.photoNames.join(', ')}`
+      : '';
+    const metricsSummary = `Distancia: ${totalDistanceKm.toFixed(2)} km | Desnivel+: ${Math.round(totalAscentM)} m | Puntos: ${recordedTrack.length} | Waypoints: ${recordedIncidents.length}${photosNote}`;
+    const fullDesc = userDesc ? `${userDesc} — ${metricsSummary}` : metricsSummary;
+
+    const trackPointsSource = recordedTrack.length > 1
+      ? recordedTrack
+      : plannedCoords.map(c => ({ lat: c[0], lon: c[1], ele: 0, time: new Date().toISOString() }));
+
     const wptsXml = recordedIncidents.map(i =>
       `  <wpt lat="${i.lat.toFixed(6)}" lon="${i.lon.toFixed(6)}">\n    <time>${i.time}</time>\n    <name>${escapeXml(i.title)}</name>\n    <type>${escapeXml(i.type)}</type>\n  </wpt>`
     ).join('\n');
-    const trkptsXml = recordedTrack.map(p =>
-      `      <trkpt lat="${p.lat.toFixed(6)}" lon="${p.lon.toFixed(6)}">\n        <ele>${p.ele}</ele>\n        <time>${p.time}</time>\n      </trkpt>`
+    const trkptsXml = trackPointsSource.map(p =>
+      `      <trkpt lat="${p.lat.toFixed(6)}" lon="${p.lon.toFixed(6)}">\n        <ele>${p.ele || 0}</ele>\n        <time>${p.time || new Date().toISOString()}</time>\n      </trkpt>`
     ).join('\n');
     const gpx = `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="TrailSync GPX Group Tracker v14" xmlns="http://www.topografix.com/GPX/1/1">
+<gpx version="1.1" creator="TrailSync GPX Group Tracker" xmlns="http://www.topografix.com/GPX/1/1">
   <metadata>
-    <name>${escapeXml(groupName)} - ${new Date().toLocaleDateString()}</name>
-    <desc>Distancia: ${totalDistanceKm.toFixed(2)} km | Desnivel+: ${Math.round(totalAscentM)} m | Puntos: ${recordedTrack.length} | Waypoints: ${recordedIncidents.length}</desc>
+    <name>${escapeXml(titleText)}</name>
+    <desc>${escapeXml(fullDesc)}</desc>
     <time>${new Date().toISOString()}</time>
   </metadata>
 ${wptsXml}
   <trk>
-    <name>Recorrido (${userNick})</name>
+    <name>${escapeXml(titleText)} (${escapeXml(userNick)})</name>
+    <desc>${escapeXml(fullDesc)}</desc>
     <trkseg>
 ${trkptsXml}
     </trkseg>
@@ -4629,7 +5166,8 @@ ${trkptsXml}
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${groupName.replace(/\s+/g,'_')}_${new Date().toISOString().slice(0,16).replace(/[:T]/g,'-')}.gpx`;
+    const safeFileBase = titleText.replace(/[^a-zA-Z0-9_-]+/g, '_');
+    a.download = `${safeFileBase}_${new Date().toISOString().slice(0,16).replace(/[:T]/g,'-')}.gpx`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -5973,7 +6511,7 @@ ${trkptsXml}
   let liveZoneCheckInFlight = false;
 
   async function checkLiveZoneRestrictionAtUserPos(lat, lon) {
-    if (isFamilySpectator || !navigator.onLine) return;
+    if (isFamilySpectator || !navigator.onLine || !hasRideStartedAndPositioned()) return;
     if (typeof lat !== 'number' || typeof lon !== 'number' || isNaN(lat) || isNaN(lon)) return;
     if (liveZoneCheckInFlight) return;
 
@@ -6084,16 +6622,92 @@ ${trkptsXml}
     }
   }
 
+
+  function hasRideStartedAndPositioned() {
+    return Boolean(rideStartedAndPositioned && hasValidGpsFix && isRecording);
+  }
+
+  function applyFallbackPosition(lat, lon, sourceLabel) {
+    if (hasValidGpsFix) return;
+    if (typeof lat !== 'number' || typeof lon !== 'number' || isNaN(lat) || isNaN(lon)) return;
+    hasValidGpsFix = true;
+    gpsFixSource = sourceLabel;
+    userPos = [lat, lon];
+    prevUserPos = [lat, lon];
+    rideStartedAndPositioned = isRecording;
+    if (userMarker && map) {
+      userMarker.setLatLng(userPos);
+      userMarker.setIcon(createRiderIcon(`${userNick} (tú) · ${sourceLabel}`, '#f59e0b', true));
+      map.setView(userPos, Math.max(map.getZoom(), 15));
+    }
+    if (rideStartedAndPositioned) {
+      recordPoint(userPos[0], userPos[1], 0);
+      broadcastState('POS');
+    }
+  }
+
+  function requestFallbackLocationIfNoGpsFix() {
+    if (hasValidGpsFix) return;
+    if (activeSharedRoute && Array.isArray(activeSharedRoute.coords) && activeSharedRoute.coords.length > 0) {
+      const c0 = activeSharedRoute.coords[0];
+      if (Array.isArray(c0) && c0.length >= 2) {
+        applyFallbackPosition(c0[0], c0[1], 'Ruta/Red');
+        return;
+      }
+    }
+    if (navigator.geolocation) {
+      try {
+        navigator.geolocation.getCurrentPosition(
+          pos => {
+            if (!hasValidGpsFix) {
+              applyFallbackPosition(pos.coords.latitude, pos.coords.longitude, 'Red/WiFi');
+            }
+          },
+          () => {},
+          { enableHighAccuracy: false, maximumAge: 60000, timeout: 5000 }
+        );
+      } catch (e) {}
+    }
+    try {
+      const savedLat = parseFloat(safeStorageGet('trailsync_last_valid_lat', ''));
+      const savedLon = parseFloat(safeStorageGet('trailsync_last_valid_lon', ''));
+      if (!hasValidGpsFix && !isNaN(savedLat) && !isNaN(savedLon)) {
+        applyFallbackPosition(savedLat, savedLon, 'Última pos.');
+      }
+    } catch (e) {}
+  }
+
   function enableRealGPS(silent = false) {
+    if (gpsFallbackTimer) {
+      clearTimeout(gpsFallbackTimer);
+      gpsFallbackTimer = null;
+    }
     if (!navigator.geolocation) {
-      if (!silent) showToast('GPS no soportado en este dispositivo');
+      if (!silent) showToast('GPS físico no soportado; buscando ubicación alternativa');
+      requestFallbackLocationIfNoGpsFix();
       return;
     }
+    gpsFallbackTimer = setTimeout(() => {
+      if (!hasValidGpsFix) {
+        requestFallbackLocationIfNoGpsFix();
+      }
+    }, 6000);
+
     if (realGpsWatch !== null) navigator.geolocation.clearWatch(realGpsWatch);
     realGpsWatch = navigator.geolocation.watchPosition(pos => {
-      const firstFix = !realGpsActive;
+      if (gpsFallbackTimer) {
+        clearTimeout(gpsFallbackTimer);
+        gpsFallbackTimer = null;
+      }
+      const firstFix = !realGpsActive || !hasValidGpsFix;
       realGpsActive = true;
+      hasValidGpsFix = true;
+      gpsFixSource = 'GPS físico';
+      gpsLastAccuracyM = typeof pos.coords.accuracy === 'number' ? Math.round(pos.coords.accuracy) : null;
       const newPos = [pos.coords.latitude, pos.coords.longitude];
+      safeStorageSet('trailsync_last_valid_lat', newPos[0]);
+      safeStorageSet('trailsync_last_valid_lon', newPos[1]);
+      if (isRecording) rideStartedAndPositioned = true;
 
       const movedMeters = prevUserPos ? haversineKm(prevUserPos[0], prevUserPos[1], newPos[0], newPos[1]) * 1000 : 999;
       if (typeof pos.coords.speed === 'number' && !isNaN(pos.coords.speed) && pos.coords.speed >= 0) {
@@ -6140,8 +6754,9 @@ ${trkptsXml}
       checkLiveZoneRestrictionAtUserPos(userPos[0], userPos[1]);
       broadcastState('POS');
     }, err => {
-      if (!silent) showToast('Permiso GPS pendiente o denegado: ' + err.message);
-    }, { enableHighAccuracy: true, maximumAge: 2000, timeout: 10000 });
+      if (!silent) showToast('GPS físico sin señal o permiso: usando alternativa');
+      requestFallbackLocationIfNoGpsFix();
+    }, { enableHighAccuracy: true, maximumAge: 1500, timeout: 8000 });
     if (!silent) {
       closeModal('settingsModal');
       showToast('📡 GPS real activado');
