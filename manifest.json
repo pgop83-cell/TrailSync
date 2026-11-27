@@ -1,21 +1,18 @@
 {
-  "id": "./",
-  "name": "TrailSync",
+  "name": "TrailSync — Biker Striker GPX",
   "short_name": "TrailSync",
-  "version": "15.0.0",
-  "description": "App trail con capa DMD2 Trail / Pistas descargable offline, rutas BRouter, telemetría GPX y bloqueo lluvia.",
-  "start_url": "./",
-  "scope": "./",
+  "description": "Navegación GPX en grupo, GPS físico prioritario, mapas offline y comprobación legal de rutas trail.",
+  "start_url": "./index.html",
   "display": "standalone",
-  "orientation": "any",
+  "orientation": "portrait",
   "background_color": "#161b26",
   "theme_color": "#161b26",
   "icons": [
     {
-      "src": "./icon-192.png",
-      "sizes": "192x192",
+      "src": "./icon-128.png",
+      "sizes": "128x128",
       "type": "image/png",
-      "purpose": "any"
+      "purpose": "any maskable"
     },
     {
       "src": "./icon-512.png",
