@@ -10,7 +10,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
   <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
-  <title>TrailSync v15.0.7 — Capas Online/Offline limpias y carpeta local TrailSync en el dispositivo</title>
+  <title>TrailSync v15.0.8 — Capas Online/Offline limpias y carpeta local TrailSync en el dispositivo</title>
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
         onerror="this.onerror=null;this.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';" />
@@ -1106,26 +1106,41 @@
     }
     .progress-bar-fill { height: 100%; width: 0%; background: #22c55e; transition: width 0.2s ease; }
 
+    .leaflet-marker-icon.gmaps-rider-marker {
+      transition: transform 0.65s cubic-bezier(0.22, 1, 0.36, 1) !important;
+    }
     .rider-badge {
       display: inline-flex;
       flex-direction: row;
       align-items: center;
-      gap: 6px;
+      gap: 7px;
       white-space: nowrap;
       pointer-events: auto;
     }
-    .rider-dot {
-      width: 40px; height: 40px; border-radius: 50%;
-      border: 2.5px solid #fff; color: #fff;
+    .rider-puck {
+      width: 48px; height: 48px; border-radius: 50%;
+      background: radial-gradient(circle at 35% 30%, #ffffff 0%, #f1f5f9 78%, #cbd5e1 100%);
+      border: 2.5px solid #ffffff;
+      box-shadow: 0 5px 14px rgba(15, 23, 42, 0.45), 0 0 0 2px rgba(15, 23, 42, 0.14);
       display: flex; align-items: center; justify-content: center;
-      box-shadow: 0 3px 12px rgba(0,0,0,0.55);
       flex-shrink: 0;
+      position: relative;
+    }
+    .rider-puck-rotator {
+      width: 42px; height: 42px;
+      display: flex; align-items: center; justify-content: center;
+      transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+      transform-origin: center center;
     }
     .rider-tag {
-      background: rgba(17, 24, 39, 0.92); color: #fff;
+      background: rgba(15, 23, 42, 0.92); color: #fff;
       font-size: 11.5px; font-weight: 800; padding: 3px 9px; border-radius: 999px;
       white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,0.45);
       border: 1px solid rgba(255,255,255,0.22);
+      display: inline-flex; align-items: center; gap: 5px;
+    }
+    .rider-tag-dot {
+      width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
     }
     .rider-tag.stale-peer {
       background: #7f1d1d; border-color: #ef4444; color: #fecaca;
@@ -1200,7 +1215,7 @@
       </button>
     </div>
     <div style="text-align:center;font-size:11px;color:#64748b;margin-top:8px;">
-      Versión 15.0.7 · Capas Online/Offline + Carpeta local TrailSync en dispositivo
+      Versión 15.0.8 · Capas Online/Offline + Carpeta local TrailSync en dispositivo
     </div>
   </div>
 </div>
@@ -2006,7 +2021,7 @@
     <h2>Ajustes de ruta y App</h2>
     <div style="background:#18141a;padding:10px 12px;border-radius:12px;margin-bottom:12px;border:1px solid #334155;display:flex;align-items:center;justify-content:space-between;gap:8px;">
       <div>
-        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">15.0.7</span></div>
+        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">15.0.8</span></div>
         <div style="font-size:11px;color:#94a3b8;" id="webVerStatusLabel">Comprobando actualizaciones en la web...</div>
       </div>
       <button class="solid-btn" style="flex:0 0 auto;background:#16a34a;color:#fff;padding:8px 12px;font-size:12px;" onclick="manualCheckForUpdates()">🔄 Buscar / Actualizar</button>
@@ -2087,7 +2102,7 @@
     } catch (e) {}
   });
 
-  const APP_VERSION = '15.0.7';
+  const APP_VERSION = '15.0.8';
   let swWaitingWorker = null;
   let remoteVersionFound = null;
 
@@ -3626,8 +3641,11 @@ function keepOriginalRouteAndNavigate() {
       btn.classList.remove('course-up-active');
       badge.textContent = 'NORTE';
     }
+      if (!isFamilySpectator && userMarker) {
+      const rotEl = userMarker.getElement()?.querySelector('.rider-puck-rotator');
+      if (rotEl) rotEl.style.transform = `rotate(${currentHeadingDeg || 0}deg)`;
+    }
   }
-
   function toggleNavigationHeadingMode() {
     courseUpMode = !courseUpMode;
     userExploringMap = false;
@@ -4290,10 +4308,23 @@ window.addEventListener('offline', () => {
         ? msg.reason
         : (msg.kind === 'ZONE_ALERT' ? `🚫 Zona restr.: ${msg.zoneReason || ''}`.trim() : 'En ruta'));
 
+    const prevPeer = peers[msg.peerId];
+    let resolvedPeerHeading = (typeof msg.heading === 'number' && !isNaN(msg.heading))
+      ? Math.round(msg.heading)
+      : (prevPeer && typeof prevPeer.heading === 'number' ? prevPeer.heading : 0);
+    if (prevPeer && typeof prevPeer.lat === 'number' && typeof prevPeer.lon === 'number' &&
+        typeof msg.lat === 'number' && typeof msg.lon === 'number') {
+      const movedPeerM = haversineMeters([prevPeer.lat, prevPeer.lon], [msg.lat, msg.lon]);
+      if (movedPeerM >= 4 && (typeof msg.heading !== 'number' || msg.heading === 0)) {
+        resolvedPeerHeading = Math.round(computeBearing(prevPeer.lat, prevPeer.lon, msg.lat, msg.lon));
+      }
+    }
+
     peers[msg.peerId] = {
       nick: msg.nick || 'Amigo',
       lat: msg.lat,
       lon: msg.lon,
+      heading: resolvedPeerHeading,
       speedKmh: typeof msg.speedKmh === 'number' ? msg.speedKmh : 0,
       lastSeen: Date.now(),
       status: peerStatusText
@@ -4376,14 +4407,14 @@ window.addEventListener('offline', () => {
   }
 
   function updatePeerMarkers() {
-    const colors = ['#0284c7', '#10b981', '#8b5cf6', '#ec4899', '#06b6d4', '#eab308'];
     let idx = 0;
     Object.entries(peers).forEach(([id, p]) => {
       const staleSec = Math.round((Date.now() - p.lastSeen) / 1000);
       const isStale = staleSec > 120;
+      const peerColor = isStale ? '#dc2626' : getPeerDistinctColor(id, idx++);
       const distStr = isFamilySpectator ? `${p.speedKmh || 0} km/h` : calcDistanceLabel(userPos[0], userPos[1], p.lat, p.lon);
       const label = isStale ? `⚠️ ${p.nick} · hace ${Math.floor(staleSec/60)}m` : `${p.nick} · ${distStr}`;
-      const icon = createRiderIcon(label, isStale ? '#dc2626' : colors[idx++ % colors.length], false, isStale);
+      const icon = createRiderIcon(label, peerColor, false, isStale, p.heading || 0);
       if (!peerMarkers[id]) {
         peerMarkers[id] = L.marker([p.lat, p.lon], { icon }).addTo(map);
       } else {
@@ -4422,13 +4453,12 @@ window.addEventListener('offline', () => {
     const bubblesContainer = document.getElementById('groupMembersBubbles');
     if (!bubblesContainer) return;
 
-    const palette = ['#0284c7', '#10b981', '#8b5cf6', '#ec4899', '#06b6d4', '#eab308'];
     const entries = Object.entries(peers).filter(([, p]) => typeof p.lat === 'number' && typeof p.lon === 'number');
 
     bubblesContainer.innerHTML = entries.map(([id, p], idx) => {
       const staleSec = Math.round((Date.now() - p.lastSeen) / 1000);
       const isStale = staleSec > 120;
-      const color = isStale ? '#ef4444' : palette[idx % palette.length];
+      const color = isStale ? '#ef4444' : getPeerDistinctColor(id, idx);
       const distStr = calcDistanceLabel(userPos[0], userPos[1], p.lat, p.lon);
       const safeNick = escapeXml(p.nick || 'Amigo');
       const escapedJsNick = safeNick.replace(/'/g, "\'");
@@ -4473,35 +4503,73 @@ window.addEventListener('offline', () => {
     fitAllGroupMembers();
   }
 
-  function buildDirtBikeSvg(isSelf = false) {
-    const accent = isSelf ? '#fef08a' : '#ffffff';
-    return `<svg width="26" height="26" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <!-- Rear & front knobby wheels -->
-      <circle cx="8.5" cy="26.5" r="5" stroke="#ffffff" stroke-width="2.3" fill="#0f172a"/>
-      <circle cx="8.5" cy="26.5" r="1.6" fill="${accent}"/>
-      <circle cx="27.5" cy="26.5" r="5" stroke="#ffffff" stroke-width="2.3" fill="#0f172a"/>
-      <circle cx="27.5" cy="26.5" r="1.6" fill="${accent}"/>
-      <!-- Swingarm, frame & front suspension forks -->
-      <path d="M8.5 26.5L15.5 21.5L22.5 20.5L27.5 26.5" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M21 15L27.5 26.5" stroke="${accent}" stroke-width="2.3" stroke-linecap="round"/>
-      <!-- High front fender & rear tail -->
-      <path d="M21.5 17.5C24.5 16.5 27.5 17.2 29.8 18.8" stroke="${accent}" stroke-width="2" stroke-linecap="round"/>
-      <path d="M7.5 19.5L14.5 19.8" stroke="${accent}" stroke-width="2.2" stroke-linecap="round"/>
-      <!-- Enduro rider torso, arms & helmet with visor -->
-      <path d="M14.5 19.5L16.2 13.2L21.5 15.2" stroke="#ffffff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
-      <circle cx="17.8" cy="8.5" r="3.4" fill="#ffffff"/>
-      <path d="M18.2 7.5L22.4 8.2L19.5 9.8Z" fill="${accent}"/>
+  const GROUP_RIDER_PALETTE = [
+    '#2563eb',
+    '#16a34a',
+    '#9333ea',
+    '#e11d48',
+    '#0891b2',
+    '#d97706',
+    '#4f46e5',
+    '#059669'
+  ];
+
+  function getPeerDistinctColor(peerId, fallbackIdx = 0) {
+    if (!peerId) return GROUP_RIDER_PALETTE[fallbackIdx % GROUP_RIDER_PALETTE.length];
+    let hash = 0;
+    for (let i = 0; i < peerId.length; i++) {
+      hash = ((hash << 5) - hash) + peerId.charCodeAt(i);
+      hash |= 0;
+    }
+    return GROUP_RIDER_PALETTE[Math.abs(hash) % GROUP_RIDER_PALETTE.length];
+  }
+
+  function buildGoogleMapsMotoSvg(suitColor) {
+    return `<svg width="38" height="38" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <ellipse cx="24" cy="27" rx="9" ry="14" fill="rgba(15,23,42,0.16)"/>
+      <rect x="21.6" y="4.5" width="4.8" height="9.5" rx="2.4" fill="#1e293b"/>
+      <path d="M20.5 11.5C20.5 9.6 22 8.4 24 8.4C26 8.4 27.5 9.6 27.5 11.5L26.8 15.2H21.2L20.5 11.5Z" fill="${suitColor}"/>
+      <path d="M12.5 17.5L18.5 16.2H29.5L35.5 17.5" stroke="#334155" stroke-width="2.4" stroke-linecap="round"/>
+      <circle cx="11.5" cy="17.2" r="1.6" fill="#475569"/>
+      <circle cx="36.5" cy="17.2" r="1.6" fill="#475569"/>
+      <path d="M14.2 17.8C15.5 19.5 17.5 21.5 19.2 22.2" stroke="${suitColor}" stroke-width="3.6" stroke-linecap="round"/>
+      <path d="M33.8 17.8C32.5 19.5 30.5 21.5 28.8 22.2" stroke="${suitColor}" stroke-width="3.6" stroke-linecap="round"/>
+      <circle cx="13.8" cy="17.5" r="1.7" fill="#0f172a"/>
+      <circle cx="34.2" cy="17.5" r="1.7" fill="#0f172a"/>
+      <rect x="20.8" y="32.5" width="6.4" height="11" rx="3.2" fill="#0f172a"/>
+      <rect x="22.8" y="33.5" width="2.4" height="9" rx="1.2" fill="#334155"/>
+      <path d="M20.5 30.5H27.5L26.5 35.5H21.5L20.5 30.5Z" fill="${suitColor}"/>
+      <rect x="22.2" y="34.4" width="3.6" height="1.5" rx="0.7" fill="#ef4444"/>
+      <path d="M18.8 25.5L17.8 31.8" stroke="#1e293b" stroke-width="3.4" stroke-linecap="round"/>
+      <path d="M29.2 25.5L30.2 31.8" stroke="#1e293b" stroke-width="3.4" stroke-linecap="round"/>
+      <rect x="17.5" y="19.5" width="13" height="11.5" rx="5.5" fill="${suitColor}" stroke="rgba(255,255,255,0.45)" stroke-width="1"/>
+      <rect x="21.4" y="21.2" width="5.2" height="7.6" rx="2.4" fill="rgba(15,23,42,0.22)"/>
+      <circle cx="24" cy="21.2" r="5.3" fill="${suitColor}" stroke="#ffffff" stroke-width="1.4"/>
+      <path d="M19.8 18.8C21 16.9 27 16.9 28.2 18.8C26.5 18.1 21.5 18.1 19.8 18.8Z" fill="#0f172a"/>
     </svg>`;
   }
 
-  function createRiderIcon(label, bgColor, isSelf = false, isStale = false) {
+  function createRiderIcon(label, suitColor, isSelf = false, isStale = false, headingDeg = null) {
     const safeLabel = escapeXml(String(label || '').trim() || 'Piloto');
-    const bikeSvg = buildDirtBikeSvg(isSelf);
+    const rot = typeof headingDeg === 'number' && !isNaN(headingDeg)
+      ? headingDeg
+      : (isSelf ? (currentHeadingDeg || 0) : 0);
+    const motoSvg = buildGoogleMapsMotoSvg(suitColor);
     return L.divIcon({
-      className: '',
-      html: `<div class="rider-upright-wrapper"><div class="rider-badge"><div class="rider-dot" style="background:${bgColor};">${bikeSvg}</div><div class="rider-tag ${isStale ? 'stale-peer' : ''}">${safeLabel}</div></div></div>`,
-      iconSize: [180, 44],
-      iconAnchor: [20, 22]
+      className: 'gmaps-rider-marker',
+      html: `<div class="rider-upright-wrapper">
+        <div class="rider-badge">
+          <div class="rider-puck" style="box-shadow:0 5px 14px rgba(15,23,42,0.45), 0 0 0 2.5px ${suitColor};">
+            <div class="rider-puck-rotator" style="transform:rotate(${rot}deg);">${motoSvg}</div>
+          </div>
+          <div class="rider-tag ${isStale ? 'stale-peer' : ''}" style="border-color:${suitColor};">
+            <span class="rider-tag-dot" style="background:${suitColor};"></span>
+            <span>${safeLabel}</span>
+          </div>
+        </div>
+      </div>`,
+      iconSize: [190, 50],
+      iconAnchor: [24, 25]
     });
   }
 
@@ -5333,7 +5401,7 @@ window.addEventListener('offline', () => {
     }).join('\n');
 
     return `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="TrailSync v15.0.7" xmlns="http://www.topografix.com/GPX/1/1">
+<gpx version="1.1" creator="TrailSync v15.0.8" xmlns="http://www.topografix.com/GPX/1/1">
   <metadata><name>${escapeXml(titleText)}</name>${descTag}</metadata>
   <trk><name>${escapeXml(titleText)}</name>${descTag}<trkseg>
 ${trkpts}
