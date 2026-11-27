@@ -10,7 +10,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
   <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
-  <title>TrailSync v15.1.7 — Capas Online/Offline limpias y carpeta local TrailSync en el dispositivo</title>
+  <title>TrailSync v15.1.9 — Capas Online/Offline limpias y carpeta local TrailSync en el dispositivo</title>
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
         onerror="this.onerror=null;this.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';" />
@@ -1225,7 +1225,7 @@
       </button>
     </div>
     <div style="text-align:center;font-size:11px;color:#64748b;margin-top:8px;">
-      Versión 15.1.7 · Capas Online/Offline + Carpeta local TrailSync en dispositivo
+      Versión 15.1.9 · Capas Online/Offline + Carpeta local TrailSync en dispositivo
     </div>
   </div>
 </div>
@@ -2032,7 +2032,7 @@
     <h2>Ajustes de ruta y App</h2>
     <div style="background:#18141a;padding:10px 12px;border-radius:12px;margin-bottom:12px;border:1px solid #334155;display:flex;align-items:center;justify-content:space-between;gap:8px;">
       <div>
-        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">15.1.7</span></div>
+        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">15.1.9</span></div>
         <div style="font-size:11px;color:#94a3b8;" id="webVerStatusLabel">Comprobando actualizaciones en la web...</div>
       </div>
       <button class="solid-btn" style="flex:0 0 auto;background:#16a34a;color:#fff;padding:8px 12px;font-size:12px;" onclick="manualCheckForUpdates()">🔄 Buscar / Actualizar</button>
@@ -2053,9 +2053,9 @@
       <input type="checkbox" id="dynamicSpeedZoomToggle" checked onchange="toggleDynamicSpeedZoom(this.checked)" /> 🔍 Zoom dinámico según velocidad (estilo DMD2 / Maps)
     </label>
 
-    <label style="display:flex;align-items:center;gap:8px;font-size:13.5px;margin-bottom:12px;cursor:pointer;">
-      <input type="checkbox" id="autoWakeLockToggle" checked onchange="if(this.checked)toggleWakeLock(false)" /> ☀️ Mantener pantalla siempre encendida en ruta
-    </label>
+    <button type="button" id="btnWakeLock" class="solid-btn" style="background:#eab308;color:#0f172a;width:100%;margin-bottom:12px;display:flex;align-items:center;justify-content:center;gap:8px;" onclick="toggleWakeLock(true)">
+      ☀️ Pantalla siempre encendida: ACTIVADA (Pulsa para apagar)
+    </button>
 
     <button class="solid-btn" style="background:#0284c7;color:#fff;width:100%;margin-bottom:8px;" onclick="enableRealGPS()">📡 Activar GPS real del dispositivo</button>
     <button class="solid-btn" style="background:#10b981;color:#052e16;width:100%;margin-bottom:8px;" onclick="exportRecordedGPX()">💾 Exportar GPX recorrido + incidencias</button>
@@ -2113,7 +2113,7 @@
     } catch (e) {}
   });
 
-  const APP_VERSION = '15.1.7';
+  const APP_VERSION = '15.1.9';
   let swWaitingWorker = null;
   let remoteVersionFound = null;
 
@@ -2232,30 +2232,71 @@
     }
   }
 
-  // --- WAKE LOCK (KEEP SCREEN AWAKE WHILE RIDING) ---
+  // --- WAKE LOCK (KEEP SCREEN ALWAYS AWAKE IN APP UNLESS USER TURNS IT OFF VIA BUTTON) ---
   let wakeLockSentinel = null;
-  async function toggleWakeLock(userClicked = false) {
+  let keepScreenAwakeEnabled = localStorage.getItem('trailsync_keep_screen_awake') !== '0';
+
+  function syncWakeLockButtonUI() {
     const btn = document.getElementById('btnWakeLock');
-    if (!('wakeLock' in navigator)) {
-      if (userClicked) showToast('⚠️ Tu navegador no soporta Wake Lock automático');
-      return;
+    if (!btn) return;
+    if (keepScreenAwakeEnabled) {
+      btn.classList.add('active-toggle');
+      btn.style.background = '#eab308';
+      btn.style.color = '#0f172a';
+      btn.textContent = '☀️ Pantalla siempre encendida: ACTIVADA (Pulsa para apagar)';
+    } else {
+      btn.classList.remove('active-toggle');
+      btn.style.background = '#334155';
+      btn.style.color = '#e2e8f0';
+      btn.textContent = '🌙 Pantalla siempre encendida: APAGADA (Pulsa para activar)';
     }
-    if (wakeLockSentinel && userClicked) {
-      try { await wakeLockSentinel.release(); } catch (e) {}
-      wakeLockSentinel = null;
-      btn?.classList.remove('active-toggle');
-      showToast('🌙 Bloqueo de pantalla activa desactivado');
-      return;
+  }
+
+  async function ensureWakeLockActive(showErrorToast = false) {
+    syncWakeLockButtonUI();
+    if (!keepScreenAwakeEnabled) return false;
+    if (!('wakeLock' in navigator)) {
+      if (showErrorToast) showToast('⚠️ Tu navegador no soporta Wake Lock automático');
+      return false;
+    }
+    if (wakeLockSentinel && !wakeLockSentinel.released) {
+      return true;
     }
     try {
       wakeLockSentinel = await navigator.wakeLock.request('screen');
-      btn?.classList.add('active-toggle');
       wakeLockSentinel.addEventListener('release', () => {
-        btn?.classList.remove('active-toggle');
+        wakeLockSentinel = null;
+        if (keepScreenAwakeEnabled && document.visibilityState === 'visible') {
+          setTimeout(() => { ensureWakeLockActive(false); }, 350);
+        }
       });
-      if (userClicked) showToast('☀️ Pantalla fijada siempre encendida (Wake Lock)');
+      return true;
     } catch (e) {
-      if (userClicked) showToast('⚠️ No se pudo activar Wake Lock: ' + e.message);
+      if (showErrorToast) showToast('⚠️ No se pudo activar pantalla encendida: ' + e.message);
+      return false;
+    }
+  }
+
+  async function toggleWakeLock(userClicked = false) {
+    if (!userClicked) {
+      await ensureWakeLockActive(false);
+      return;
+    }
+    if (keepScreenAwakeEnabled) {
+      keepScreenAwakeEnabled = false;
+      localStorage.setItem('trailsync_keep_screen_awake', '0');
+      if (wakeLockSentinel) {
+        try { await wakeLockSentinel.release(); } catch (e) {}
+        wakeLockSentinel = null;
+      }
+      syncWakeLockButtonUI();
+      showToast('🌙 Pantalla siempre encendida desactivada');
+    } else {
+      keepScreenAwakeEnabled = true;
+      localStorage.setItem('trailsync_keep_screen_awake', '1');
+      syncWakeLockButtonUI();
+      const ok = await ensureWakeLockActive(true);
+      if (ok) showToast('☀️ Pantalla siempre encendida activada');
     }
   }
 
@@ -2428,8 +2469,8 @@
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') {
       checkWebVersionUpdate(false);
-      if (document.getElementById('autoWakeLockToggle')?.checked && !wakeLockSentinel) {
-        toggleWakeLock(false);
+      if (keepScreenAwakeEnabled) {
+        ensureWakeLockActive(false);
       }
     }
   });
@@ -3946,8 +3987,8 @@ function keepOriginalRouteAndNavigate() {
     }
 
     enableRealGPS(true);
-    if (document.getElementById('autoWakeLockToggle')?.checked) {
-      toggleWakeLock(false);
+    if (keepScreenAwakeEnabled) {
+      ensureWakeLockActive(false);
     }
     updateGroupRadarLabel();
     if (!isAutoRestore) {
@@ -5015,6 +5056,17 @@ window.addEventListener('offline', () => {
 
     checkWebVersionUpdate(false);
     updateOfflineQueueBadge();
+    syncWakeLockButtonUI();
+    if (keepScreenAwakeEnabled) {
+      ensureWakeLockActive(false);
+      const reacquireOnGesture = () => {
+        if (keepScreenAwakeEnabled && (!wakeLockSentinel || wakeLockSentinel.released)) {
+          ensureWakeLockActive(false);
+        }
+      };
+      document.addEventListener('pointerdown', reacquireOnGesture, { passive: true });
+      document.addEventListener('touchstart', reacquireOnGesture, { passive: true });
+    }
 
     const startMode = getActiveLayerObj();
     unlockDeviceOrientation();
@@ -5345,16 +5397,17 @@ window.addEventListener('offline', () => {
       return;
     }
 
-    // 2. High-speed sliding worker pool (16 parallel downloads, no pause between batches)
-    const concurrency = 16;
+    // 2. Balanced parallel worker pool (8 workers + smart retry + backoff when servers throttle)
+    const concurrency = 8;
     let cursor = 0;
     let lastUiUpdateTs = 0;
     let lastStatsRefreshDone = done;
     let consecutiveErrors = 0;
+    let throttlePauseUntil = 0;
 
     function updateProgressUi(force = false) {
       const now = Date.now();
-      if (!force && now - lastUiUpdateTs < 220) return;
+      if (!force && now - lastUiUpdateTs < 240) return;
       lastUiUpdateTs = now;
       const pct = Math.min(100, Math.round((done / Math.max(1, totalTasks)) * 100));
       if (bar) bar.style.width = pct + '%';
@@ -5366,21 +5419,42 @@ window.addEventListener('offline', () => {
       }
     }
 
+    async function downloadTaskWithRetry(task, workerId, idx) {
+      const candidateUrls = Array.isArray(task.urls) && task.urls.length ? task.urls : [task.url];
+      const startOffset = (idx + workerId) % candidateUrls.length;
+
+      // Pass 1: try mirrors with 8s timeout
+      for (let m = 0; m < candidateUrls.length; m++) {
+        if (cancelOfflineDownloadFlag) return null;
+        const u = candidateUrls[(startOffset + m) % candidateUrls.length];
+        const blob = await fetchTileBlobWithTimeout(u, 8000);
+        if (blob) return blob;
+      }
+
+      // Pass 2: short breather + retry once with 10s timeout so transient 429/503/timeout aren't lost
+      if (cancelOfflineDownloadFlag) return null;
+      await new Promise(r => setTimeout(r, 220 + ((idx + workerId) % 5) * 90));
+      for (let m = 0; m < candidateUrls.length; m++) {
+        if (cancelOfflineDownloadFlag) return null;
+        const u = candidateUrls[(startOffset + m) % candidateUrls.length];
+        const blob = await fetchTileBlobWithTimeout(u, 10000);
+        if (blob) return blob;
+      }
+      return null;
+    }
+
     async function worker(workerId) {
       while (!cancelOfflineDownloadFlag) {
+        const waitMs = throttlePauseUntil - Date.now();
+        if (waitMs > 0) {
+          await new Promise(r => setTimeout(r, Math.min(waitMs, 600)));
+          continue;
+        }
         const idx = cursor++;
         if (idx >= pendingTasks.length) break;
         const task = pendingTasks[idx];
         try {
-          const candidateUrls = Array.isArray(task.urls) && task.urls.length ? task.urls : [task.url];
-          const startOffset = (idx + workerId) % candidateUrls.length;
-          let blob = null;
-          for (let m = 0; m < candidateUrls.length; m++) {
-            if (cancelOfflineDownloadFlag) break;
-            const u = candidateUrls[(startOffset + m) % candidateUrls.length];
-            blob = await fetchTileBlobWithTimeout(u, 4500);
-            if (blob) break;
-          }
+          const blob = await downloadTaskWithRetry(task, workerId, idx);
           if (blob) {
             const xDir = await getCachedXDir(task.layerKey, task.z, task.x);
             const fileHandle = await xDir.getFileHandle(`${task.y}.png`, { create: true });
@@ -5393,13 +5467,14 @@ window.addEventListener('offline', () => {
           } else {
             failedCount++;
             consecutiveErrors++;
-            if (consecutiveErrors > 25) {
-              await new Promise(r => setTimeout(r, 350));
+            if (consecutiveErrors >= 12) {
+              throttlePauseUntil = Date.now() + 1400;
               consecutiveErrors = 0;
             }
           }
         } catch (e) {
           failedCount++;
+          consecutiveErrors++;
         }
         done++;
         updateProgressUi(false);
@@ -5628,7 +5703,7 @@ window.addEventListener('offline', () => {
     }).join('\n');
 
     return `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="TrailSync v15.1.7" xmlns="http://www.topografix.com/GPX/1/1">
+<gpx version="1.1" creator="TrailSync v15.1.9" xmlns="http://www.topografix.com/GPX/1/1">
   <metadata><name>${escapeXml(titleText)}</name>${descTag}</metadata>
   <trk><name>${escapeXml(titleText)}</name>${descTag}<trkseg>
 ${trkpts}
