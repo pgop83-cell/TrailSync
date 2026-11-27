@@ -1,4 +1,4 @@
-const APP_CACHE = 'trailsync-app-shell-v15-0-1';
+const APP_CACHE = 'trailsync-app-shell-v14-31-0';
 const TILE_CACHE = 'trailsync-peninsula-tiles-v2';
 const APP_ASSETS = [
   './',
