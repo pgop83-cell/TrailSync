@@ -10,7 +10,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
   <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
-  <title>TrailSync v15.2.13 — Capas Online/Offline limpias y carpeta local TrailSync en el dispositivo</title>
+  <title>TrailSync v15.2.14 — Capas Online/Offline limpias y carpeta local TrailSync en el dispositivo</title>
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
         onerror="this.onerror=null;this.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';" />
@@ -180,6 +180,9 @@
 
     #map.offline-pista-mode .leaflet-tile-pane {
       filter: contrast(1.24) brightness(1.05) saturate(0.85);
+    }
+    #map.topo-relief-style .leaflet-tile-pane {
+      filter: contrast(1.24) saturate(1.38) brightness(0.98);
     }
     #map.sunlight-boost-mode .leaflet-tile-pane {
       filter: contrast(1.42) brightness(1.14) saturate(1.15);
@@ -398,7 +401,13 @@
       box-shadow: 0 1px 4px rgba(0,0,0,0.4);
     }
 
-    /* QUICK DISPLAY CONTRAST BUTTON (SOL / NOCHE / NORMAL) */
+    /* QUICK DISPLAY STYLE BUTTON + POPOVER LIST */
+    .display-mode-wrap {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+    }
     .display-mode-btn {
       width: 46px; height: 38px;
       border-radius: 12px;
@@ -410,6 +419,78 @@
       cursor: pointer; font-size: 13px; font-weight: 800; line-height: 1;
     }
     .display-mode-btn span { font-size: 8px; color: #cbd5e1; margin-top: 2px; }
+    .display-style-popover {
+      position: absolute;
+      top: 0;
+      right: 54px;
+      width: 230px;
+      background: rgba(15, 23, 42, 0.97);
+      border: 1.5px solid #475569;
+      border-radius: 14px;
+      padding: 8px;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.55);
+      z-index: 1250;
+      display: none;
+      flex-direction: column;
+      gap: 5px;
+      backdrop-filter: blur(8px);
+    }
+    .display-style-popover.open {
+      display: flex;
+    }
+    .display-style-title {
+      font-size: 10.5px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      color: #94a3b8;
+      padding: 2px 6px 4px;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+    }
+    .display-style-opt {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      text-align: left;
+      background: rgba(30, 41, 59, 0.72);
+      color: #f8fafc;
+      border: 1px solid transparent;
+      border-radius: 10px;
+      padding: 8px 9px;
+      cursor: pointer;
+      transition: all 0.14s ease;
+    }
+    .display-style-opt:hover {
+      background: rgba(51, 65, 85, 0.9);
+    }
+    .display-style-opt.active {
+      background: rgba(249, 115, 22, 0.22);
+      border-color: #f97316;
+    }
+    .display-style-opt-icon {
+      font-size: 16px;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+    .display-style-opt-text {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      flex: 1;
+    }
+    .display-style-opt-name {
+      font-size: 12px;
+      font-weight: 800;
+      color: #f8fafc;
+      line-height: 1.2;
+    }
+    .display-style-opt-sub {
+      font-size: 10px;
+      color: #94a3b8;
+      line-height: 1.25;
+      margin-top: 1px;
+    }
 
 
     /* TOP-CENTER GROUP MEMBER BUBBLES (SAME PILL STYLE, CLICK TO JUMP TO MEMBER) */
@@ -1311,7 +1392,7 @@
       </button>
     </div>
     <div style="text-align:center;font-size:11px;color:#64748b;margin-top:8px;">
-      Versión 15.2.13 · Capas Online/Offline + Carpeta local TrailSync en dispositivo
+      Versión 15.2.14 · Capas Online/Offline + Carpeta local TrailSync en dispositivo
     </div>
   </div>
 </div>
@@ -1403,10 +1484,16 @@
         <span class="compass-mode-badge" id="compassModeBadge">NORTE</span>
       </button>
 
-      <button class="display-mode-btn" id="displayModeBtn" onclick="cycleDisplayContrastMode()" title="Cambiar contraste: Normal / Pistas Alto Contraste / Sol directo / Noche">
-        <div id="displayModeIcon">☀️</div>
-        <span id="displayModeLabel">NORMAL</span>
-      </button>
+      <div class="display-mode-wrap" id="displayModeWrap">
+        <button class="display-mode-btn" id="displayModeBtn" onclick="toggleDisplayStyleMenu(event)" title="Elegir estilo visual del mapa">
+          <div id="displayModeIcon">☀️</div>
+          <span id="displayModeLabel">NORMAL</span>
+        </button>
+        <div class="display-style-popover" id="displayStylePopover" onclick="event.stopPropagation()">
+          <div class="display-style-title">Estilo visual del mapa</div>
+          <div id="displayStyleOptionsList"></div>
+        </div>
+      </div>
 
       <button class="display-mode-btn" id="btnScreenLock" onclick="lockScreen()" title="Bloquear pantalla táctil por lluvia (mantiene mapa visible)">
         <svg width="16" height="16" fill="#fbbf24" viewBox="0 0 24 24"><path d="M12 2a5 5 0 00-5 5v3H6a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2v-8a2 2 0 00-2-2h-1V7a5 5 0 00-5-5zm-3 5a3 3 0 116 0v3H9V7z"/></svg>
@@ -1770,14 +1857,9 @@
     </div>
 
     <div style="margin-bottom:10px;">
-      <label class="field-label">Capa a descargar en TrailSync/mapas/:</label>
+      <label class="field-label">Cartografía combinada a descargar en TrailSync/mapas/:</label>
       <select id="offlineLayerChoice" style="width:100%;background:#161b26;color:#fff;border:1px solid #475569;border-radius:10px;padding:9px;font-size:13px;">
-        <option value="opentopo">⛰️ OpenTopoMap (Pistas, curvas de nivel y relieve)</option>
-        <option value="ign_mtn">🏔️ IGN Topográfico MTN25/50 (Pistas oficiales España)</option>
-        <option value="osm_base">🗺️ OpenStreetMap (Carreteras y caminos)</option>
-        <option value="satelite">🛰️ Satélite (Ortofoto aérea)</option>
-        <option value="google_maps">📍 Google Maps (Mapa estándar sin satélite)</option>
-        <option value="both">📦 Pack Trail (OpenTopoMap + IGN Topográfico)</option>
+        <option value="osm_relieve" selected>⛰️ OpenStreetMap + Curvas de relieve (Pistas, caminos y topografía)</option>
       </select>
     </div>
 
@@ -2099,7 +2181,7 @@
     <h2>Ajustes de ruta y App</h2>
     <div style="background:#18141a;padding:10px 12px;border-radius:12px;margin-bottom:12px;border:1px solid #334155;display:flex;align-items:center;justify-content:space-between;gap:8px;">
       <div>
-        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">15.2.13</span></div>
+        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">15.2.14</span></div>
         <div style="font-size:11px;color:#94a3b8;" id="webVerStatusLabel">Comprobando actualizaciones en la web...</div>
       </div>
       <button class="solid-btn" style="flex:0 0 auto;background:#16a34a;color:#fff;padding:8px 12px;font-size:12px;" onclick="manualCheckForUpdates()">🔄 Buscar / Actualizar</button>
@@ -2180,7 +2262,7 @@
     } catch (e) {}
   });
 
-  const APP_VERSION = '15.2.13';
+  const APP_VERSION = '15.2.14';
   let swWaitingWorker = null;
   let remoteVersionFound = null;
 
@@ -2446,24 +2528,73 @@
     }
   }
 
-  // --- DISPLAY CONTRAST MODE (NORMAL / PISTAS ALTO CONTRASTE / SOL DIRECTO / NOCHE) ---
+  // --- DISPLAY STYLE SELECTOR (NORMAL / OFFROAD ALTO CONTRASTE / TOPO RELIEVE / SOL DIRECTO / NOCHE) ---
   const DISPLAY_MODES = [
-    { key: 'normal',   icon: '☀️', label: 'NORMAL', cls: '' },
-    { key: 'contrast', icon: '🌓', label: 'PISTAS', cls: 'trail-contrast-mode' },
-    { key: 'sun',      icon: '🔆', label: 'SOL',    cls: 'sunlight-boost-mode' },
-    { key: 'night',    icon: '🌙', label: 'NOCHE',  cls: 'night-ride-mode' }
+    { key: 'normal',   icon: '☀️', label: 'NORMAL',  name: 'Normal (Estándar)',       sub: 'Colores originales de la capa activa', cls: '',                    routeWeight: 6, trackWeight: 6 },
+    { key: 'contrast', icon: '🌓', label: 'OFFROAD', name: 'Offroad Alto Contraste',  sub: 'Fondo oscuro con pistas y caminos resaltados', cls: 'trail-contrast-mode', routeWeight: 8, trackWeight: 7 },
+    { key: 'topo',     icon: '⛰️', label: 'TOPO',    name: 'Topo / Curvas Marcadas',  sub: 'Realce de curvas de nivel, relieve y senderos', cls: 'topo-relief-style',   routeWeight: 7, trackWeight: 7 },
+    { key: 'sun',      icon: '🔆', label: 'SOL',     name: 'Sol Directo',             sub: 'Máximo brillo y contraste bajo luz intensa', cls: 'sunlight-boost-mode', routeWeight: 8, trackWeight: 7 },
+    { key: 'night',    icon: '🌙', label: 'NOCHE',   name: 'Noche / Baja Luz',        sub: 'Tonos oscuros para conducción nocturna', cls: 'night-ride-mode',     routeWeight: 7, trackWeight: 6 }
   ];
-  let displayModeIdx = 0;
+  let activeDisplayStyleKey = localStorage.getItem('trailsync_display_style') || 'normal';
 
-  function cycleDisplayContrastMode() {
-    displayModeIdx = (displayModeIdx + 1) % DISPLAY_MODES.length;
-    const m = DISPLAY_MODES[displayModeIdx];
+  function renderDisplayStyleOptions() {
+    const listEl = document.getElementById('displayStyleOptionsList');
+    if (!listEl) return;
+    listEl.innerHTML = DISPLAY_MODES.map(m => {
+      const isActive = m.key === activeDisplayStyleKey;
+      return `
+        <button type="button" class="display-style-opt ${isActive ? 'active' : ''}" onclick="selectDisplayStyle('${m.key}')">
+          <span class="display-style-opt-icon">${m.icon}</span>
+          <span class="display-style-opt-text">
+            <span class="display-style-opt-name">${m.name}</span>
+            <span class="display-style-opt-sub">${m.sub}</span>
+          </span>
+        </button>
+      `;
+    }).join('');
+  }
+
+  function toggleDisplayStyleMenu(ev) {
+    if (ev) ev.stopPropagation();
+    const pop = document.getElementById('displayStylePopover');
+    if (!pop) return;
+    const willOpen = !pop.classList.contains('open');
+    if (willOpen) {
+      renderDisplayStyleOptions();
+      pop.classList.add('open');
+    } else {
+      pop.classList.remove('open');
+    }
+  }
+
+  function closeDisplayStyleMenu() {
+    const pop = document.getElementById('displayStylePopover');
+    if (pop) pop.classList.remove('open');
+  }
+
+  function selectDisplayStyle(key, silent = false) {
+    const m = DISPLAY_MODES.find(item => item.key === key) || DISPLAY_MODES[0];
+    activeDisplayStyleKey = m.key;
+    localStorage.setItem('trailsync_display_style', m.key);
     const mapEl = document.getElementById('map');
-    mapEl.classList.remove('trail-contrast-mode', 'sunlight-boost-mode', 'night-ride-mode');
-    if (m.cls) mapEl.classList.add(m.cls);
-    document.getElementById('displayModeIcon').textContent = m.icon;
-    document.getElementById('displayModeLabel').textContent = m.label;
-    showToast(`👁️ Modo visualización: ${m.label}`);
+    if (mapEl) {
+      mapEl.classList.remove('trail-contrast-mode', 'topo-relief-style', 'sunlight-boost-mode', 'night-ride-mode');
+      if (m.cls) mapEl.classList.add(m.cls);
+    }
+    if (typeof plannedLine !== 'undefined' && plannedLine) {
+      plannedLine.setStyle({ weight: m.routeWeight });
+    }
+    if (typeof recordedLine !== 'undefined' && recordedLine) {
+      recordedLine.setStyle({ weight: m.trackWeight });
+    }
+    const iconEl = document.getElementById('displayModeIcon');
+    const lblEl = document.getElementById('displayModeLabel');
+    if (iconEl) iconEl.textContent = m.icon;
+    if (lblEl) lblEl.textContent = m.label;
+    renderDisplayStyleOptions();
+    closeDisplayStyleMenu();
+    if (!silent) showToast(`👁️ Estilo de mapa: ${m.name}`);
   }
 
   // --- TRANSPARENT RAIN-LOCK SHIELD (3-SECOND HOLD ON BOTTOM RED PADLOCK TO UNLOCK) ---
@@ -2676,6 +2807,8 @@
   function closeQuickMenuIfOutside(e) {
     const wrapper = document.getElementById('leftMenuWrapper');
     if (wrapper && !wrapper.contains(e.target)) closeQuickMenu();
+    const styleWrap = document.getElementById('displayModeWrap');
+    if (styleWrap && !styleWrap.contains(e.target)) closeDisplayStyleMenu();
   }
 
   const TILE_CACHE_NAME = 'trailsync-peninsula-tiles-v2';
@@ -2691,7 +2824,7 @@
     {
       key: 'opentopo',
       group: 'online',
-      title: 'OpenTopoMap (Relieve y Pistas)',
+      title: 'OpenStreetMap + Curvas de relieve',
       badge: 'TOPO',
       desc: 'Online · Pistas forestales, senderos, curvas de nivel y relieve de montaña',
       url: OPENTOPO_TILE_URL,
@@ -5386,6 +5519,7 @@ window.addEventListener('offline', () => {
     plannedLine = L.polyline([], { color: '#ea580c', weight: 6 }).addTo(map);
     legalOverlayLayer = L.layerGroup().addTo(map);
     recordedLine = L.polyline([], { color: '#16a34a', weight: 6 }).addTo(map);
+    selectDisplayStyle(activeDisplayStyleKey, true);
     backtrackLine = L.polyline([], { color: '#4f46e5', weight: 4, dashArray: '5, 6' }).addTo(map);
     incidentLayer = L.layerGroup().addTo(map);
     sharedWaypointsLayer = L.layerGroup().addTo(map);
@@ -5464,45 +5598,20 @@ window.addEventListener('offline', () => {
   function lat2tile(lat, z) { return Math.floor((1 - Math.log(Math.tan(lat * Math.PI / 180) + 1 / Math.cos(lat * Math.PI / 180)) / Math.PI) / 2 * Math.pow(2, z)); }
 
   function getSelectedOfflineSources() {
-    const choice = document.getElementById('offlineLayerChoice')?.value || 'opentopo';
-    const openTopoPrimaryMirrors = [
-      'https://a.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png',
-      'https://b.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png',
-      'https://c.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png',
-      'https://tile.opentopomap.org/{z}/{x}/{y}.png'
-    ];
-    const ignMtnMirrors = [
-      IGN_MTN_TILE_URL,
-      'https://a.tile.opentopomap.org/{z}/{x}/{y}.png'
-    ];
     const openTopoMirrors = [
       'https://a.tile.opentopomap.org/{z}/{x}/{y}.png',
       'https://b.tile.opentopomap.org/{z}/{x}/{y}.png',
-      'https://c.tile.opentopomap.org/{z}/{x}/{y}.png'
+      'https://c.tile.opentopomap.org/{z}/{x}/{y}.png',
+      'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
     ];
     const osmMirrors = [
       'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
       'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
       'https://b.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png'
     ];
-    const satMirrors = [
-      SAT_IGN_TILE_URL,
-      SAT_ESRI_TILE_URL
-    ];
-    const gmapsMirrors = [
-      'https://mt0.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
-      'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
-      'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png'
-    ];
-    if (choice === 'opentopo') return [{ key: 'opentopo', mirrors: openTopoPrimaryMirrors }];
-    if (choice === 'ign_mtn') return [{ key: 'ign_mtn', mirrors: ignMtnMirrors }];
-    if (choice === 'opentopo') return [{ key: 'opentopo', mirrors: openTopoMirrors }];
-    if (choice === 'osm_base') return [{ key: 'osm_base', mirrors: osmMirrors }];
-    if (choice === 'satelite') return [{ key: 'satelite', mirrors: satMirrors }];
-    if (choice === 'google_maps') return [{ key: 'google_maps', mirrors: gmapsMirrors }];
     return [
-      { key: 'opentopo', mirrors: openTopoPrimaryMirrors },
-      { key: 'ign_mtn', mirrors: ignMtnMirrors }
+      { key: 'opentopo', mirrors: openTopoMirrors },
+      { key: 'osm_base', mirrors: osmMirrors }
     ];
   }
 
@@ -6049,7 +6158,7 @@ window.addEventListener('offline', () => {
     }).join('\n');
 
     return `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="TrailSync v15.2.13" xmlns="http://www.topografix.com/GPX/1/1">
+<gpx version="1.1" creator="TrailSync v15.2.14" xmlns="http://www.topografix.com/GPX/1/1">
   <metadata><name>${escapeXml(titleText)}</name>${descTag}</metadata>
   <trk><name>${escapeXml(titleText)}</name>${descTag}<trkseg>
 ${trkpts}
