@@ -10,7 +10,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
   <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
-  <title>TrailSync v15.2.1 — Capas Online/Offline limpias y carpeta local TrailSync en el dispositivo</title>
+  <title>TrailSync v15.2.2 — Capas Online/Offline limpias y carpeta local TrailSync en el dispositivo</title>
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
         onerror="this.onerror=null;this.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';" />
@@ -613,7 +613,7 @@
     .circle-action:active { transform: scale(0.92); }
     .circle-action svg { width: 23px; height: 23px; }
     .act-voice  { border: 2.5px solid #0284c7; color: #38bdf8; }
-    .act-stop   { border: 2.5px solid #f97316; color: #fb923c; }
+    .act-stop   { border: 2.5px solid #ef4444; color: #f87171; }
     .act-sos    { border: 2.5px solid #dc2626; color: #f87171; font-weight: 900; font-size: 13px; }
     .act-comp   { border: 2.5px solid #4f46e5; color: #818cf8; }
     .act-group  { border: 2.5px solid #059669; color: #34d399; }
@@ -1225,7 +1225,7 @@
       </button>
     </div>
     <div style="text-align:center;font-size:11px;color:#64748b;margin-top:8px;">
-      Versión 15.2.1 · Capas Online/Offline + Carpeta local TrailSync en dispositivo
+      Versión 15.2.2 · Capas Online/Offline + Carpeta local TrailSync en dispositivo
     </div>
   </div>
 </div>
@@ -1505,13 +1505,12 @@
           </button>
         </div>
 
-        <button class="circle-action act-stop" onclick="openModal('stopModal')" title="Pedir parada">
-          <svg fill="currentColor" viewBox="0 0 24 24">
-            <path d="M18 8.5V6a1.5 1.5 0 00-3 0v2.5h-1V4.5a1.5 1.5 0 00-3 0v4h-1V5.5a1.5 1.5 0 00-3 0v6.2l-1.9-1.9a1.5 1.5 0 00-2.1 2.1l4.8 4.8A5 5 0 0011.3 18H15a4 4 0 004-4V8.5a1 1 0 00-1 0z"/>
+        <button class="circle-action act-stop" onclick="requestDirectStop()" title="Pedir parada al grupo">
+          <svg viewBox="0 0 24 24" fill="none">
+            <polygon points="7.86,2 16.14,2 22,7.86 22,16.14 16.14,22 7.86,22 2,16.14 2,7.86" fill="#dc2626" stroke="#ffffff" stroke-width="1.6"/>
+            <text x="12" y="13.9" text-anchor="middle" fill="#ffffff" font-size="5.6" font-weight="900" font-family="system-ui,-apple-system,sans-serif" letter-spacing="0.2">STOP</text>
           </svg>
         </button>
-
-        <button class="circle-action act-sos" onclick="triggerSOS()" title="Emergencia SOS">SOS</button>
         <button type="button" class="circle-action act-legal" id="floatingLegalCheckPill" onclick="checkActiveRouteLegality(true)" title="Comprobar ruta legal" aria-label="Comprobar ruta legal">
           <svg fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
             <path d="M12 3v18M8 21h8M4 7h16"/>
@@ -1524,13 +1523,6 @@
         <button class="circle-action act-comp" id="btnCompass" onclick="toggleBacktrack()" title="Volver por rastro (Backtrack)">
           <svg fill="none" stroke="currentColor" stroke-width="2.3" viewBox="0 0 24 24">
             <circle cx="12" cy="12" r="9"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" fill="currentColor"/>
-          </svg>
-        </button>
-
-        <button class="circle-action act-group" onclick="openGroupModal()" title="Miembros del grupo">
-          <svg fill="currentColor" viewBox="0 0 24 24">
-            <circle cx="12" cy="7" r="2.5"/><circle cx="6" cy="9" r="2"/><circle cx="18" cy="9" r="2"/>
-            <path d="M9 14a3 3 0 016 0v5H9v-5zm-6 1a2.5 2.5 0 015 0v4H3v-4zm13 0a2.5 2.5 0 015 0v4h-5v-4z"/>
           </svg>
         </button>
 
@@ -2032,7 +2024,7 @@
     <h2>Ajustes de ruta y App</h2>
     <div style="background:#18141a;padding:10px 12px;border-radius:12px;margin-bottom:12px;border:1px solid #334155;display:flex;align-items:center;justify-content:space-between;gap:8px;">
       <div>
-        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">15.2.1</span></div>
+        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">15.2.2</span></div>
         <div style="font-size:11px;color:#94a3b8;" id="webVerStatusLabel">Comprobando actualizaciones en la web...</div>
       </div>
       <button class="solid-btn" style="flex:0 0 auto;background:#16a34a;color:#fff;padding:8px 12px;font-size:12px;" onclick="manualCheckForUpdates()">🔄 Buscar / Actualizar</button>
@@ -2113,7 +2105,7 @@
     } catch (e) {}
   });
 
-  const APP_VERSION = '15.2.1';
+  const APP_VERSION = '15.2.2';
   let swWaitingWorker = null;
   let remoteVersionFound = null;
 
@@ -4579,8 +4571,11 @@ window.addEventListener('offline', () => {
       showToast(`🆘 ¡ALERTA S.O.S. DE ${peers[msg.peerId].nick.toUpperCase()}!`);
       speakAlert(`Atención, alerta SOS de ${peers[msg.peerId].nick}`);
     } else if (msg.kind === 'STOP') {
-      showToast(`✋ ${peers[msg.peerId].nick} pide parada: ${msg.reason || ''}`);
-      speakAlert(`${peers[msg.peerId].nick} pide parada: ${msg.reason || ''}`);
+      const stopVoiceText = msg.directStop
+        ? `El usuario ${peers[msg.peerId].nick} ha pedido parar`
+        : (msg.reason ? `${peers[msg.peerId].nick} pide parada: ${msg.reason}` : `El usuario ${peers[msg.peerId].nick} ha pedido parar`);
+      showToast(`🛑 ${stopVoiceText}`);
+      speakAlert(stopVoiceText);
     } else if (msg.kind === 'ZONE_ALERT') {
       const zReason = msg.zoneReason || 'zona restringida';
       showToast(`🚫 ${peers[msg.peerId].nick} ha entrado en zona restringida: ${zReason}`);
@@ -5899,7 +5894,7 @@ window.addEventListener('offline', () => {
     }).join('\n');
 
     return `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="TrailSync v15.2.1" xmlns="http://www.topografix.com/GPX/1/1">
+<gpx version="1.1" creator="TrailSync v15.2.2" xmlns="http://www.topografix.com/GPX/1/1">
   <metadata><name>${escapeXml(titleText)}</name>${descTag}</metadata>
   <trk><name>${escapeXml(titleText)}</name>${descTag}<trkseg>
 ${trkpts}
@@ -6385,6 +6380,15 @@ ${trkptsXml}
     clearInterval(sosTimer);
     document.getElementById('sosCountdownText').textContent = '✅ Cancelado: familia avisada de que estás bien.';
     recordIncident('SOS_OK', 'Confirmado «Estoy bien»');
+  }
+
+  function requestDirectStop() {
+    const sender = (userNick || 'Un compañero').trim();
+    const stopMsg = `El usuario ${sender} ha pedido parar`;
+    recordIncident('STOP_REQUEST', '🛑 Parada solicitada');
+    broadcastState('STOP', { reason: stopMsg, directStop: true });
+    showToast(`🛑 Aviso enviado: "${stopMsg}"`);
+    speakAlert(stopMsg);
   }
 
   function registerStop(reason) {
