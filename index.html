@@ -10,7 +10,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
   <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
-  <title>TrailSync v15.2.12 — Capas Online/Offline limpias y carpeta local TrailSync en el dispositivo</title>
+  <title>TrailSync v15.2.13 — Capas Online/Offline limpias y carpeta local TrailSync en el dispositivo</title>
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
         onerror="this.onerror=null;this.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';" />
@@ -181,11 +181,14 @@
     #map.offline-pista-mode .leaflet-tile-pane {
       filter: contrast(1.24) brightness(1.05) saturate(0.85);
     }
-    #map.dmd2-trail-mode .leaflet-tile-pane {
-      filter: contrast(1.22) saturate(1.34) brightness(0.97);
-    }
     #map.sunlight-boost-mode .leaflet-tile-pane {
       filter: contrast(1.42) brightness(1.14) saturate(1.15);
+    }
+    #map.trail-contrast-mode {
+      background: #141a21;
+    }
+    #map.trail-contrast-mode .leaflet-tile-pane {
+      filter: invert(0.91) hue-rotate(188deg) saturate(1.65) contrast(1.32) brightness(0.84);
     }
     #map.night-ride-mode .leaflet-tile-pane {
       filter: invert(0.9) hue-rotate(180deg) contrast(1.12) brightness(0.88);
@@ -1094,7 +1097,7 @@
       font-size: 16px; font-weight: 600; color: #f3eff5; line-height: 1.25;
       display: flex; align-items: center; gap: 7px;
     }
-    .dmd2-tag {
+    .layer-badge-tag {
       background: rgba(249, 115, 22, 0.22);
       color: #fb923c;
       border: 1px solid rgba(249, 115, 22, 0.45);
@@ -1107,7 +1110,7 @@
       font-size: 12.5px; color: #aca3af; margin-top: 3px; line-height: 1.35;
     }
 
-    /* DMD2 / BROUTER 6-PROFILE ROUTE PLANNER GRID */
+    /* BROUTER 6-PROFILE ROUTE PLANNER GRID */
     .route-section-badge {
       display: inline-block; font-size: 11px; font-weight: 800; letter-spacing: 0.6px;
       text-transform: uppercase; padding: 3px 9px; border-radius: 7px; margin: 8px 0 8px;
@@ -1273,7 +1276,7 @@
     </div>
 
     <p style="color:#94a3b8;font-size:13px;margin:0 0 14px;line-height:1.45;">
-      Capa <strong>DMD2 Trail / Pistas</strong> offline, rutas <strong>BRouter</strong>, telemetría en vivo, chinchetas compartidas, alertas de grupo, cola sin cobertura y bloqueo táctil bajo lluvia.
+      Cartografía topográfica <strong>OpenTopoMap / IGN</strong> offline, rutas <strong>BRouter</strong>, telemetría en vivo, chinchetas compartidas, alertas de grupo, cola sin cobertura y bloqueo táctil bajo lluvia.
     </p>
 
     <div class="lobby-card">
@@ -1308,7 +1311,7 @@
       </button>
     </div>
     <div style="text-align:center;font-size:11px;color:#64748b;margin-top:8px;">
-      Versión 15.2.12 · Capas Online/Offline + Carpeta local TrailSync en dispositivo
+      Versión 15.2.13 · Capas Online/Offline + Carpeta local TrailSync en dispositivo
     </div>
   </div>
 </div>
@@ -1332,7 +1335,7 @@
         </svg>
       </button>
 
-      <button class="top-icon-btn" onclick="openOfflineModal()" title="Descargar Península / DMD2 Offline">
+      <button class="top-icon-btn" onclick="openOfflineModal()" title="Descargar mapas offline de Península">
         <svg width="20" height="20" fill="none" stroke="#38bdf8" stroke-width="2.1" viewBox="0 0 24 24">
           <path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/>
         </svg>
@@ -1400,7 +1403,7 @@
         <span class="compass-mode-badge" id="compassModeBadge">NORTE</span>
       </button>
 
-      <button class="display-mode-btn" id="displayModeBtn" onclick="cycleDisplayContrastMode()" title="Cambiar contraste: Normal / Sol directo / Noche">
+      <button class="display-mode-btn" id="displayModeBtn" onclick="cycleDisplayContrastMode()" title="Cambiar contraste: Normal / Pistas Alto Contraste / Sol directo / Noche">
         <div id="displayModeIcon">☀️</div>
         <span id="displayModeLabel">NORMAL</span>
       </button>
@@ -1671,7 +1674,7 @@
   </div>
 </div>
 
-<!-- BOTTOM SHEET: DMD2 / BROUTER ROUTE PROFILE SELECTOR -->
+<!-- BOTTOM SHEET: BROUTER ROUTE PROFILE SELECTOR -->
 <div class="modal-backdrop sheet-mode" id="routePlannerModal" onclick="if(event.target===this)closeModal('routePlannerModal')">
   <div class="layers-sheet">
     <div class="sheet-handle" onclick="closeModal('routePlannerModal')"></div>
@@ -1769,13 +1772,12 @@
     <div style="margin-bottom:10px;">
       <label class="field-label">Capa a descargar en TrailSync/mapas/:</label>
       <select id="offlineLayerChoice" style="width:100%;background:#161b26;color:#fff;border:1px solid #475569;border-radius:10px;padding:9px;font-size:13px;">
-        <option value="dmd2_trail">🧭 DMD2 Trail / Pistas (Senderos y pistas marcados)</option>
-        <option value="ign_mtn">🏔️ IGN Topográfico MTN25/50 (Pistas oficiales España)</option>
         <option value="opentopo">⛰️ OpenTopoMap (Pistas, curvas de nivel y relieve)</option>
+        <option value="ign_mtn">🏔️ IGN Topográfico MTN25/50 (Pistas oficiales España)</option>
         <option value="osm_base">🗺️ OpenStreetMap (Carreteras y caminos)</option>
         <option value="satelite">🛰️ Satélite (Ortofoto aérea)</option>
         <option value="google_maps">📍 Google Maps (Mapa estándar sin satélite)</option>
-        <option value="both">📦 Pack Trail (DMD2 Trail + IGN Topográfico)</option>
+        <option value="both">📦 Pack Trail (OpenTopoMap + IGN Topográfico)</option>
       </select>
     </div>
 
@@ -2097,7 +2099,7 @@
     <h2>Ajustes de ruta y App</h2>
     <div style="background:#18141a;padding:10px 12px;border-radius:12px;margin-bottom:12px;border:1px solid #334155;display:flex;align-items:center;justify-content:space-between;gap:8px;">
       <div>
-        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">15.2.12</span></div>
+        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">15.2.13</span></div>
         <div style="font-size:11px;color:#94a3b8;" id="webVerStatusLabel">Comprobando actualizaciones en la web...</div>
       </div>
       <button class="solid-btn" style="flex:0 0 auto;background:#16a34a;color:#fff;padding:8px 12px;font-size:12px;" onclick="manualCheckForUpdates()">🔄 Buscar / Actualizar</button>
@@ -2115,7 +2117,7 @@
     </label>
 
     <label style="display:flex;align-items:center;gap:8px;font-size:13.5px;margin-bottom:10px;cursor:pointer;">
-      <input type="checkbox" id="dynamicSpeedZoomToggle" checked onchange="toggleDynamicSpeedZoom(this.checked)" /> 🔍 Zoom dinámico según velocidad (estilo DMD2 / Maps)
+      <input type="checkbox" id="dynamicSpeedZoomToggle" checked onchange="toggleDynamicSpeedZoom(this.checked)" /> 🔍 Zoom dinámico según velocidad (estilo navegador off-road)
     </label>
 
     <button type="button" id="btnWakeLock" class="solid-btn" style="background:#eab308;color:#0f172a;width:100%;margin-bottom:12px;display:flex;align-items:center;justify-content:center;gap:8px;" onclick="toggleWakeLock(true)">
@@ -2178,7 +2180,7 @@
     } catch (e) {}
   });
 
-  const APP_VERSION = '15.2.12';
+  const APP_VERSION = '15.2.13';
   let swWaitingWorker = null;
   let remoteVersionFound = null;
 
@@ -2224,7 +2226,7 @@
     if (map) map.invalidateSize(true);
   });
 
-  // --- DMD2 / GOOGLE MAPS STYLE SPEED-BASED DYNAMIC ZOOM + FREE PAN WHEN STOPPED ---
+  // --- SPEED-BASED DYNAMIC ZOOM + FREE PAN WHEN STOPPED ---
   let dynamicSpeedZoomEnabled = localStorage.getItem('trailsync_dynamic_zoom') !== '0';
   let smoothedSpeedKmh = 0;
   let lastDynamicZoomApplied = null;
@@ -2312,7 +2314,7 @@
   }
 
   function getTargetZoomForSpeed(speedKmh, currentZoom = null) {
-    // Google Maps / DMD2 closer navigation curve:
+    // Navigation speed-zoom curve:
     // Technical trail / slow (< 25 km/h) -> Zoom 17.5
     // Fast trail / secondary curves (25 - 50 km/h) -> Zoom 16.5
     // National road (50 - 78 km/h) -> Zoom 15.5
@@ -2444,11 +2446,12 @@
     }
   }
 
-  // --- DISPLAY CONTRAST MODE (NORMAL / SOL DIRECTO / NOCHE) ---
+  // --- DISPLAY CONTRAST MODE (NORMAL / PISTAS ALTO CONTRASTE / SOL DIRECTO / NOCHE) ---
   const DISPLAY_MODES = [
-    { key: 'normal', icon: '☀️', label: 'NORMAL', cls: '' },
-    { key: 'sun',    icon: '🔆', label: 'SOL',    cls: 'sunlight-boost-mode' },
-    { key: 'night',  icon: '🌙', label: 'NOCHE',  cls: 'night-ride-mode' }
+    { key: 'normal',   icon: '☀️', label: 'NORMAL', cls: '' },
+    { key: 'contrast', icon: '🌓', label: 'PISTAS', cls: 'trail-contrast-mode' },
+    { key: 'sun',      icon: '🔆', label: 'SOL',    cls: 'sunlight-boost-mode' },
+    { key: 'night',    icon: '🌙', label: 'NOCHE',  cls: 'night-ride-mode' }
   ];
   let displayModeIdx = 0;
 
@@ -2456,7 +2459,7 @@
     displayModeIdx = (displayModeIdx + 1) % DISPLAY_MODES.length;
     const m = DISPLAY_MODES[displayModeIdx];
     const mapEl = document.getElementById('map');
-    mapEl.classList.remove('sunlight-boost-mode', 'night-ride-mode');
+    mapEl.classList.remove('trail-contrast-mode', 'sunlight-boost-mode', 'night-ride-mode');
     if (m.cls) mapEl.classList.add(m.cls);
     document.getElementById('displayModeIcon').textContent = m.icon;
     document.getElementById('displayModeLabel').textContent = m.label;
@@ -2676,7 +2679,7 @@
   }
 
   const TILE_CACHE_NAME = 'trailsync-peninsula-tiles-v2';
-  const DMD2_TRAIL_TILE_URL  = 'https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png';
+  const PISTAS_TOPO_TILE_URL = 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png';
   const IGN_MTN_TILE_URL     = 'https://www.ign.es/wmts/mapa-raster?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=MTN&STYLE=default&TILEMATRIXSET=GoogleMapsCompatible&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT=image/jpeg';
   const OPENTOPO_TILE_URL    = 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png';
   const OSM_BASE_TILE_URL    = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
@@ -2686,16 +2689,15 @@
 
   const LAYER_MODES = [
     {
-      key: 'dmd2_trail',
+      key: 'opentopo',
       group: 'online',
-      title: 'DMD2 Trail / Pistas',
-      badge: 'DMD2',
-      desc: 'Online · Pistas forestales, senderos y curvas de nivel resaltadas',
-      url: DMD2_TRAIL_TILE_URL,
-      fallbackUrl: OPENTOPO_TILE_URL,
+      title: 'OpenTopoMap (Relieve y Pistas)',
+      badge: 'TOPO',
+      desc: 'Online · Pistas forestales, senderos, curvas de nivel y relieve de montaña',
+      url: OPENTOPO_TILE_URL,
+      fallbackUrl: OSM_BASE_TILE_URL,
       cacheOnly: false,
       pistaStyle: false,
-      dmd2Style: true,
       maxNativeZoom: 17,
       maxZoom: 19
     },
@@ -2709,22 +2711,7 @@
       fallbackUrl: OPENTOPO_TILE_URL,
       cacheOnly: false,
       pistaStyle: false,
-      dmd2Style: false,
       maxZoom: 18
-    },
-    {
-      key: 'opentopo',
-      group: 'online',
-      title: 'OpenTopoMap (Relieve)',
-      badge: 'TOPO',
-      desc: 'Online · Pistas, curvas de nivel y sombreado de pendientes de montaña',
-      url: OPENTOPO_TILE_URL,
-      fallbackUrl: DMD2_TRAIL_TILE_URL,
-      cacheOnly: false,
-      pistaStyle: false,
-      dmd2Style: false,
-      maxNativeZoom: 17,
-      maxZoom: 19
     },
     {
       key: 'osm',
@@ -2735,7 +2722,6 @@
       fallbackUrl: 'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
       cacheOnly: false,
       pistaStyle: false,
-      dmd2Style: false,
       maxZoom: 19
     },
     {
@@ -2747,7 +2733,6 @@
       fallbackUrl: SAT_ESRI_TILE_URL,
       cacheOnly: false,
       pistaStyle: false,
-      dmd2Style: false,
       maxZoom: 19
     },
     {
@@ -2759,7 +2744,6 @@
       fallbackUrl: OSM_BASE_TILE_URL,
       cacheOnly: false,
       pistaStyle: false,
-      dmd2Style: false,
       maxZoom: 20
     },
     {
@@ -2768,11 +2752,10 @@
       title: 'Mapa Offline (Carpeta TrailSync)',
       badge: 'OFFLINE',
       desc: 'Sin conexión · Lee los mapas guardados en la carpeta TrailSync del dispositivo',
-      url: DMD2_TRAIL_TILE_URL,
+      url: PISTAS_TOPO_TILE_URL,
       fallbackUrl: OSM_BASE_TILE_URL,
       cacheOnly: true,
       pistaStyle: false,
-      dmd2Style: true,
       maxZoom: 18
     }
   ];
@@ -2786,7 +2769,7 @@
     trail_hard:   { label: 'Off-Road · Trail Difícil',   brouter: 'mtb',           color: '#dc2626' }
   };
 
-  let selectedLayerKey = localStorage.getItem('trailsync_selected_layer') || 'dmd2_trail';
+  let selectedLayerKey = localStorage.getItem('trailsync_selected_layer') || 'opentopo';
 
   let map, baseTileLayer, plannedLine, recordedLine, backtrackLine, incidentLayer, sharedWaypointsLayer, userMarker, destMarker;
   let isRecording = true;
@@ -4035,7 +4018,7 @@ function keepOriginalRouteAndNavigate() {
 
   function getActiveLayerObj() {
     if (selectedLayerKey === 'satelite_ign') selectedLayerKey = 'satelite';
-    if (selectedLayerKey === 'auto' || selectedLayerKey === 'outdoors') selectedLayerKey = 'dmd2_trail';
+    if (selectedLayerKey === 'auto' || selectedLayerKey === 'outdoors' || selectedLayerKey === 'opentopo') selectedLayerKey = 'opentopo';
     if (selectedLayerKey === 'offline_pista') selectedLayerKey = 'offline';
     return LAYER_MODES.find(l => l.key === selectedLayerKey) || LAYER_MODES[0];
   }
@@ -4048,7 +4031,7 @@ function keepOriginalRouteAndNavigate() {
     const renderGroup = (headerTitle, items) => {
       const rows = items.map(layer => {
         const isSelected = layer.key === selectedLayerKey;
-        const badgeHtml = layer.badge ? `<span class="dmd2-tag">${layer.badge}</span>` : '';
+        const badgeHtml = layer.badge ? `<span class="layer-badge-tag">${layer.badge}</span>` : '';
         return `
           <div class="layer-option-row ${isSelected ? 'selected' : ''}" onclick="selectMapLayer('${layer.key}')">
             <div class="custom-radio"><div class="custom-radio-dot"></div></div>
@@ -4084,15 +4067,12 @@ function keepOriginalRouteAndNavigate() {
     baseTileLayer = buildOfflineTileLayer(mode).addTo(map);
 
     const mapEl = document.getElementById('map');
-    mapEl.classList.remove('offline-pista-mode', 'dmd2-trail-mode');
+    mapEl.classList.remove('offline-pista-mode');
     const baseRouteColor = activeSharedRoute?.color || '#ea580c';
 
     if (mode.pistaStyle) {
       mapEl.classList.add('offline-pista-mode');
       if (plannedLine) plannedLine.setStyle({ weight: 8, color: '#dc2626' });
-    } else if (mode.dmd2Style) {
-      mapEl.classList.add('dmd2-trail-mode');
-      if (plannedLine) plannedLine.setStyle({ weight: 7, color: baseRouteColor });
     } else {
       if (plannedLine) plannedLine.setStyle({ weight: 6, color: baseRouteColor });
     }
@@ -4933,7 +4913,7 @@ window.addEventListener('offline', () => {
   }
 
   const ALL_TILE_TEMPLATES = [
-    DMD2_TRAIL_TILE_URL,
+    PISTAS_TOPO_TILE_URL,
     OSM_BASE_TILE_URL,
     SAT_IGN_TILE_URL,
     SAT_ESRI_TILE_URL,
@@ -5118,12 +5098,12 @@ window.addEventListener('offline', () => {
   }
 
   function inferLayerFolderKeyFromUrl(tileUrl) {
-    if (!tileUrl) return 'dmd2_trail';
-    if (tileUrl.includes('cyclosm')) return 'dmd2_trail';
+    if (!tileUrl) return 'opentopo';
+    if (tileUrl.includes('opentopomap')) return 'opentopo';
     if (tileUrl.includes('tile.openstreetmap.org')) return 'osm_base';
     if (tileUrl.includes('ign.es') || tileUrl.includes('World_Imagery')) return 'satelite';
     if (tileUrl.includes('google.com/vt')) return 'google_maps';
-    return 'dmd2_trail';
+    return 'opentopo';
   }
 
   async function writeTileBlobToDeviceFolder(layerKey, z, x, y, blob) {
@@ -5147,7 +5127,7 @@ window.addEventListener('offline', () => {
   async function readTileBlobFromDeviceFolder(preferredLayerKey, z, x, y) {
     const root = await ensureTrailSyncFolderReady(false);
     if (!root) return null;
-    const candidateLayers = [preferredLayerKey, 'dmd2_trail', 'ign_mtn', 'opentopo', 'osm_base', 'satelite', 'google_maps']
+    const candidateLayers = [preferredLayerKey, 'opentopo', 'ign_mtn', 'opentopo', 'osm_base', 'satelite', 'google_maps']
       .filter((v, idx, arr) => v && arr.indexOf(v) === idx);
     try {
       const mapasDir = await root.getDirectoryHandle('mapas', { create: false });
@@ -5168,7 +5148,7 @@ window.addEventListener('offline', () => {
   async function resolveOfflineTileDataUrl(coords, modeObj) {
     const preferredLayer = modeObj && modeObj.key && modeObj.key !== 'offline'
       ? (modeObj.key === 'osm' ? 'osm_base' : modeObj.key)
-      : 'dmd2_trail';
+      : 'opentopo';
 
     const exactBlob = await readTileBlobFromDeviceFolder(preferredLayer, coords.z, coords.x, coords.y);
     if (exactBlob) {
@@ -5299,7 +5279,7 @@ window.addEventListener('offline', () => {
         // Prioritize exact local tile from TrailSync/mapas if already downloaded on device, otherwise load from network
         const preferredFolderKey = modeObj && modeObj.key && modeObj.key !== 'offline'
           ? (modeObj.key === 'osm' ? 'osm_base' : modeObj.key)
-          : 'dmd2_trail';
+          : 'opentopo';
 
         readTileBlobFromDeviceFolder(preferredFolderKey, coords.z, coords.x, coords.y).then(localBlob => {
           if (localBlob && localBlob.size > 0) {
@@ -5323,7 +5303,7 @@ window.addEventListener('offline', () => {
       }
     });
     return new OfflineLayer(modeObj.url, {
-      attribution: '&copy; CyclOSM DMD2 / OpenStreetMap / IGN / Google Maps',
+      attribution: '&copy; OpenTopoMap / OpenStreetMap / IGN / Google Maps',
       subdomains: ['a', 'b', 'c'],
       maxNativeZoom: modeObj.maxNativeZoom || modeObj.maxZoom || 18,
       maxZoom: Math.max(19, modeObj.maxZoom || 18),
@@ -5402,7 +5382,6 @@ window.addEventListener('offline', () => {
     baseTileLayer = buildOfflineTileLayer(startMode).addTo(map);
     const lp2 = document.getElementById('layerNamePill'); if (lp2) lp2.textContent = `🗺️ Capa: ${startMode.title} ▾`;
     if (startMode.pistaStyle) document.getElementById('map').classList.add('offline-pista-mode');
-    if (startMode.dmd2Style) document.getElementById('map').classList.add('dmd2-trail-mode');
 
     plannedLine = L.polyline([], { color: '#ea580c', weight: 6 }).addTo(map);
     legalOverlayLayer = L.layerGroup().addTo(map);
@@ -5485,8 +5464,8 @@ window.addEventListener('offline', () => {
   function lat2tile(lat, z) { return Math.floor((1 - Math.log(Math.tan(lat * Math.PI / 180) + 1 / Math.cos(lat * Math.PI / 180)) / Math.PI) / 2 * Math.pow(2, z)); }
 
   function getSelectedOfflineSources() {
-    const choice = document.getElementById('offlineLayerChoice')?.value || 'dmd2_trail';
-    const dmd2Mirrors = [
+    const choice = document.getElementById('offlineLayerChoice')?.value || 'opentopo';
+    const openTopoPrimaryMirrors = [
       'https://a.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png',
       'https://b.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png',
       'https://c.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png',
@@ -5515,14 +5494,14 @@ window.addEventListener('offline', () => {
       'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
       'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png'
     ];
-    if (choice === 'dmd2_trail') return [{ key: 'dmd2_trail', mirrors: dmd2Mirrors }];
+    if (choice === 'opentopo') return [{ key: 'opentopo', mirrors: openTopoPrimaryMirrors }];
     if (choice === 'ign_mtn') return [{ key: 'ign_mtn', mirrors: ignMtnMirrors }];
     if (choice === 'opentopo') return [{ key: 'opentopo', mirrors: openTopoMirrors }];
     if (choice === 'osm_base') return [{ key: 'osm_base', mirrors: osmMirrors }];
     if (choice === 'satelite') return [{ key: 'satelite', mirrors: satMirrors }];
     if (choice === 'google_maps') return [{ key: 'google_maps', mirrors: gmapsMirrors }];
     return [
-      { key: 'dmd2_trail', mirrors: dmd2Mirrors },
+      { key: 'opentopo', mirrors: openTopoPrimaryMirrors },
       { key: 'ign_mtn', mirrors: ignMtnMirrors }
     ];
   }
@@ -6070,7 +6049,7 @@ window.addEventListener('offline', () => {
     }).join('\n');
 
     return `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="TrailSync v15.2.12" xmlns="http://www.topografix.com/GPX/1/1">
+<gpx version="1.1" creator="TrailSync v15.2.13" xmlns="http://www.topografix.com/GPX/1/1">
   <metadata><name>${escapeXml(titleText)}</name>${descTag}</metadata>
   <trk><name>${escapeXml(titleText)}</name>${descTag}<trkseg>
 ${trkpts}
