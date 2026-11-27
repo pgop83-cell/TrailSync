@@ -10,7 +10,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
   <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
-  <title>TrailSync v15.0.2 — Inicio limpio sin salto automático, Botón Legal Central y Actualización/Caché en Inicio</title>
+  <title>TrailSync v15.0.3 — Indicador progreso legal junto a Pantalla Completa y consulta Overpass optimizada</title>
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
         onerror="this.onerror=null;this.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';" />
@@ -221,6 +221,25 @@
       pointer-events: none;
     }
     .top-pills > * { pointer-events: auto; }
+    .top-pills-row {
+      display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 6px;
+      max-width: calc(100vw - 88px);
+    }
+    .legal-top-progress-pill {
+      display: none;
+      background: rgba(15, 23, 42, 0.95);
+      color: #bae6fd;
+      border: 1.5px solid #38bdf8;
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 11.5px;
+      font-weight: 800;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 4px 14px rgba(2, 132, 199, 0.45);
+      white-space: nowrap;
+      animation: pulseUpdate 1.2s infinite;
+    }
     .fullscreen-pill-btn {
       background: rgba(22, 27, 38, 0.92);
       color: #f8fafc;
@@ -1173,7 +1192,7 @@
       </button>
     </div>
     <div style="text-align:center;font-size:11px;color:#64748b;margin-top:8px;">
-      Versión 15.0.2 · Wake Lock + Telemetría GPX · Alertas Grupo · Cola Offline MQTT · Bloqueo Lluvia 3s
+      Versión 15.0.3 · Indicador progreso legal en mapa · Consulta cartográfica optimizada
     </div>
   </div>
 </div>
@@ -1242,20 +1261,25 @@
     </div>
     <div id="toast" class="toast"></div>
 
-    <!-- TOP-LEFT: FULLSCREEN BUTTON + APP UPDATE -->
+    <!-- TOP-LEFT: FULLSCREEN BUTTON + LEGAL PROGRESS PILL + APP UPDATE -->
     <div class="top-pills" id="topPillsStack">
-      <button type="button" class="fullscreen-pill-btn" id="btnFullscreenToggle" onclick="toggleMapFullscreen()" title="Alternar pantalla completa del mapa">
-        <svg id="fullscreenIconSvg" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24">
-          <path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3"/>
-        </svg>
-        <span id="fullscreenBtnLabel">Pantalla completa</span>
-      </button>
+      <div class="top-pills-row">
+        <button type="button" class="fullscreen-pill-btn" id="btnFullscreenToggle" onclick="toggleMapFullscreen()" title="Alternar pantalla completa del mapa">
+          <svg id="fullscreenIconSvg" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24">
+            <path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3"/>
+          </svg>
+          <span id="fullscreenBtnLabel">Pantalla completa</span>
+        </button>
+
+        <div id="legalTopProgressPill" class="legal-top-progress-pill" role="status" aria-live="polite">
+          <span>⚖️</span>
+          <span id="legalTopProgressText">Calculando legalidad 0%</span>
+        </div>
+      </div>
 
       <button id="updateAppBannerBtn" onclick="applyAppUpdate()">
         🔄 Actualizar app <span id="newVersionBadge"></span>
       </button>
-
-
     </div>
 
     <!-- TOP-CENTER: GROUP MEMBER BUBBLES -->
@@ -1958,7 +1982,7 @@
     <h2>Ajustes de ruta y App</h2>
     <div style="background:#18141a;padding:10px 12px;border-radius:12px;margin-bottom:12px;border:1px solid #334155;display:flex;align-items:center;justify-content:space-between;gap:8px;">
       <div>
-        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">15.0.1</span></div>
+        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">15.0.3</span></div>
         <div style="font-size:11px;color:#94a3b8;" id="webVerStatusLabel">Comprobando actualizaciones en la web...</div>
       </div>
       <button class="solid-btn" style="flex:0 0 auto;background:#16a34a;color:#fff;padding:8px 12px;font-size:12px;" onclick="manualCheckForUpdates()">🔄 Buscar / Actualizar</button>
@@ -2039,7 +2063,7 @@
     } catch (e) {}
   });
 
-  const APP_VERSION = '15.0.2';
+  const APP_VERSION = '15.0.3';
   let swWaitingWorker = null;
   let remoteVersionFound = null;
 
@@ -2711,6 +2735,8 @@
     lastLegalAuditResult = null;
     legalOverlayVisible = true;
     if (legalOverlayLayer) legalOverlayLayer.clearLayers();
+    const topBanner = document.getElementById('legalTopProgressPill');
+    if (topBanner) topBanner.style.display = 'none';
     const btn = document.getElementById('btnCheckRouteLegal');
     if (btn) {
       btn.disabled = false;
@@ -2975,14 +3001,26 @@ function keepOriginalRouteAndNavigate() {
 
     const btn = document.getElementById('btnCheckRouteLegal');
     const pill = document.getElementById('floatingLegalCheckPill');
+    const topBanner = document.getElementById('legalTopProgressPill');
+    const topBannerText = document.getElementById('legalTopProgressText');
+
+    const hideTopBanner = () => {
+      if (topBanner) topBanner.style.display = 'none';
+    };
+
     const setLegalProgress = (pct, label) => {
       const clamped = Math.max(0, Math.min(100, Math.round(pct)));
-      const text = `⏳ Legalidad ${clamped}% · ${label}`;
-      if (btn) { btn.disabled = true; btn.textContent = text; }
+      const menuText = `⏳ Legalidad ${clamped}% · ${label}`;
+      const topText = `Calculando legalidad ${clamped}%`;
+      if (btn) { btn.disabled = true; btn.textContent = menuText; }
+      if (topBanner && topBannerText) {
+        topBanner.style.display = 'inline-flex';
+        topBannerText.textContent = topText;
+      }
       if (pill) {
         pill.classList.remove('legal-ok', 'legal-warn', 'legal-danger');
         pill.classList.add('legal-loading');
-        pill.title = text;
+        pill.title = `${topText} · ${label}`;
       }
     };
 
@@ -2990,56 +3028,84 @@ function keepOriginalRouteAndNavigate() {
 
     try {
       const sampled = sampleRouteForLegalAudit(plannedCoords, 55);
-      const bounds = L.latLngBounds(sampled).pad(0.04);
+      // Tighter padding (0.012 ~= 1 km) so Overpass downloads 10x less geometry and responds fast
+      const bounds = L.latLngBounds(sampled).pad(0.012);
       const s = bounds.getSouth().toFixed(5), w = bounds.getWest().toFixed(5);
       const n = bounds.getNorth().toFixed(5), e = bounds.getEast().toFixed(5);
 
-      const overpassQuery = `[out:json][timeout:10];(
-        way["highway"](${s},${w},${n},${e});
+      const overpassQuery = `[out:json][timeout:18];(
+        way["highway"~"^(motorway|trunk|primary|secondary|tertiary|unclassified|residential|service|track|path|footway|bridleway|cycleway|pedestrian|living_street)"](${s},${w},${n},${e});
         way["boundary"="protected_area"](${s},${w},${n},${e});
         way["leisure"="nature_reserve"](${s},${w},${n},${e});
       );out body geom;`;
 
       const endpoints = [
-        'https://overpass-api.de/api/interpreter',
-        'https://overpass.kumi.systems/api/interpreter'
+        { name: 'Overpass DE', url: 'https://overpass-api.de/api/interpreter' },
+        { name: 'Overpass Kumi', url: 'https://overpass.kumi.systems/api/interpreter' },
+        { name: 'Overpass Mail.ru', url: 'https://maps.mail.ru/osm/tools/overpass/api/interpreter' }
       ];
 
-      setLegalProgress(15, 'Consultando mapa...');
+      setLegalProgress(12, 'Consultando cartografía...');
 
       let osmElements = null;
+      let lastServerError = '';
+
       for (let epIdx = 0; epIdx < endpoints.length; epIdx++) {
         const ep = endpoints[epIdx];
-        setLegalProgress(15 + epIdx * 15, epIdx === 0 ? 'Servidor principal...' : 'Servidor alternativo...');
+        const basePct = 15 + epIdx * 10;
+        setLegalProgress(basePct, `Conectando (${ep.name})...`);
+
+        // Smooth visual progress ticker while waiting for network response
+        let waitTick = 0;
+        const ticker = setInterval(() => {
+          waitTick = Math.min(8, waitTick + 1);
+          setLegalProgress(basePct + waitTick, `Descargando (${ep.name})...`);
+        }, 1200);
+
         try {
           const controller = new AbortController();
-          const tid = setTimeout(() => controller.abort(), 8500);
-          const resp = await fetch(ep, {
+          const tid = setTimeout(() => controller.abort(), 16000);
+          const resp = await fetch(ep.url, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+              'Accept': 'application/json'
+            },
             body: 'data=' + encodeURIComponent(overpassQuery),
             signal: controller.signal
           });
           clearTimeout(tid);
+          clearInterval(ticker);
+
           if (resp.ok) {
             const json = await resp.json();
             if (json && Array.isArray(json.elements)) {
               osmElements = json.elements;
-              setLegalProgress(45, 'Cartografía recibida');
+              setLegalProgress(48, 'Cartografía recibida');
               break;
+            } else {
+              lastServerError = `${ep.name}: respuesta vacía`;
             }
+          } else {
+            lastServerError = `${ep.name}: HTTP ${resp.status}`;
           }
-        } catch (err) {}
+        } catch (err) {
+          clearInterval(ticker);
+          lastServerError = err && err.name === 'AbortError'
+            ? `${ep.name}: tiempo agotado (16s)`
+            : `${ep.name}: error de red`;
+        }
       }
 
       if (!osmElements) {
-        throw new Error(!navigator.onLine ? 'Sin conexión a Internet para consultar la cartografía legal' : 'Servidores cartográficos ocupados en este momento; inténtalo de nuevo en unos segundos');
+        throw new Error(!navigator.onLine
+          ? 'Sin conexión a Internet para consultar la cartografía legal'
+          : `Servidores cartográficos sin respuesta (${lastServerError}). Inténtalo en unos segundos.`);
       }
 
       const highwayWays = osmElements.filter(el => el.type === 'way' && el.tags && el.tags.highway && Array.isArray(el.geometry) && el.geometry.length >= 2);
       const protectedPolys = osmElements.filter(el => el.type === 'way' && el.tags && (el.tags.boundary === 'protected_area' || el.tags.leisure === 'nature_reserve') && Array.isArray(el.geometry) && el.geometry.length >= 4);
 
-      // Classify each sampled segment with live percentage (45% -> 88%)
       const rawSegments = [];
       const totalSegs = Math.max(1, sampled.length - 1);
       for (let i = 0; i < totalSegs; i++) {
@@ -3077,18 +3143,17 @@ function keepOriginalRouteAndNavigate() {
           reason: verdict.reason
         });
 
-        if (i % 6 === 0 || i === totalSegs - 1) {
-          const segPct = 45 + ((i + 1) / totalSegs) * 43;
+        if (i % 5 === 0 || i === totalSegs - 1) {
+          const segPct = 50 + ((i + 1) / totalSegs) * 40;
           setLegalProgress(segPct, `Tramo ${i + 1}/${totalSegs}`);
-          if (i % 12 === 0) {
+          if (i % 10 === 0) {
             await new Promise(r => setTimeout(r, 0));
           }
         }
       }
 
-      setLegalProgress(90, 'Pintando ruta...');
+      setLegalProgress(93, 'Pintando ruta...');
 
-      // Merge contiguous segments with same level & reason
       const merged = [];
       for (const seg of rawSegments) {
         const prev = merged[merged.length - 1];
@@ -3181,6 +3246,7 @@ function keepOriginalRouteAndNavigate() {
       }).join('');
 
       setLegalProgress(100, 'Completado');
+      setTimeout(hideTopBanner, 1200);
 
       if (btn) {
         btn.disabled = false;
@@ -3221,6 +3287,7 @@ function keepOriginalRouteAndNavigate() {
         openModal('routeLegalModal');
       }
     } catch (err) {
+      hideTopBanner();
       if (btn) { btn.disabled = false; btn.textContent = '⚖️ Comprobar ruta legal'; }
       if (pill) {
         pill.classList.remove('legal-ok', 'legal-warn', 'legal-danger', 'legal-loading');
