@@ -10,7 +10,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
   <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
-  <title>TrailSync v15.2.4 — Capas Online/Offline limpias y carpeta local TrailSync en el dispositivo</title>
+  <title>TrailSync v15.2.6 — Capas Online/Offline limpias y carpeta local TrailSync en el dispositivo</title>
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
         onerror="this.onerror=null;this.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';" />
@@ -161,6 +161,14 @@
     }
     #map-rotator.course-up-pivot {
       top: calc(100% - 106px);
+    }
+    @media (orientation: portrait) {
+      #map-container {
+        perspective-origin: 50% calc(100% - 168px);
+      }
+      #map-rotator.course-up-pivot {
+        top: calc(100% - 168px);
+      }
     }
     #map { width: 100%; height: 100%; }
 
@@ -1232,7 +1240,7 @@
       </button>
     </div>
     <div style="text-align:center;font-size:11px;color:#64748b;margin-top:8px;">
-      Versión 15.2.4 · Capas Online/Offline + Carpeta local TrailSync en dispositivo
+      Versión 15.2.6 · Capas Online/Offline + Carpeta local TrailSync en dispositivo
     </div>
   </div>
 </div>
@@ -2031,7 +2039,7 @@
     <h2>Ajustes de ruta y App</h2>
     <div style="background:#18141a;padding:10px 12px;border-radius:12px;margin-bottom:12px;border:1px solid #334155;display:flex;align-items:center;justify-content:space-between;gap:8px;">
       <div>
-        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">15.2.4</span></div>
+        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">15.2.6</span></div>
         <div style="font-size:11px;color:#94a3b8;" id="webVerStatusLabel">Comprobando actualizaciones en la web...</div>
       </div>
       <button class="solid-btn" style="flex:0 0 auto;background:#16a34a;color:#fff;padding:8px 12px;font-size:12px;" onclick="manualCheckForUpdates()">🔄 Buscar / Actualizar</button>
@@ -2112,7 +2120,7 @@
     } catch (e) {}
   });
 
-  const APP_VERSION = '15.2.4';
+  const APP_VERSION = '15.2.6';
   let swWaitingWorker = null;
   let remoteVersionFound = null;
 
@@ -2609,7 +2617,8 @@
       cacheOnly: false,
       pistaStyle: false,
       dmd2Style: true,
-      maxZoom: 18
+      maxNativeZoom: 17,
+      maxZoom: 19
     },
     {
       key: 'ign_mtn',
@@ -3856,7 +3865,10 @@ function keepOriginalRouteAndNavigate() {
     }
     if (!isFamilySpectator && userMarker) {
       const rotEl = userMarker.getElement()?.querySelector('.rider-puck-rotator');
-      if (rotEl) rotEl.style.transform = `rotate(${continuousHeadingDeg || 0}deg)`;
+      if (rotEl) {
+        const arrowLocalDeg = activeCourseUp ? 0 : (continuousHeadingDeg || 0);
+        rotEl.style.transform = `rotate(${arrowLocalDeg}deg)`;
+      }
     }
   }
   function toggleNavigationHeadingMode() {
@@ -3869,6 +3881,9 @@ function keepOriginalRouteAndNavigate() {
       currentHeadingDeg = Math.round(initBrg);
     }
     applyMapOrientation();
+    if (map) {
+      setTimeout(() => { try { map.invalidateSize({ animate: false }); } catch (e) {} }, 60);
+    }
     if (courseUpMode) {
       const targetZ = dynamicSpeedZoomEnabled ? getTargetZoomForSpeed(smoothedSpeedKmh) : Math.max(map.getZoom(), 16.5);
       const camCenter = getNavigationCameraCenter(targetZ);
@@ -5113,9 +5128,20 @@ window.addEventListener('offline', () => {
         tile.alt = '';
         const url = this.getTileUrl(coords);
         const sub = ['a', 'b', 'c'][Math.abs((coords.x || 0) + (coords.y || 0)) % 3];
+        const safeFallbackZ = (modeObj.fallbackUrl && modeObj.fallbackUrl.includes('opentopomap'))
+          ? Math.min(coords.z, 17)
+          : coords.z;
+        const scaleShift = coords.z - safeFallbackZ;
+        const safeFallbackX = scaleShift > 0 ? Math.floor(coords.x / Math.pow(2, scaleShift)) : coords.x;
+        const safeFallbackY = scaleShift > 0 ? Math.floor(coords.y / Math.pow(2, scaleShift)) : coords.y;
         const fallbackUrl = modeObj.fallbackUrl
-          ? modeObj.fallbackUrl.replace('{s}', sub).replace('{z}', coords.z).replace('{x}', coords.x).replace('{y}', coords.y)
+          ? modeObj.fallbackUrl
+              .replace('{s}', sub)
+              .replace('{z}', safeFallbackZ)
+              .replace('{x}', safeFallbackX)
+              .replace('{y}', safeFallbackY)
           : null;
+        const osmEmergencyUrl = `https://tile.openstreetmap.org/${Math.min(coords.z, 18)}/${coords.z > 18 ? Math.floor(coords.x / Math.pow(2, coords.z - 18)) : coords.x}/${coords.z > 18 ? Math.floor(coords.y / Math.pow(2, coords.z - 18)) : coords.y}.png`;
 
         const serveOfflineFromFolderOrFallback = () => {
           resolveOfflineTileDataUrl(coords, modeObj).then(resolvedSrc => {
@@ -5137,18 +5163,37 @@ window.addEventListener('offline', () => {
         };
 
         const loadFromNetwork = () => {
-          let triedSecondary = false;
-          tile.onload = () => {
-            done(null, tile);
+          let stage = 0; // 0 = primary, 1 = fallbackUrl, 2 = osmEmergencyUrl, 3 = offline/canvas
+          let loadTimer = null;
+          const clearLoadTimer = () => {
+            if (loadTimer) { clearTimeout(loadTimer); loadTimer = null; }
           };
-          tile.onerror = () => {
-            if (!triedSecondary && fallbackUrl && navigator.onLine) {
-              triedSecondary = true;
+          const advanceFallback = () => {
+            clearLoadTimer();
+            if (!navigator.onLine) {
+              stage = 3;
+              serveOfflineFromFolderOrFallback();
+              return;
+            }
+            if (stage === 0 && fallbackUrl) {
+              stage = 1;
+              loadTimer = setTimeout(advanceFallback, 3500);
               tile.src = fallbackUrl;
+            } else if (stage <= 1 && !url.includes('tile.openstreetmap.org')) {
+              stage = 2;
+              loadTimer = setTimeout(advanceFallback, 3500);
+              tile.src = osmEmergencyUrl;
             } else {
+              stage = 3;
               serveOfflineFromFolderOrFallback();
             }
           };
+          tile.onload = () => {
+            clearLoadTimer();
+            done(null, tile);
+          };
+          tile.onerror = advanceFallback;
+          loadTimer = setTimeout(advanceFallback, 3500);
           tile.src = url;
         };
 
@@ -5911,7 +5956,7 @@ window.addEventListener('offline', () => {
     }).join('\n');
 
     return `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="TrailSync v15.2.4" xmlns="http://www.topografix.com/GPX/1/1">
+<gpx version="1.1" creator="TrailSync v15.2.6" xmlns="http://www.topografix.com/GPX/1/1">
   <metadata><name>${escapeXml(titleText)}</name>${descTag}</metadata>
   <trk><name>${escapeXml(titleText)}</name>${descTag}<trkseg>
 ${trkpts}
