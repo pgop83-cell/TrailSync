@@ -10,7 +10,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
   <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
-  <title>TrailSync v15.1.6 — Capas Online/Offline limpias y carpeta local TrailSync en el dispositivo</title>
+  <title>TrailSync v15.1.7 — Capas Online/Offline limpias y carpeta local TrailSync en el dispositivo</title>
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
         onerror="this.onerror=null;this.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';" />
@@ -1225,7 +1225,7 @@
       </button>
     </div>
     <div style="text-align:center;font-size:11px;color:#64748b;margin-top:8px;">
-      Versión 15.1.6 · Capas Online/Offline + Carpeta local TrailSync en dispositivo
+      Versión 15.1.7 · Capas Online/Offline + Carpeta local TrailSync en dispositivo
     </div>
   </div>
 </div>
@@ -1705,10 +1705,12 @@
       <label class="field-label">Capa a descargar en TrailSync/mapas/:</label>
       <select id="offlineLayerChoice" style="width:100%;background:#161b26;color:#fff;border:1px solid #475569;border-radius:10px;padding:9px;font-size:13px;">
         <option value="dmd2_trail">🧭 DMD2 Trail / Pistas (Senderos y pistas marcados)</option>
+        <option value="ign_mtn">🏔️ IGN Topográfico MTN25/50 (Pistas oficiales España)</option>
+        <option value="opentopo">⛰️ OpenTopoMap (Pistas, curvas de nivel y relieve)</option>
         <option value="osm_base">🗺️ OpenStreetMap (Carreteras y caminos)</option>
         <option value="satelite">🛰️ Satélite (Ortofoto aérea)</option>
         <option value="google_maps">📍 Google Maps (Mapa estándar sin satélite)</option>
-        <option value="both">📦 Pack Trail (DMD2 Trail + OpenStreetMap)</option>
+        <option value="both">📦 Pack Trail (DMD2 Trail + IGN Topográfico)</option>
       </select>
     </div>
 
@@ -2030,7 +2032,7 @@
     <h2>Ajustes de ruta y App</h2>
     <div style="background:#18141a;padding:10px 12px;border-radius:12px;margin-bottom:12px;border:1px solid #334155;display:flex;align-items:center;justify-content:space-between;gap:8px;">
       <div>
-        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">15.1.6</span></div>
+        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">15.1.7</span></div>
         <div style="font-size:11px;color:#94a3b8;" id="webVerStatusLabel">Comprobando actualizaciones en la web...</div>
       </div>
       <button class="solid-btn" style="flex:0 0 auto;background:#16a34a;color:#fff;padding:8px 12px;font-size:12px;" onclick="manualCheckForUpdates()">🔄 Buscar / Actualizar</button>
@@ -2111,7 +2113,7 @@
     } catch (e) {}
   });
 
-  const APP_VERSION = '15.1.6';
+  const APP_VERSION = '15.1.7';
   let swWaitingWorker = null;
   let remoteVersionFound = null;
 
@@ -2453,6 +2455,8 @@
 
   const TILE_CACHE_NAME = 'trailsync-peninsula-tiles-v2';
   const DMD2_TRAIL_TILE_URL  = 'https://a.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png';
+  const IGN_MTN_TILE_URL     = 'https://www.ign.es/wmts/mapa-raster?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=MTN&STYLE=default&TILEMATRIXSET=GoogleMapsCompatible&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT=image/jpeg';
+  const OPENTOPO_TILE_URL    = 'https://a.tile.opentopomap.org/{z}/{x}/{y}.png';
   const OSM_BASE_TILE_URL    = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
   const SAT_IGN_TILE_URL     = 'https://www.ign.es/wmts/pnoa-ma?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=OI.OrthoimageCoverage&STYLE=default&TILEMATRIXSET=GoogleMapsCompatible&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT=image/jpeg';
   const SAT_ESRI_TILE_URL    = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
@@ -2466,11 +2470,37 @@
       badge: 'DMD2',
       desc: 'Online · Pistas forestales, senderos y curvas de nivel resaltadas',
       url: DMD2_TRAIL_TILE_URL,
-      fallbackUrl: 'https://tile.opentopomap.org/{z}/{x}/{y}.png',
+      fallbackUrl: OPENTOPO_TILE_URL,
       cacheOnly: false,
       pistaStyle: false,
       dmd2Style: true,
       maxZoom: 18
+    },
+    {
+      key: 'ign_mtn',
+      group: 'online',
+      title: 'IGN Topográfico MTN25/50',
+      badge: 'IGN',
+      desc: 'Online · Cartografía oficial de España con pistas forestales, cortafuegos y cotas',
+      url: IGN_MTN_TILE_URL,
+      fallbackUrl: OPENTOPO_TILE_URL,
+      cacheOnly: false,
+      pistaStyle: false,
+      dmd2Style: false,
+      maxZoom: 18
+    },
+    {
+      key: 'opentopo',
+      group: 'online',
+      title: 'OpenTopoMap (Relieve)',
+      badge: 'TOPO',
+      desc: 'Online · Pistas, curvas de nivel y sombreado de pendientes de montaña',
+      url: OPENTOPO_TILE_URL,
+      fallbackUrl: DMD2_TRAIL_TILE_URL,
+      cacheOnly: false,
+      pistaStyle: false,
+      dmd2Style: false,
+      maxZoom: 17
     },
     {
       key: 'osm',
@@ -4824,7 +4854,7 @@ window.addEventListener('offline', () => {
   async function readTileBlobFromDeviceFolder(preferredLayerKey, z, x, y) {
     const root = await ensureTrailSyncFolderReady(false);
     if (!root) return null;
-    const candidateLayers = [preferredLayerKey, 'dmd2_trail', 'osm_base', 'satelite', 'google_maps']
+    const candidateLayers = [preferredLayerKey, 'dmd2_trail', 'ign_mtn', 'opentopo', 'osm_base', 'satelite', 'google_maps']
       .filter((v, idx, arr) => v && arr.indexOf(v) === idx);
     try {
       const mapasDir = await root.getDirectoryHandle('mapas', { create: false });
@@ -5101,6 +5131,15 @@ window.addEventListener('offline', () => {
       'https://c.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png',
       'https://tile.opentopomap.org/{z}/{x}/{y}.png'
     ];
+    const ignMtnMirrors = [
+      IGN_MTN_TILE_URL,
+      'https://a.tile.opentopomap.org/{z}/{x}/{y}.png'
+    ];
+    const openTopoMirrors = [
+      'https://a.tile.opentopomap.org/{z}/{x}/{y}.png',
+      'https://b.tile.opentopomap.org/{z}/{x}/{y}.png',
+      'https://c.tile.opentopomap.org/{z}/{x}/{y}.png'
+    ];
     const osmMirrors = [
       'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
       'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
@@ -5116,12 +5155,14 @@ window.addEventListener('offline', () => {
       'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png'
     ];
     if (choice === 'dmd2_trail') return [{ key: 'dmd2_trail', mirrors: dmd2Mirrors }];
+    if (choice === 'ign_mtn') return [{ key: 'ign_mtn', mirrors: ignMtnMirrors }];
+    if (choice === 'opentopo') return [{ key: 'opentopo', mirrors: openTopoMirrors }];
     if (choice === 'osm_base') return [{ key: 'osm_base', mirrors: osmMirrors }];
     if (choice === 'satelite') return [{ key: 'satelite', mirrors: satMirrors }];
     if (choice === 'google_maps') return [{ key: 'google_maps', mirrors: gmapsMirrors }];
     return [
       { key: 'dmd2_trail', mirrors: dmd2Mirrors },
-      { key: 'osm_base', mirrors: osmMirrors }
+      { key: 'ign_mtn', mirrors: ignMtnMirrors }
     ];
   }
 
@@ -5587,7 +5628,7 @@ window.addEventListener('offline', () => {
     }).join('\n');
 
     return `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="TrailSync v15.1.6" xmlns="http://www.topografix.com/GPX/1/1">
+<gpx version="1.1" creator="TrailSync v15.1.7" xmlns="http://www.topografix.com/GPX/1/1">
   <metadata><name>${escapeXml(titleText)}</name>${descTag}</metadata>
   <trk><name>${escapeXml(titleText)}</name>${descTag}<trkseg>
 ${trkpts}
