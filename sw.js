@@ -1,4 +1,4 @@
-const APP_CACHE = 'trailsync-app-shell-v15-1-4';
+const APP_CACHE = 'trailsync-app-shell-v15-1-6';
 const APP_ASSETS = [
   './',
   './index.html',

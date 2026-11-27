@@ -10,7 +10,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
   <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
-  <title>TrailSync v15.1.4 — Capas Online/Offline limpias y carpeta local TrailSync en el dispositivo</title>
+  <title>TrailSync v15.1.6 — Capas Online/Offline limpias y carpeta local TrailSync en el dispositivo</title>
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
         onerror="this.onerror=null;this.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';" />
@@ -163,7 +163,7 @@
 
     .rider-upright-wrapper {
       transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
-      transform-origin: 24px 25px;
+      transform-origin: 22px 22px;
       transform: rotateZ(var(--inv-map-rot, 0deg)) rotateX(var(--inv-map-tilt, 0deg)) scale(var(--inv-map-scale, 1));
     }
 
@@ -1126,20 +1126,21 @@
       pointer-events: auto;
     }
     .rider-puck {
-      width: 58px; height: 58px; border-radius: 50%;
-      background: radial-gradient(circle at 38% 26%, rgba(255,255,255,0.97) 0%, rgba(241,245,249,0.92) 62%, rgba(203,213,225,0.84) 100%);
-      border: 2.5px solid #ffffff;
-      box-shadow: 0 11px 22px rgba(15, 23, 42, 0.52), 0 2px 5px rgba(15, 23, 42, 0.28);
+      width: 44px; height: 44px;
+      background: transparent;
+      border: none;
+      box-shadow: none;
       display: flex; align-items: center; justify-content: center;
       flex-shrink: 0;
       position: relative;
+      pointer-events: none;
     }
     .rider-puck-rotator {
-      width: 52px; height: 52px;
+      width: 44px; height: 44px;
       display: flex; align-items: center; justify-content: center;
       transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
       transform-origin: center center;
-      filter: drop-shadow(0 5px 5px rgba(15, 23, 42, 0.38));
+      filter: drop-shadow(0 2px 4px rgba(15, 23, 42, 0.65));
     }
     .rider-tag {
       background: rgba(15, 23, 42, 0.92); color: #fff;
@@ -1224,7 +1225,7 @@
       </button>
     </div>
     <div style="text-align:center;font-size:11px;color:#64748b;margin-top:8px;">
-      Versión 15.1.4 · Capas Online/Offline + Carpeta local TrailSync en dispositivo
+      Versión 15.1.6 · Capas Online/Offline + Carpeta local TrailSync en dispositivo
     </div>
   </div>
 </div>
@@ -2029,7 +2030,7 @@
     <h2>Ajustes de ruta y App</h2>
     <div style="background:#18141a;padding:10px 12px;border-radius:12px;margin-bottom:12px;border:1px solid #334155;display:flex;align-items:center;justify-content:space-between;gap:8px;">
       <div>
-        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">15.1.4</span></div>
+        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">15.1.6</span></div>
         <div style="font-size:11px;color:#94a3b8;" id="webVerStatusLabel">Comprobando actualizaciones en la web...</div>
       </div>
       <button class="solid-btn" style="flex:0 0 auto;background:#16a34a;color:#fff;padding:8px 12px;font-size:12px;" onclick="manualCheckForUpdates()">🔄 Buscar / Actualizar</button>
@@ -2110,7 +2111,7 @@
     } catch (e) {}
   });
 
-  const APP_VERSION = '15.1.4';
+  const APP_VERSION = '15.1.6';
   let swWaitingWorker = null;
   let remoteVersionFound = null;
 
@@ -4562,16 +4563,9 @@ window.addEventListener('offline', () => {
   const GLB_RIDER_DEFAULT_SPRITE = "data:image/png;base64,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";
   function buildGoogleMapsMotoSvg(suitColor) {
     const col = String(suitColor || '#f59e0b').trim();
-    return `<svg width="46" height="46" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <defs>
-        <filter id="arrowShadow_${col.replace('#','')}" x="-25%" y="-25%" width="150%" height="150%">
-          <feDropShadow dx="0" dy="2.5" stdDeviation="2.2" flood-color="#0f172a" flood-opacity="0.45"/>
-        </filter>
-      </defs>
-      <g filter="url(#arrowShadow_${col.replace('#','')})">
-        <path d="M32 7 L52 52 L32 41 L12 52 Z" fill="${col}" stroke="#ffffff" stroke-width="3.2" stroke-linejoin="round"/>
-        <path d="M32 13 L45 45 L32 38.5 Z" fill="#ffffff" opacity="0.24"/>
-      </g>
+    return `<svg width="42" height="42" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path d="M32 6 L53 54 L32 42 L11 54 Z" fill="${col}" stroke="#ffffff" stroke-width="4" stroke-linejoin="round"/>
+      <path d="M32 12 L46 46 L32 39 Z" fill="#ffffff" opacity="0.24"/>
     </svg>`;
   }
   function createRiderIcon(label, suitColor, isSelf = false, isStale = false, headingDeg = null) {
@@ -4584,7 +4578,7 @@ window.addEventListener('offline', () => {
       className: 'gmaps-rider-marker',
       html: `<div class="rider-upright-wrapper">
         <div class="rider-badge">
-          <div class="rider-puck" style="box-shadow:0 5px 14px rgba(15,23,42,0.45), 0 0 0 2.5px ${suitColor};">
+          <div class="rider-puck">
             <div class="rider-puck-rotator" style="transform:rotate(${rot}deg);">${motoSvg}</div>
           </div>
           <div class="rider-tag ${isStale ? 'stale-peer' : ''}" style="border-color:${suitColor};">
@@ -4593,8 +4587,8 @@ window.addEventListener('offline', () => {
           </div>
         </div>
       </div>`,
-      iconSize: [190, 50],
-      iconAnchor: [24, 25]
+      iconSize: [184, 44],
+      iconAnchor: [22, 22]
     });
   }
 
@@ -5195,6 +5189,26 @@ window.addEventListener('offline', () => {
     }
   }
 
+  async function collectExistingTileSetForLayer(mapasRoot, layerKey) {
+    const existing = new Set();
+    try {
+      const layerDir = await mapasRoot.getDirectoryHandle(layerKey, { create: false });
+      for await (const [zName, zEntry] of layerDir.entries()) {
+        if (zEntry.kind !== 'directory') continue;
+        for await (const [xName, xEntry] of zEntry.entries()) {
+          if (xEntry.kind !== 'directory') continue;
+          for await (const [fName, fEntry] of xEntry.entries()) {
+            if (fEntry.kind === 'file' && fName.endsWith('.png')) {
+              const yName = fName.slice(0, -4);
+              existing.add(`${zName}/${xName}/${yName}`);
+            }
+          }
+        }
+      }
+    } catch (e) {}
+    return existing;
+  }
+
   async function batchDownloadTilesToDeviceFolder(taskList, labelSuccess) {
     await ensurePersistentStorageQuota();
     let rootDir = await ensureTrailSyncFolderReady(false);
@@ -5205,7 +5219,6 @@ window.addEventListener('offline', () => {
       return showToast('⚠️ Selecciona la carpeta TrailSync en tu dispositivo para guardar los mapas');
     }
 
-    // Pre-create top-level 'mapas' directory once instead of re-checking permissions on every single tile
     let mapasRoot = null;
     try {
       mapasRoot = await rootDir.getDirectoryHandle('mapas', { create: true });
@@ -5222,87 +5235,155 @@ window.addEventListener('offline', () => {
       cancelBtn.textContent = '⏹ Detener';
     }
 
-    let done = 0;
-    let savedCount = 0;
+    if (lbl) lbl.textContent = '🔍 Comprobando teselas ya descargadas en carpeta...';
+
+    // 1. Pre-index existing tiles on disk in one fast directory sweep so resume skips them immediately!
+    const uniqueLayers = [...new Set(taskList.map(t => t.layerKey))];
+    const existingByLayer = new Map();
+    const dirHandleCache = new Map();
+
+    for (const lKey of uniqueLayers) {
+      existingByLayer.set(lKey, await collectExistingTileSetForLayer(mapasRoot, lKey));
+      try {
+        const lDir = await mapasRoot.getDirectoryHandle(lKey, { create: true });
+        dirHandleCache.set(lKey, lDir);
+      } catch (e) {}
+    }
+
+    async function getCachedXDir(layerKey, z, x) {
+      const cacheKey = `${layerKey}/${z}/${x}`;
+      if (dirHandleCache.has(cacheKey)) return dirHandleCache.get(cacheKey);
+      let lDir = dirHandleCache.get(layerKey);
+      if (!lDir) {
+        lDir = await mapasRoot.getDirectoryHandle(layerKey, { create: true });
+        dirHandleCache.set(layerKey, lDir);
+      }
+      const zKey = `${layerKey}/${z}`;
+      let zDir = dirHandleCache.get(zKey);
+      if (!zDir) {
+        zDir = await lDir.getDirectoryHandle(String(z), { create: true });
+        dirHandleCache.set(zKey, zDir);
+      }
+      const xDir = await zDir.getDirectoryHandle(String(x), { create: true });
+      dirHandleCache.set(cacheKey, xDir);
+      return xDir;
+    }
+
+    const totalTasks = taskList.length;
+    const pendingTasks = [];
+    let skippedExisting = 0;
+
+    for (const task of taskList) {
+      const setForLayer = existingByLayer.get(task.layerKey);
+      if (setForLayer && setForLayer.has(`${task.z}/${task.x}/${task.y}`)) {
+        skippedExisting++;
+      } else {
+        pendingTasks.push(task);
+      }
+    }
+
+    let done = skippedExisting;
+    let newlySavedCount = 0;
     let failedCount = 0;
-    let savedBytes = 0;
-    const batchSize = 5;
-    let consecutiveEmptyBatches = 0;
+    let newlySavedBytes = 0;
 
-    for (let i = 0; i < taskList.length; i += batchSize) {
-      if (cancelOfflineDownloadFlag) break;
-      let batchSaved = 0;
+    const initPct = Math.min(100, Math.round((done / Math.max(1, totalTasks)) * 100));
+    if (bar) bar.style.width = initPct + '%';
+    if (lbl) {
+      lbl.textContent = skippedExisting > 0
+        ? `⚡ Reanudando: ${skippedExisting} ya descargadas · faltan ${pendingTasks.length} (${initPct}%)`
+        : `Descargando ${pendingTasks.length} teselas en ${rootDir.name}/mapas/...`;
+    }
 
-      await Promise.all(taskList.slice(i, i + batchSize).map(async (task, slotIdx) => {
+    if (pendingTasks.length === 0) {
+      if (cancelBtn) cancelBtn.style.display = 'none';
+      localStorage.setItem('peninsulaOfflineReady', '1');
+      await refreshOfflineStats();
+      if (lbl) lbl.textContent = `${labelSuccess} · Todas ya estaban guardadas (${skippedExisting} archivos)`;
+      showToast('✅ Todas las teselas ya estaban descargadas en tu carpeta TrailSync');
+      return;
+    }
+
+    // 2. High-speed sliding worker pool (16 parallel downloads, no pause between batches)
+    const concurrency = 16;
+    let cursor = 0;
+    let lastUiUpdateTs = 0;
+    let lastStatsRefreshDone = done;
+    let consecutiveErrors = 0;
+
+    function updateProgressUi(force = false) {
+      const now = Date.now();
+      if (!force && now - lastUiUpdateTs < 220) return;
+      lastUiUpdateTs = now;
+      const pct = Math.min(100, Math.round((done / Math.max(1, totalTasks)) * 100));
+      if (bar) bar.style.width = pct + '%';
+      const newMb = (newlySavedBytes / (1024 * 1024)).toFixed(1);
+      const resumeNote = skippedExisting > 0 ? `${skippedExisting} previas + ` : '';
+      const failNote = failedCount > 0 ? ` · ${failedCount} omitidas` : '';
+      if (lbl) {
+        lbl.textContent = `Guardando (${resumeNote}${newlySavedCount} nuevas): ${done}/${totalTasks} · ${pct}% · +${newMb} MB${failNote}`;
+      }
+    }
+
+    async function worker(workerId) {
+      while (!cancelOfflineDownloadFlag) {
+        const idx = cursor++;
+        if (idx >= pendingTasks.length) break;
+        const task = pendingTasks[idx];
         try {
-          const already = await readTileBlobFromDeviceFolder(task.layerKey, task.z, task.x, task.y);
-          if (already) {
-            savedCount++;
-            batchSaved++;
-            savedBytes += already.size || 20000;
+          const candidateUrls = Array.isArray(task.urls) && task.urls.length ? task.urls : [task.url];
+          const startOffset = (idx + workerId) % candidateUrls.length;
+          let blob = null;
+          for (let m = 0; m < candidateUrls.length; m++) {
+            if (cancelOfflineDownloadFlag) break;
+            const u = candidateUrls[(startOffset + m) % candidateUrls.length];
+            blob = await fetchTileBlobWithTimeout(u, 4500);
+            if (blob) break;
+          }
+          if (blob) {
+            const xDir = await getCachedXDir(task.layerKey, task.z, task.x);
+            const fileHandle = await xDir.getFileHandle(`${task.y}.png`, { create: true });
+            const writable = await fileHandle.createWritable();
+            await writable.write(blob);
+            await writable.close();
+            newlySavedCount++;
+            newlySavedBytes += blob.size || 18000;
+            consecutiveErrors = 0;
           } else {
-            const candidateUrls = Array.isArray(task.urls) && task.urls.length ? task.urls : [task.url];
-            // Rotate starting mirror across slots so we don't hammer a single tile subdomain
-            const startOffset = (i + slotIdx) % candidateUrls.length;
-            let blob = null;
-            for (let m = 0; m < candidateUrls.length; m++) {
-              const u = candidateUrls[(startOffset + m) % candidateUrls.length];
-              blob = await fetchTileBlobWithTimeout(u, 6500);
-              if (blob) break;
-            }
-            if (blob) {
-              const layerDir = await mapasRoot.getDirectoryHandle(task.layerKey, { create: true });
-              const zDir = await layerDir.getDirectoryHandle(String(task.z), { create: true });
-              const xDir = await zDir.getDirectoryHandle(String(task.x), { create: true });
-              const fileHandle = await xDir.getFileHandle(`${task.y}.png`, { create: true });
-              const writable = await fileHandle.createWritable();
-              await writable.write(blob);
-              await writable.close();
-              savedCount++;
-              batchSaved++;
-              savedBytes += blob.size || 20000;
-            } else {
-              failedCount++;
+            failedCount++;
+            consecutiveErrors++;
+            if (consecutiveErrors > 25) {
+              await new Promise(r => setTimeout(r, 350));
+              consecutiveErrors = 0;
             }
           }
         } catch (e) {
           failedCount++;
         }
         done++;
-      }));
-
-      if (batchSaved === 0) {
-        consecutiveEmptyBatches++;
-        // Brief backoff if the tile server temporarily throttles requests
-        await new Promise(r => setTimeout(r, Math.min(1800, 250 * consecutiveEmptyBatches)));
-      } else {
-        consecutiveEmptyBatches = 0;
-        await new Promise(r => setTimeout(r, 35));
-      }
-
-      const pct = Math.min(100, Math.round((done / Math.max(1, taskList.length)) * 100));
-      bar.style.width = pct + '%';
-      const realMb = (savedBytes / (1024 * 1024)).toFixed(1);
-      const failNote = failedCount > 0 ? ` · ${failedCount} omitidas` : '';
-      lbl.textContent = `Guardando en ${rootDir.name}/mapas/: ${savedCount} guardadas (${done}/${taskList.length} · ${pct}% · ${realMb} MB${failNote})`;
-
-      if (done % (batchSize * 15) === 0) {
-        refreshOfflineStats();
-        updateDynamicMapScale();
+        updateProgressUi(false);
+        if (done - lastStatsRefreshDone >= 600) {
+          lastStatsRefreshDone = done;
+          refreshOfflineStats();
+        }
       }
     }
+
+    await Promise.all(Array.from({ length: concurrency }, (_, wIdx) => worker(wIdx)));
+    updateProgressUi(true);
 
     if (cancelBtn) cancelBtn.style.display = 'none';
     localStorage.setItem('peninsulaOfflineReady', '1');
     await refreshOfflineStats();
 
+    const totalNow = skippedExisting + newlySavedCount;
     if (cancelOfflineDownloadFlag) {
-      lbl.textContent = `⏸ Descarga pausada (${savedCount} teselas guardadas en ${rootDir.name}/mapas/)`;
-      showToast('⏸ Descarga pausada. Los archivos ya escritos están en tu carpeta TrailSync.');
+      lbl.textContent = `⏸ Descarga pausada (${totalNow} teselas en ${rootDir.name}/mapas/ · reanudable)`;
+      showToast('⏸ Descarga pausada. Al volver a pulsar continuará donde lo dejaste.');
       return;
     }
 
-    lbl.textContent = `${labelSuccess} · ${savedCount} archivos en ${rootDir.name}/mapas/`;
+    lbl.textContent = `${labelSuccess} · ${totalNow} archivos listos en ${rootDir.name}/mapas/`;
     showToast(`${labelSuccess} en carpeta ${rootDir.name}/`);
     speakAlert('Descarga de mapa offline completada en carpeta TrailSync');
   }
@@ -5506,7 +5587,7 @@ window.addEventListener('offline', () => {
     }).join('\n');
 
     return `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="TrailSync v15.1.4" xmlns="http://www.topografix.com/GPX/1/1">
+<gpx version="1.1" creator="TrailSync v15.1.6" xmlns="http://www.topografix.com/GPX/1/1">
   <metadata><name>${escapeXml(titleText)}</name>${descTag}</metadata>
   <trk><name>${escapeXml(titleText)}</name>${descTag}<trkseg>
 ${trkpts}
