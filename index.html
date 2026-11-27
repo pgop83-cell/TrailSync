@@ -10,7 +10,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
   <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
-  <title>TrailSync v15.1.9 — Capas Online/Offline limpias y carpeta local TrailSync en el dispositivo</title>
+  <title>TrailSync v15.2.1 — Capas Online/Offline limpias y carpeta local TrailSync en el dispositivo</title>
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
         onerror="this.onerror=null;this.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';" />
@@ -1225,7 +1225,7 @@
       </button>
     </div>
     <div style="text-align:center;font-size:11px;color:#64748b;margin-top:8px;">
-      Versión 15.1.9 · Capas Online/Offline + Carpeta local TrailSync en dispositivo
+      Versión 15.2.1 · Capas Online/Offline + Carpeta local TrailSync en dispositivo
     </div>
   </div>
 </div>
@@ -2032,7 +2032,7 @@
     <h2>Ajustes de ruta y App</h2>
     <div style="background:#18141a;padding:10px 12px;border-radius:12px;margin-bottom:12px;border:1px solid #334155;display:flex;align-items:center;justify-content:space-between;gap:8px;">
       <div>
-        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">15.1.9</span></div>
+        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">15.2.1</span></div>
         <div style="font-size:11px;color:#94a3b8;" id="webVerStatusLabel">Comprobando actualizaciones en la web...</div>
       </div>
       <button class="solid-btn" style="flex:0 0 auto;background:#16a34a;color:#fff;padding:8px 12px;font-size:12px;" onclick="manualCheckForUpdates()">🔄 Buscar / Actualizar</button>
@@ -2113,7 +2113,7 @@
     } catch (e) {}
   });
 
-  const APP_VERSION = '15.1.9';
+  const APP_VERSION = '15.2.1';
   let swWaitingWorker = null;
   let remoteVersionFound = null;
 
@@ -2190,45 +2190,132 @@
     if (courseUpMode) applyMapOrientation();
   }
 
-  function getTargetZoomForSpeed(speedKmh) {
-    // DMD2 / Google Maps curve:
-    // Stopped / technical slow trail (< 12 km/h) -> Zoom 17.5 (close detail on junctions)
-    // Slow off-road trail (12 - 28 km/h) -> Zoom 16.5
-    // Medium pista / secondary road (28 - 50 km/h) -> Zoom 15.5
-    // Fast secondary road (50 - 75 km/h) -> Zoom 14.5
-    // Highway / fast liaison (75 - 100 km/h) -> Zoom 13.5
-    // High speed (> 100 km/h) -> Zoom 12.5 (wide horizon preview)
-    if (speedKmh < 12) return 17.5;
-    if (speedKmh < 28) return 16.5;
-    if (speedKmh < 50) return 15.5;
-    if (speedKmh < 75) return 14.5;
-    if (speedKmh < 100) return 13.5;
+  let navCompassSmoothedDeg = null;
+  let lastCompassApplyTs = 0;
+  let manualNorthLockByUser = false;
+
+  function shortestAngleDelta(fromDeg, toDeg) {
+    let diff = ((toDeg - fromDeg + 540) % 360) - 180;
+    if (diff === -180) diff = 180;
+    return diff;
+  }
+
+  function stepHeadingTowards(currentContinuousDeg, targetDeg, alpha = 0.35) {
+    if (typeof currentContinuousDeg !== 'number' || isNaN(currentContinuousDeg)) return targetDeg;
+    const delta = shortestAngleDelta(currentContinuousDeg, targetDeg);
+    return currentContinuousDeg + delta * alpha;
+  }
+
+  function getScreenOrientationOffsetDeg() {
+    try {
+      if (window.screen && window.screen.orientation && typeof window.screen.orientation.angle === 'number') {
+        return window.screen.orientation.angle;
+      }
+      if (typeof window.orientation === 'number') return window.orientation;
+    } catch (e) {}
+    return 0;
+  }
+
+  // Project a point ahead in meters along headingDeg so the rider arrow sits in the lower third
+  // of the viewport (~68-72% down), opening ~70% of the screen ahead just like Google Maps Navigation.
+  function projectLatLngAhead(latLng, headingDeg, distanceMeters) {
+    if (!distanceMeters || distanceMeters <= 0) return latLng;
+    const R = 6371000;
+    const brng = (headingDeg * Math.PI) / 180;
+    const lat1 = (latLng[0] * Math.PI) / 180;
+    const lon1 = (latLng[1] * Math.PI) / 180;
+    const angDist = distanceMeters / R;
+
+    const lat2 = Math.asin(
+      Math.sin(lat1) * Math.cos(angDist) +
+      Math.cos(lat1) * Math.sin(angDist) * Math.cos(brng)
+    );
+    const lon2 = lon1 + Math.atan2(
+      Math.sin(brng) * Math.sin(angDist) * Math.cos(lat1),
+      Math.cos(angDist) - Math.sin(lat1) * Math.sin(lat2)
+    );
+    return [(lat2 * 180) / Math.PI, (lon2 * 180) / Math.PI];
+  }
+
+  function computeLookAheadMeters(speedKmh, zoomLevel) {
+    if (!courseUpMode || userExploringMap || isFamilySpectator) return 0;
+    const metersPerPixel = (156543.03392 * Math.cos((userPos[0] * Math.PI) / 180)) / Math.pow(2, zoomLevel || 16);
+    const viewH = map ? (map.getSize().y || window.innerHeight || 720) : 720;
+    // Place rider arrow at ~67% from top (17% below center, well above bottom telemetry bar)
+    const speedFactor = Math.min(1, Math.max(0, speedKmh / 100));
+    const targetAheadPx = Math.min(135, Math.max(85, Math.round(viewH * (0.14 + speedFactor * 0.04))));
+    return Math.round(metersPerPixel * targetAheadPx);
+  }
+
+  function getNavigationCameraCenter(zoomLevel = null) {
+    const z = zoomLevel !== null ? zoomLevel : (map ? map.getZoom() : 16.5);
+    if (!courseUpMode || userExploringMap || isFamilySpectator) return userPos;
+    const aheadM = computeLookAheadMeters(smoothedSpeedKmh || currentSpeedKmh || 0, z);
+    return projectLatLngAhead(userPos, currentHeadingDeg || 0, aheadM);
+  }
+
+  function getTargetZoomForSpeed(speedKmh, currentZoom = null) {
+    // Google Maps / DMD2 closer navigation curve:
+    // Technical trail / slow (< 25 km/h) -> Zoom 17.5
+    // Fast trail / secondary curves (25 - 50 km/h) -> Zoom 16.5
+    // National road (50 - 78 km/h) -> Zoom 15.5
+    // Fast liaison / highway (78 - 108 km/h) -> Zoom 14.5 (keeps roads and junctions clearly legible)
+    // Very high speed (> 108 km/h) -> Zoom 13.5
+    const bands = [
+      { maxSpeed: 25, zoom: 17.5 },
+      { maxSpeed: 50, zoom: 16.5 },
+      { maxSpeed: 78, zoom: 15.5 },
+      { maxSpeed: 108, zoom: 14.5 },
+      { maxSpeed: 9999, zoom: 13.5 }
+    ];
+
+    if (typeof currentZoom === 'number' && !isNaN(currentZoom)) {
+      const idx = bands.findIndex(b => Math.abs(b.zoom - currentZoom) < 0.35);
+      if (idx !== -1) {
+        const lowerBound = idx === 0 ? -1 : (bands[idx - 1].maxSpeed - 3);
+        const upperBound = bands[idx].maxSpeed + 3;
+        if (speedKmh >= lowerBound && speedKmh <= upperBound) {
+          return bands[idx].zoom;
+        }
+      }
+    }
+
+    for (const b of bands) {
+      if (speedKmh < b.maxSpeed) return b.zoom;
+    }
     return 12.5;
   }
 
   function applyDynamicSpeedZoom(rawSpeedKmh, forceImmediate = false) {
-    if (!map || !dynamicSpeedZoomEnabled) return;
+    if (!map) return;
+    if (!dynamicSpeedZoomEnabled && !forceImmediate) {
+      if (!userExploringMap) {
+        const camCenter = getNavigationCameraCenter(map.getZoom());
+        map.panTo(camCenter, { animate: true, duration: 0.45 });
+      }
+      return;
+    }
     if (!forceImmediate) {
       if (Date.now() < manualZoomOverrideUntil) return;
-      // When stopped (< 4 km/h), never hijack the camera or zoom level
-      if (rawSpeedKmh < 4) return;
+      if (rawSpeedKmh < 3.5) return;
       if (userExploringMap) return;
     }
 
-    // Exponential moving average smoothing to avoid jitter from GPS speed spikes
     smoothedSpeedKmh = smoothedSpeedKmh === 0
       ? rawSpeedKmh
-      : (smoothedSpeedKmh * 0.65 + rawSpeedKmh * 0.35);
+      : (smoothedSpeedKmh * 0.72 + rawSpeedKmh * 0.28);
 
-    const targetZoom = getTargetZoomForSpeed(smoothedSpeedKmh);
     const currentZoom = map.getZoom();
+    const targetZoom = getTargetZoomForSpeed(smoothedSpeedKmh, forceImmediate ? null : currentZoom);
     const now = Date.now();
+    const camCenter = getNavigationCameraCenter(targetZoom);
 
-    // Hysteresis: only change zoom when delta >= 0.5 and at least 2.2s elapsed (unless forced)
-    if (forceImmediate || (Math.abs(targetZoom - currentZoom) >= 0.5 && (now - lastDynamicZoomTimestamp) > 2200)) {
+    if (forceImmediate || (Math.abs(targetZoom - currentZoom) >= 0.5 && (now - lastDynamicZoomTimestamp) > 3500)) {
       lastDynamicZoomApplied = targetZoom;
       lastDynamicZoomTimestamp = now;
-      map.setView(userPos, targetZoom, { animate: true, duration: 0.65 });
+      map.setView(camCenter, targetZoom, { animate: true, duration: 0.75 });
+    } else {
+      map.panTo(camCenter, { animate: true, duration: 0.45 });
     }
   }
 
@@ -2472,6 +2559,22 @@
       if (keepScreenAwakeEnabled) {
         ensureWakeLockActive(false);
       }
+      if (!isFamilySpectator && navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(pos => {
+          const newPos = [pos.coords.latitude, pos.coords.longitude];
+          userPos = newPos;
+          if (isRecording) recordPoint(newPos[0], newPos[1], Math.round(pos.coords.altitude || 0));
+          prevUserPos = newPos;
+          if (userMarker && typeof userMarker.setLatLng === 'function') userMarker.setLatLng(userPos);
+          if (map && !userExploringMap) {
+            const camCenter = getNavigationCameraCenter(map.getZoom());
+            map.panTo(camCenter, { animate: true, duration: 0.35 });
+          }
+        }, () => {}, { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 });
+        enableRealGPS(true);
+      }
+    } else if (document.visibilityState === 'hidden') {
+      persistLiveRecordedTrack(true);
     }
   });
 
@@ -3713,6 +3816,15 @@ function keepOriginalRouteAndNavigate() {
 
   let isUserDraggingMap = false;
 
+  let continuousHeadingDeg = 0;
+
+  function setSmoothHeading(targetDeg, alpha = 0.42) {
+    if (typeof targetDeg !== 'number' || isNaN(targetDeg)) return;
+    const normalizedTarget = ((targetDeg % 360) + 360) % 360;
+    continuousHeadingDeg = stepHeadingTowards(continuousHeadingDeg, normalizedTarget, alpha);
+    currentHeadingDeg = ((Math.round(continuousHeadingDeg) % 360) + 360) % 360;
+  }
+
   function applyMapOrientation() {
     const rotator = document.getElementById('map-rotator');
     const needle = document.getElementById('gmapsCompassNeedle');
@@ -3722,16 +3834,16 @@ function keepOriginalRouteAndNavigate() {
     // Keep map flat and aligned with screen axes while exploring/dragging so finger movement is always 1:1
     const activeCourseUp = courseUpMode && !userExploringMap && !isUserDraggingMap;
     const shouldTilt = activeCourseUp && !isFamilySpectator;
-    const tiltDeg = shouldTilt ? 38 : 0;
+    const tiltDeg = shouldTilt ? 34 : 0;
     const mapScale = shouldTilt ? 1.12 : 1;
-    const rotZDeg = activeCourseUp ? (-currentHeadingDeg) : 0;
+    const rotZDeg = activeCourseUp ? (-continuousHeadingDeg) : 0;
 
     if (rotator) {
-      rotator.style.transition = isUserDraggingMap ? 'none' : 'transform 0.45s cubic-bezier(0.22, 1, 0.36, 1)';
+      rotator.style.transition = isUserDraggingMap ? 'none' : 'transform 0.42s cubic-bezier(0.22, 1, 0.36, 1)';
       rotator.style.transform = `translate(-50%, -50%) rotateX(${tiltDeg}deg) rotateZ(${rotZDeg}deg) scale(${mapScale})`;
     }
 
-    const invRot = activeCourseUp ? `${currentHeadingDeg}deg` : '0deg';
+    const invRot = activeCourseUp ? `${continuousHeadingDeg}deg` : '0deg';
     const invTilt = shouldTilt ? `${-tiltDeg * 0.68}deg` : '0deg';
     const invScale = shouldTilt ? '1.16' : '1';
     document.documentElement.style.setProperty('--inv-map-rot', invRot);
@@ -3739,7 +3851,7 @@ function keepOriginalRouteAndNavigate() {
     document.documentElement.style.setProperty('--inv-map-scale', invScale);
 
     if (courseUpMode) {
-      if (needle) needle.style.transform = `rotate(${-currentHeadingDeg}deg)`;
+      if (needle) needle.style.transform = `rotate(${-continuousHeadingDeg}deg)`;
       if (btn) btn.classList.add('course-up-active');
       if (badge) badge.textContent = shouldTilt ? '3D' : 'RUMBO';
     } else {
@@ -3749,22 +3861,27 @@ function keepOriginalRouteAndNavigate() {
     }
     if (!isFamilySpectator && userMarker) {
       const rotEl = userMarker.getElement()?.querySelector('.rider-puck-rotator');
-      if (rotEl) rotEl.style.transform = `rotate(${currentHeadingDeg || 0}deg)`;
+      if (rotEl) rotEl.style.transform = `rotate(${continuousHeadingDeg || 0}deg)`;
     }
   }
   function toggleNavigationHeadingMode() {
     courseUpMode = !courseUpMode;
+    manualNorthLockByUser = !courseUpMode;
     userExploringMap = false;
     if (courseUpMode && currentHeadingDeg === 0 && plannedCoords.length > 1) {
-      currentHeadingDeg = computeBearing(plannedCoords[0][0], plannedCoords[0][1], plannedCoords[1][0], plannedCoords[1][1]);
+      const initBrg = computeBearing(plannedCoords[0][0], plannedCoords[0][1], plannedCoords[1][0], plannedCoords[1][1]);
+      continuousHeadingDeg = initBrg;
+      currentHeadingDeg = Math.round(initBrg);
     }
     applyMapOrientation();
     if (courseUpMode) {
-      const targetZ = dynamicSpeedZoomEnabled ? getTargetZoomForSpeed(smoothedSpeedKmh) : Math.max(map.getZoom(), 16);
-      map.setView(userPos, targetZ);
-      showToast('🧭 Orientación: Sentido de navegación (Rumbo arriba)');
+      const targetZ = dynamicSpeedZoomEnabled ? getTargetZoomForSpeed(smoothedSpeedKmh) : Math.max(map.getZoom(), 16.5);
+      const camCenter = getNavigationCameraCenter(targetZ);
+      map.setView(camCenter, targetZ, { animate: true, duration: 0.55 });
+      showToast('🧭 Navegación Google Maps: Rumbo arriba y vista adelantada');
       speakAlert('Mapa orientado en el sentido de la marcha');
     } else {
+      map.setView(userPos, map.getZoom(), { animate: true, duration: 0.45 });
       showToast('⬆️ Orientación: Norte arriba fijado');
       speakAlert('Mapa orientado al norte');
     }
@@ -3774,19 +3891,40 @@ function keepOriginalRouteAndNavigate() {
   window.addEventListener('deviceorientation', handleDeviceCompass, true);
 
   function handleDeviceCompass(e) {
-    if (!courseUpMode) return;
-    let heading = null;
-    if (typeof e.webkitCompassHeading === 'number') heading = e.webkitCompassHeading;
-    else if (e.absolute && typeof e.alpha === 'number') heading = (360 - e.alpha) % 360;
-    if (heading !== null && !isNaN(heading)) {
-      currentHeadingDeg = Math.round(heading);
-      applyMapOrientation();
+    // Sensor fusion: when riding (>= 5 km/h), GPS course/track vector controls heading so handlebar tilt or engine vibration never twists the map.
+    // Magnetometer compass only assists when stopped or maneuvering very slowly (< 5 km/h).
+    if (!courseUpMode || userExploringMap || isUserDraggingMap) return;
+    if ((currentSpeedKmh || 0) >= 5) return;
+
+    const now = Date.now();
+    if (now - lastCompassApplyTs < 120) return;
+
+    let rawHeading = null;
+    if (typeof e.webkitCompassHeading === 'number' && !isNaN(e.webkitCompassHeading)) {
+      rawHeading = e.webkitCompassHeading;
+    } else if (e.absolute && typeof e.alpha === 'number' && !isNaN(e.alpha)) {
+      rawHeading = (360 - e.alpha + getScreenOrientationOffsetDeg()) % 360;
     }
+    if (rawHeading === null || isNaN(rawHeading)) return;
+
+    rawHeading = ((rawHeading % 360) + 360) % 360;
+    if (navCompassSmoothedDeg === null) {
+      navCompassSmoothedDeg = rawHeading;
+    } else {
+      const diff = shortestAngleDelta(navCompassSmoothedDeg, rawHeading);
+      // Deadband of 4.5 deg to filter handlebar vibration when idling
+      if (Math.abs(diff) < 4.5) return;
+      navCompassSmoothedDeg = ((navCompassSmoothedDeg + diff * 0.22) % 360 + 360) % 360;
+    }
+
+    lastCompassApplyTs = now;
+    setSmoothHeading(navCompassSmoothedDeg, 0.35);
+    applyMapOrientation();
   }
 
   function getActiveLayerObj() {
     if (selectedLayerKey === 'satelite_ign') selectedLayerKey = 'satelite';
-    if (selectedLayerKey === 'auto' || selectedLayerKey === 'outdoors' || selectedLayerKey === 'opentopo') selectedLayerKey = 'dmd2_trail';
+    if (selectedLayerKey === 'auto' || selectedLayerKey === 'outdoors') selectedLayerKey = 'dmd2_trail';
     if (selectedLayerKey === 'offline_pista') selectedLayerKey = 'offline';
     return LAYER_MODES.find(l => l.key === selectedLayerKey) || LAYER_MODES[0];
   }
@@ -5633,12 +5771,69 @@ window.addEventListener('offline', () => {
   function openOfflineModal() { refreshOfflineStats(); openModal('offlineModal'); }
 
   // --- RECORDING, TELEMETRY, GPX, FAMILY + GOOGLE MAPS, SOS, STOP ---
+  let lastTrackPersistTs = 0;
+
+  function persistLiveRecordedTrack(force = false) {
+    const now = Date.now();
+    if (!force && (now - lastTrackPersistTs) < 4000) return;
+    lastTrackPersistTs = now;
+    try {
+      const payload = {
+        savedAt: now,
+        totalDistanceKm,
+        totalAscentM,
+        points: recordedTrack.slice(-4000)
+      };
+      localStorage.setItem('trailsync_live_track_backup_v1', JSON.stringify(payload));
+    } catch (e) {}
+  }
+
+  // When returning from background (e.g., switching music tracks), interpolate straight GPS gaps > 120 m along the active route if available
+  function bridgeBackgroundGpsGapIfOnRoute(prevPt, newLat, newLon) {
+    if (!plannedCoords || plannedCoords.length < 2) return [];
+    const gapKm = haversineKm(prevPt.lat, prevPt.lon, newLat, newLon);
+    if (gapKm < 0.12 || gapKm > 15) return [];
+
+    let bestStartIdx = -1, bestStartDist = 0.09; // within 90m of route
+    let bestEndIdx = -1, bestEndDist = 0.09;
+    for (let i = 0; i < plannedCoords.length; i++) {
+      const d1 = haversineKm(prevPt.lat, prevPt.lon, plannedCoords[i][0], plannedCoords[i][1]);
+      if (d1 < bestStartDist) { bestStartDist = d1; bestStartIdx = i; }
+      const d2 = haversineKm(newLat, newLon, plannedCoords[i][0], plannedCoords[i][1]);
+      if (d2 < bestEndDist) { bestEndDist = d2; bestEndIdx = i; }
+    }
+    if (bestStartIdx !== -1 && bestEndIdx !== -1 && Math.abs(bestEndIdx - bestStartIdx) >= 2) {
+      const step = bestEndIdx > bestStartIdx ? 1 : -1;
+      const bridged = [];
+      for (let idx = bestStartIdx + step; idx !== bestEndIdx; idx += step) {
+        bridged.push({
+          lat: plannedCoords[idx][0],
+          lon: plannedCoords[idx][1],
+          ele: prevPt.ele || 65,
+          time: new Date().toISOString()
+        });
+      }
+      return bridged;
+    }
+    return [];
+  }
+
   function recordPoint(lat, lon, ele = 65) {
     if (!isRecording) return;
     if (recordedTrack.length > 0) {
       const prev = recordedTrack[recordedTrack.length - 1];
       const segKm = haversineKm(prev.lat, prev.lon, lat, lon);
-      if (segKm > 0.002 && segKm < 2.0) {
+      if (segKm < 0.002) return;
+      const bridgedPts = bridgeBackgroundGpsGapIfOnRoute(prev, lat, lon);
+      if (bridgedPts.length > 0) {
+        let lastBridge = prev;
+        for (const bp of bridgedPts) {
+          totalDistanceKm += haversineKm(lastBridge.lat, lastBridge.lon, bp.lat, bp.lon);
+          recordedTrack.push(bp);
+          lastBridge = bp;
+        }
+        totalDistanceKm += haversineKm(lastBridge.lat, lastBridge.lon, lat, lon);
+      } else if (segKm < 15.0) {
         totalDistanceKm += segKm;
       }
     }
@@ -5652,6 +5847,7 @@ window.addEventListener('offline', () => {
     if (recordedLine) recordedLine.setLatLngs(recordedTrack.map(p => [p.lat, p.lon]));
     if (backtrackOn) if (backtrackLine) backtrackLine.setLatLngs(recordedTrack.map(p => [p.lat, p.lon]));
     updateTelemetryUI();
+    persistLiveRecordedTrack(false);
   }
 
   function recordIncident(type, title, dropMarkerOnMap = true) {
@@ -5703,7 +5899,7 @@ window.addEventListener('offline', () => {
     }).join('\n');
 
     return `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="TrailSync v15.1.9" xmlns="http://www.topografix.com/GPX/1/1">
+<gpx version="1.1" creator="TrailSync v15.2.1" xmlns="http://www.topografix.com/GPX/1/1">
   <metadata><name>${escapeXml(titleText)}</name>${descTag}</metadata>
   <trk><name>${escapeXml(titleText)}</name>${descTag}<trkseg>
 ${trkpts}
@@ -7105,16 +7301,20 @@ ${trkptsXml}
       fitAllGroupMembers();
       return;
     }
+    if (!manualNorthLockByUser && !courseUpMode) {
+      courseUpMode = true;
+    }
     if (courseUpMode) {
       applyMapOrientation();
-      const targetZ = dynamicSpeedZoomEnabled ? getTargetZoomForSpeed(smoothedSpeedKmh) : Math.max(map.getZoom(), 16);
-      map.setView(userPos, targetZ, { animate: true });
-      showToast('🧭 Navegación 3D centrada en rumbo');
+      const targetZ = dynamicSpeedZoomEnabled ? getTargetZoomForSpeed(smoothedSpeedKmh) : Math.max(map.getZoom(), 16.5);
+      const camCenter = getNavigationCameraCenter(targetZ);
+      map.setView(camCenter, targetZ, { animate: true, duration: 0.55 });
+      showToast('🧭 Navegación centrada en rumbo (vista adelantada)');
     } else if (Object.keys(peers).length > 0) {
       fitAllGroupMembers();
     } else {
-      const targetZ = dynamicSpeedZoomEnabled ? getTargetZoomForSpeed(smoothedSpeedKmh) : 16;
-      map.setView(userPos, targetZ, { animate: true });
+      const targetZ = dynamicSpeedZoomEnabled ? getTargetZoomForSpeed(smoothedSpeedKmh) : 16.5;
+      map.setView(userPos, targetZ, { animate: true, duration: 0.55 });
     }
   }
 
@@ -7632,38 +7832,50 @@ ${trkptsXml}
         }
       }
 
-      const isMoving = currentSpeedKmh >= 4.5 && movedMeters >= 4;
+      const accuracyOk = !gpsLastAccuracyM || gpsLastAccuracyM <= 35;
+      const isMoving = currentSpeedKmh >= 4.5 && movedMeters >= 3.5 && accuracyOk;
       if (isMoving) {
-        // Once riding again (> 4.5 km/h), automatically resume auto-follow
+        // Once riding again (> 4.5 km/h), automatically resume auto-follow & course-up (unless user locked North)
         userExploringMap = false;
+        if (!manualNorthLockByUser && !courseUpMode && !isFamilySpectator && currentSpeedKmh >= 6.5) {
+          courseUpMode = true;
+        }
       }
 
-      if (typeof pos.coords.heading === 'number' && !isNaN(pos.coords.heading) && (pos.coords.speed || 0) > 1.2) {
-        currentHeadingDeg = Math.round(pos.coords.heading);
-      } else if (prevUserPos && movedMeters >= 5) {
-        currentHeadingDeg = Math.round(computeBearing(prevUserPos[0], prevUserPos[1], newPos[0], newPos[1]));
+      if (typeof pos.coords.heading === 'number' && !isNaN(pos.coords.heading) && (pos.coords.speed || 0) >= 1.4 && accuracyOk) {
+        setSmoothHeading(pos.coords.heading, 0.55);
+      } else if (prevUserPos && movedMeters >= 4 && accuracyOk) {
+        const trackBearing = computeBearing(prevUserPos[0], prevUserPos[1], newPos[0], newPos[1]);
+        setSmoothHeading(trackBearing, 0.5);
       }
       prevUserPos = newPos;
       userPos = newPos;
 
       if (!isFamilySpectator && map) {
         if (!userMarker) {
-          userMarker = L.marker(userPos, { icon: createRiderIcon(`${userNick} (tú)`, '#f59e0b', true) }).addTo(map);
+          userMarker = L.marker(userPos, { icon: createRiderIcon(`${userNick} (tú)`, '#f59e0b', true, false, continuousHeadingDeg) }).addTo(map);
         } else if (userMarker && typeof userMarker.setLatLng === 'function') {
           if (!map.hasLayer(userMarker)) userMarker.addTo(map);
           userMarker.setLatLng(userPos);
-          userMarker.setIcon(createRiderIcon(userNick + ' (tú)', '#f59e0b', true));
+          const rotEl = userMarker.getElement()?.querySelector('.rider-puck-rotator');
+          if (rotEl) {
+            rotEl.style.transform = `rotate(${continuousHeadingDeg || 0}deg)`;
+          } else {
+            userMarker.setIcon(createRiderIcon(userNick + ' (tú)', '#f59e0b', true, false, continuousHeadingDeg));
+          }
         }
       }
 
       if (firstFix) {
-        const initZ = dynamicSpeedZoomEnabled ? getTargetZoomForSpeed(currentSpeedKmh) : Math.max(map.getZoom(), 16);
-        map.setView(userPos, initZ);
+        const initZ = dynamicSpeedZoomEnabled ? getTargetZoomForSpeed(currentSpeedKmh) : Math.max(map.getZoom(), 16.5);
+        const initCenter = getNavigationCameraCenter(initZ);
+        map.setView(initCenter, initZ);
       } else if (isMoving && !userExploringMap) {
         if (dynamicSpeedZoomEnabled && Date.now() >= manualZoomOverrideUntil) {
           applyDynamicSpeedZoom(currentSpeedKmh, false);
         } else {
-          map.panTo(userPos, { animate: true, duration: 0.45 });
+          const camCenter = getNavigationCameraCenter(map.getZoom());
+          map.panTo(camCenter, { animate: true, duration: 0.45 });
         }
       }
       if (courseUpMode) applyMapOrientation();
