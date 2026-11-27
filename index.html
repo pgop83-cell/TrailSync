@@ -10,7 +10,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
   <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
-  <title>TrailSync v15.0.3 — Indicador progreso legal junto a Pantalla Completa y consulta Overpass optimizada</title>
+  <title>TrailSync v15.0.4 — Auditoría legal ultrarrápida (carrera servidores) y priorización de vía legal</title>
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
         onerror="this.onerror=null;this.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';" />
@@ -1192,7 +1192,7 @@
       </button>
     </div>
     <div style="text-align:center;font-size:11px;color:#64748b;margin-top:8px;">
-      Versión 15.0.3 · Indicador progreso legal en mapa · Consulta cartográfica optimizada
+      Versión 15.0.4 · Auditoría legal ultrarrápida · Prioridad vía legal en tramos superpuestos
     </div>
   </div>
 </div>
@@ -1982,7 +1982,7 @@
     <h2>Ajustes de ruta y App</h2>
     <div style="background:#18141a;padding:10px 12px;border-radius:12px;margin-bottom:12px;border:1px solid #334155;display:flex;align-items:center;justify-content:space-between;gap:8px;">
       <div>
-        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">15.0.3</span></div>
+        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">15.0.4</span></div>
         <div style="font-size:11px;color:#94a3b8;" id="webVerStatusLabel">Comprobando actualizaciones en la web...</div>
       </div>
       <button class="solid-btn" style="flex:0 0 auto;background:#16a34a;color:#fff;padding:8px 12px;font-size:12px;" onclick="manualCheckForUpdates()">🔄 Buscar / Actualizar</button>
@@ -2063,7 +2063,7 @@
     } catch (e) {}
   });
 
-  const APP_VERSION = '15.0.3';
+  const APP_VERSION = '15.0.4';
   let swWaitingWorker = null;
   let remoteVersionFound = null;
 
@@ -2803,6 +2803,31 @@
     return inside;
   }
 
+  const LEGAL_LOCAL_CACHE_KEY = 'trailsync_legal_bbox_cache_v15_0_4';
+  const legalBboxMemoryCache = new Map();
+
+  function loadLegalBboxCache(bboxKey) {
+    if (legalBboxMemoryCache.has(bboxKey)) return legalBboxMemoryCache.get(bboxKey);
+    try {
+      const raw = sessionStorage.getItem(LEGAL_LOCAL_CACHE_KEY + '_' + bboxKey);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && Array.isArray(parsed.elements) && (Date.now() - parsed.ts) < 1800000) {
+          legalBboxMemoryCache.set(bboxKey, parsed.elements);
+          return parsed.elements;
+        }
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  function saveLegalBboxCache(bboxKey, elements) {
+    legalBboxMemoryCache.set(bboxKey, elements);
+    try {
+      sessionStorage.setItem(LEGAL_LOCAL_CACHE_KEY + '_' + bboxKey, JSON.stringify({ ts: Date.now(), elements }));
+    } catch (_) {}
+  }
+
   function classifyOsmTagsForTrail(tags, inProtectedAreaName) {
     if (!tags) {
       if (inProtectedAreaName) {
@@ -2811,39 +2836,57 @@
       return { level: 'green', reason: 'Vía sin restricciones registradas' };
     }
 
-    const hw = tags.highway || '';
+    const hw = (tags.highway || '').toLowerCase();
+    const surface = (tags.surface || '').toLowerCase();
     const mv = (tags.motor_vehicle || '').toLowerCase();
     const mc = (tags.motorcycle || '').toLowerCase();
+    const veh = (tags.vehicle || '').toLowerCase();
     const acc = (tags.access || '').toLowerCase();
     const desig = (tags.designation || '').toLowerCase();
     const nameLower = (tags.name || '').toLowerCase();
 
-    // 1. Explicit prohibition / non-motorized paths / vias pecuarias
-    if (['no', 'private', 'forestry', 'agricultural', 'customers', 'delivery'].includes(mv) ||
+    const pavedSurfaces = ['asphalt', 'paved', 'concrete', 'concrete:lanes', 'concrete:plates', 'paving_stones', 'sett'];
+    const isPaved = pavedSurfaces.includes(surface);
+    const explicitMotoYes = ['yes', 'permissive', 'designated'].includes(mc) ||
+                            ['yes', 'permissive', 'designated'].includes(mv) ||
+                            ['yes', 'permissive', 'designated'].includes(veh);
+
+    // 1. Explicit prohibition (unless motorcycle/motor_vehicle explicitly allowed)
+    if (!explicitMotoYes && (
+        ['no', 'private', 'forestry', 'agricultural', 'customers', 'delivery'].includes(mv) ||
         ['no', 'private'].includes(mc) ||
-        ['no', 'private'].includes(acc)) {
+        ['no', 'private'].includes(veh) ||
+        ['no', 'private'].includes(acc))) {
       return {
         level: 'red',
         reason: `Acceso motor restringido (${tags.name || hw || 'vía'}) · ${mv ? 'motor_vehicle=' + mv : (mc ? 'motorcycle=' + mc : 'access=' + acc)}`
       };
     }
 
+    // 2. Non-motorized paths: if paved/asphalted or explicitly allowed for motor vehicles, treat as open road/street
     if (['footway', 'path', 'bridleway', 'cycleway', 'pedestrian', 'steps'].includes(hw)) {
+      if (explicitMotoYes || isPaved) {
+        return {
+          level: 'green',
+          reason: `Vía asfaltada / habilitada (${tags.name || hw}${surface ? ' · ' + surface : ''})`
+        };
+      }
       return {
         level: 'red',
         reason: `Sendero / vía no motorizada (${hw}${tags.name ? ': ' + tags.name : ''})`
       };
     }
 
-    if (desig.includes('cañada') || desig.includes('cordel') || desig.includes('vereda') || desig.includes('colada') ||
-        nameLower.includes('cañada real') || nameLower.includes('vía pecuaria')) {
+    if (!explicitMotoYes && (
+        desig.includes('cañada') || desig.includes('cordel') || desig.includes('vereda') || desig.includes('colada') ||
+        nameLower.includes('cañada real') || nameLower.includes('vía pecuaria'))) {
       return {
         level: 'red',
         reason: `Vía pecuaria (${tags.name || tags.designation}) · circulación a motor restringida`
       };
     }
 
-    // 2. Caution: Protected natural area or forest track subject to regional rules
+    // 3. Caution: Protected natural area or forest track subject to regional rules
     if (inProtectedAreaName) {
       return {
         level: 'amber',
@@ -2851,7 +2894,7 @@
       };
     }
 
-    if (hw === 'track') {
+    if (hw === 'track' && !isPaved && !explicitMotoYes) {
       const grade = tags.tracktype ? ` (${tags.tracktype})` : '';
       return {
         level: 'amber',
@@ -2863,6 +2906,87 @@
       level: 'green',
       reason: `Carretera / camino abierto (${tags.name || hw || 'vía pública'})`
     };
+  }
+
+  /**
+   * Evalúa TODAS las entidades/vías cercanas a un punto (radio hasta 45m).
+   * Regla de prioridad: si sobre el mismo tramo coexiste una vía legal (green) y una
+   * restringida (red/amber) —por ejemplo una acera/sendero paralelo a una calle asfaltada—
+   * prevalece SIEMPRE la entidad legal (green -> amber -> red).
+   */
+  function resolveBestLegalVerdictForPoint(lat, lon, highwayWays, protectedName, maxRadiusM = 45) {
+    const candidates = [];
+    for (const way of highwayWays) {
+      const g = way.geometry;
+      let minDist = Infinity;
+      for (let k = 0; k < g.length - 1; k++) {
+        const dM = pointToSegmentDistMeters(lat, lon, g[k].lat, g[k].lon, g[k + 1].lat, g[k + 1].lon);
+        if (dM < minDist) minDist = dM;
+      }
+      if (minDist <= maxRadiusM) {
+        const verdict = classifyOsmTagsForTrail(way.tags, protectedName);
+        candidates.push({ way, distM: minDist, verdict });
+      }
+    }
+
+    if (!candidates.length) {
+      return classifyOsmTagsForTrail(null, protectedName);
+    }
+
+    // Priority rank: green (0) > amber (1) > red (2), tie-breaking by closest distance
+    const rank = { green: 0, amber: 1, red: 2 };
+    candidates.sort((a, b) => {
+      const rDiff = (rank[a.verdict.level] ?? 3) - (rank[b.verdict.level] ?? 3);
+      if (rDiff !== 0) return rDiff;
+      return a.distM - b.distM;
+    });
+
+    return candidates[0].verdict;
+  }
+
+  /**
+   * Consulta en paralelo (Promise.any / carrera) los servidores Overpass + espejo internacional
+   * para devolver la respuesta del servidor más rápido al instante.
+   */
+  async function fetchFastestCartographyElements(overpassQuery, timeoutMs = 12000) {
+    const endpoints = [
+      { name: 'Overpass DE', url: 'https://overpass-api.de/api/interpreter' },
+      { name: 'Overpass Kumi', url: 'https://overpass.kumi.systems/api/interpreter' },
+      { name: 'Overpass Mail.ru', url: 'https://maps.mail.ru/osm/tools/overpass/api/interpreter' },
+      { name: 'Overpass PrivateCoffee', url: 'https://overpass.private.coffee/api/interpreter' }
+    ];
+
+    const controllers = endpoints.map(() => new AbortController());
+    const tid = setTimeout(() => controllers.forEach(c => c.abort()), timeoutMs);
+
+    const requests = endpoints.map((ep, idx) => (async () => {
+      const resp = await fetch(ep.url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+          'Accept': 'application/json'
+        },
+        body: 'data=' + encodeURIComponent(overpassQuery),
+        signal: controllers[idx].signal
+      });
+      if (!resp.ok) throw new Error(`${ep.name}: HTTP ${resp.status}`);
+      const json = await resp.json();
+      if (!json || !Array.isArray(json.elements)) throw new Error(`${ep.name}: JSON inválido`);
+      // Cancel slower in-flight requests as soon as the fastest responds
+      controllers.forEach((c, j) => { if (j !== idx) { try { c.abort(); } catch (_) {} } });
+      return { elements: json.elements, sourceName: ep.name };
+    })());
+
+    try {
+      const winner = await Promise.any(requests);
+      clearTimeout(tid);
+      return winner;
+    } catch (aggErr) {
+      clearTimeout(tid);
+      throw new Error(!navigator.onLine
+        ? 'Sin conexión a Internet para consultar la cartografía legal'
+        : 'Ningún servidor cartográfico respondió a tiempo. Inténtalo de nuevo en unos segundos.');
+    }
   }
 
 function keepOriginalRouteAndNavigate() {
@@ -3028,79 +3152,40 @@ function keepOriginalRouteAndNavigate() {
 
     try {
       const sampled = sampleRouteForLegalAudit(plannedCoords, 55);
-      // Tighter padding (0.012 ~= 1 km) so Overpass downloads 10x less geometry and responds fast
-      const bounds = L.latLngBounds(sampled).pad(0.012);
-      const s = bounds.getSouth().toFixed(5), w = bounds.getWest().toFixed(5);
-      const n = bounds.getNorth().toFixed(5), e = bounds.getEast().toFixed(5);
+      // Tighter padding (0.008 ~= 850 m) + out tags geom (omits user/changeset metadata for 3x faster download)
+      const bounds = L.latLngBounds(sampled).pad(0.008);
+      const s = bounds.getSouth().toFixed(4), w = bounds.getWest().toFixed(4);
+      const n = bounds.getNorth().toFixed(4), e = bounds.getEast().toFixed(4);
+      const bboxKey = `${s}_${w}_${n}_${e}`;
 
-      const overpassQuery = `[out:json][timeout:18];(
-        way["highway"~"^(motorway|trunk|primary|secondary|tertiary|unclassified|residential|service|track|path|footway|bridleway|cycleway|pedestrian|living_street)"](${s},${w},${n},${e});
-        way["boundary"="protected_area"](${s},${w},${n},${e});
-        way["leisure"="nature_reserve"](${s},${w},${n},${e});
-      );out body geom;`;
+      let osmElements = !forceRefresh ? loadLegalBboxCache(bboxKey) : null;
 
-      const endpoints = [
-        { name: 'Overpass DE', url: 'https://overpass-api.de/api/interpreter' },
-        { name: 'Overpass Kumi', url: 'https://overpass.kumi.systems/api/interpreter' },
-        { name: 'Overpass Mail.ru', url: 'https://maps.mail.ru/osm/tools/overpass/api/interpreter' }
-      ];
+      if (osmElements) {
+        setLegalProgress(52, 'Cartografía cargada desde caché local');
+      } else {
+        const overpassQuery = `[out:json][timeout:12];(
+          way["highway"~"^(motorway|trunk|primary|secondary|tertiary|unclassified|residential|service|track|path|footway|bridleway|cycleway|pedestrian|living_street)"](${s},${w},${n},${e});
+          way["boundary"="protected_area"](${s},${w},${n},${e});
+          way["leisure"="nature_reserve"](${s},${w},${n},${e});
+        );out tags geom;`;
 
-      setLegalProgress(12, 'Consultando cartografía...');
-
-      let osmElements = null;
-      let lastServerError = '';
-
-      for (let epIdx = 0; epIdx < endpoints.length; epIdx++) {
-        const ep = endpoints[epIdx];
-        const basePct = 15 + epIdx * 10;
-        setLegalProgress(basePct, `Conectando (${ep.name})...`);
-
-        // Smooth visual progress ticker while waiting for network response
+        setLegalProgress(15, 'Consultando 4 servidores en paralelo...');
         let waitTick = 0;
         const ticker = setInterval(() => {
-          waitTick = Math.min(8, waitTick + 1);
-          setLegalProgress(basePct + waitTick, `Descargando (${ep.name})...`);
-        }, 1200);
+          waitTick = Math.min(30, waitTick + 3);
+          setLegalProgress(15 + waitTick, 'Esperando respuesta más rápida...');
+        }, 450);
 
         try {
-          const controller = new AbortController();
-          const tid = setTimeout(() => controller.abort(), 16000);
-          const resp = await fetch(ep.url, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
-              'Accept': 'application/json'
-            },
-            body: 'data=' + encodeURIComponent(overpassQuery),
-            signal: controller.signal
-          });
-          clearTimeout(tid);
+          const winner = await fetchFastestCartographyElements(overpassQuery, 12000);
           clearInterval(ticker);
-
-          if (resp.ok) {
-            const json = await resp.json();
-            if (json && Array.isArray(json.elements)) {
-              osmElements = json.elements;
-              setLegalProgress(48, 'Cartografía recibida');
-              break;
-            } else {
-              lastServerError = `${ep.name}: respuesta vacía`;
-            }
-          } else {
-            lastServerError = `${ep.name}: HTTP ${resp.status}`;
-          }
+          osmElements = winner.elements;
+          saveLegalBboxCache(bboxKey, osmElements);
+          setLegalProgress(50, `Cartografía recibida (${winner.sourceName})`);
         } catch (err) {
           clearInterval(ticker);
-          lastServerError = err && err.name === 'AbortError'
-            ? `${ep.name}: tiempo agotado (16s)`
-            : `${ep.name}: error de red`;
+          throw err;
         }
-      }
-
-      if (!osmElements) {
-        throw new Error(!navigator.onLine
-          ? 'Sin conexión a Internet para consultar la cartografía legal'
-          : `Servidores cartográficos sin respuesta (${lastServerError}). Inténtalo en unos segundos.`);
       }
 
       const highwayWays = osmElements.filter(el => el.type === 'way' && el.tags && el.tags.highway && Array.isArray(el.geometry) && el.geometry.length >= 2);
@@ -3122,20 +3207,8 @@ function keepOriginalRouteAndNavigate() {
           }
         }
 
-        let bestWay = null;
-        let bestDistM = 45;
-        for (const way of highwayWays) {
-          const g = way.geometry;
-          for (let k = 0; k < g.length - 1; k++) {
-            const dM = pointToSegmentDistMeters(midLat, midLon, g[k].lat, g[k].lon, g[k + 1].lat, g[k + 1].lon);
-            if (dM < bestDistM) {
-              bestDistM = dM;
-              bestWay = way;
-            }
-          }
-        }
-
-        const verdict = classifyOsmTagsForTrail(bestWay ? bestWay.tags : null, protectedName);
+        // Priority rule: if both a legal way and a restricted way exist on the same stretch, pick the legal one
+        const verdict = resolveBestLegalVerdictForPoint(midLat, midLon, highwayWays, protectedName, 45);
         rawSegments.push({
           coords: [p1, p2],
           km: segKm,
@@ -6607,34 +6680,13 @@ ${trkptsXml}
         way["highway"](${s},${w},${n},${e});
         way["boundary"="protected_area"](${s},${w},${n},${e});
         way["leisure"="nature_reserve"](${s},${w},${n},${e});
-      );out body geom;`;
-
-      const endpoints = [
-        'https://overpass-api.de/api/interpreter',
-        'https://overpass.kumi.systems/api/interpreter'
-      ];
+      );out tags geom;`;
 
       let elements = null;
-      for (const ep of endpoints) {
-        try {
-          const ctrl = new AbortController();
-          const tid = setTimeout(() => ctrl.abort(), 5500);
-          const resp = await fetch(ep, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
-            body: 'data=' + encodeURIComponent(query),
-            signal: ctrl.signal
-          });
-          clearTimeout(tid);
-          if (resp.ok) {
-            const json = await resp.json();
-            if (json && Array.isArray(json.elements)) {
-              elements = json.elements;
-              break;
-            }
-          }
-        } catch (e) {}
-      }
+      try {
+        const winner = await fetchFastestCartographyElements(query, 5500);
+        elements = winner.elements;
+      } catch (e) {}
 
       if (!elements) return;
 
@@ -6649,20 +6701,7 @@ ${trkptsXml}
         }
       }
 
-      let bestWay = null;
-      let bestDistM = 35;
-      for (const way of highwayWays) {
-        const g = way.geometry;
-        for (let k = 0; k < g.length - 1; k++) {
-          const dM = pointToSegmentDistMeters(lat, lon, g[k].lat, g[k].lon, g[k + 1].lat, g[k + 1].lon);
-          if (dM < bestDistM) {
-            bestDistM = dM;
-            bestWay = way;
-          }
-        }
-      }
-
-      const verdict = classifyOsmTagsForTrail(bestWay ? bestWay.tags : null, protectedName);
+      const verdict = resolveBestLegalVerdictForPoint(lat, lon, highwayWays, protectedName, 35);
       if (verdict.level === 'red' || verdict.level === 'amber') {
         const alertKey = `${verdict.level}|${verdict.reason}`;
         const alertAgeMs = Date.now() - lastLiveZoneAlertTs;
