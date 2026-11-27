@@ -10,7 +10,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
   <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
-  <title>TrailSync v15.1.0 — Capas Online/Offline limpias y carpeta local TrailSync en el dispositivo</title>
+  <title>TrailSync v15.1.2 — Capas Online/Offline limpias y carpeta local TrailSync en el dispositivo</title>
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
         onerror="this.onerror=null;this.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';" />
@@ -1126,20 +1126,20 @@
       pointer-events: auto;
     }
     .rider-puck {
-      width: 52px; height: 52px; border-radius: 50%;
-      background: radial-gradient(circle at 38% 28%, rgba(255,255,255,0.96) 0%, rgba(241,245,249,0.92) 64%, rgba(203,213,225,0.85) 100%);
+      width: 58px; height: 58px; border-radius: 50%;
+      background: radial-gradient(circle at 38% 26%, rgba(255,255,255,0.97) 0%, rgba(241,245,249,0.92) 62%, rgba(203,213,225,0.84) 100%);
       border: 2.5px solid #ffffff;
-      box-shadow: 0 9px 18px rgba(15, 23, 42, 0.48), 0 2px 4px rgba(15, 23, 42, 0.25);
+      box-shadow: 0 11px 22px rgba(15, 23, 42, 0.52), 0 2px 5px rgba(15, 23, 42, 0.28);
       display: flex; align-items: center; justify-content: center;
       flex-shrink: 0;
       position: relative;
     }
     .rider-puck-rotator {
-      width: 46px; height: 46px;
+      width: 52px; height: 52px;
       display: flex; align-items: center; justify-content: center;
       transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
       transform-origin: center center;
-      filter: drop-shadow(0 4px 4px rgba(15, 23, 42, 0.36));
+      filter: drop-shadow(0 5px 5px rgba(15, 23, 42, 0.38));
     }
     .rider-tag {
       background: rgba(15, 23, 42, 0.92); color: #fff;
@@ -1224,7 +1224,7 @@
       </button>
     </div>
     <div style="text-align:center;font-size:11px;color:#64748b;margin-top:8px;">
-      Versión 15.1.0 · Capas Online/Offline + Carpeta local TrailSync en dispositivo
+      Versión 15.1.2 · Capas Online/Offline + Carpeta local TrailSync en dispositivo
     </div>
   </div>
 </div>
@@ -2029,7 +2029,7 @@
     <h2>Ajustes de ruta y App</h2>
     <div style="background:#18141a;padding:10px 12px;border-radius:12px;margin-bottom:12px;border:1px solid #334155;display:flex;align-items:center;justify-content:space-between;gap:8px;">
       <div>
-        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">15.1.0</span></div>
+        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">15.1.2</span></div>
         <div style="font-size:11px;color:#94a3b8;" id="webVerStatusLabel">Comprobando actualizaciones en la web...</div>
       </div>
       <button class="solid-btn" style="flex:0 0 auto;background:#16a34a;color:#fff;padding:8px 12px;font-size:12px;" onclick="manualCheckForUpdates()">🔄 Buscar / Actualizar</button>
@@ -2110,7 +2110,7 @@
     } catch (e) {}
   });
 
-  const APP_VERSION = '15.1.0';
+  const APP_VERSION = '15.1.2';
   let swWaitingWorker = null;
   let remoteVersionFound = null;
 
@@ -4551,80 +4551,97 @@ window.addEventListener('offline', () => {
 
   function buildGoogleMapsMotoSvg(suitColor) {
     const uid = suitColor.replace('#', '');
-    return `<svg width="44" height="44" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    return `<svg width="48" height="48" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
       <defs>
-        <radialGradient id="g3dShadow_${uid}" cx="50%" cy="55%" r="48%">
-          <stop offset="0%" stop-color="#0f172a" stop-opacity="0.42"/>
-          <stop offset="70%" stop-color="#0f172a" stop-opacity="0.16"/>
+        <radialGradient id="trailShadow_${uid}" cx="50%" cy="62%" r="46%">
+          <stop offset="0%" stop-color="#0f172a" stop-opacity="0.46"/>
+          <stop offset="68%" stop-color="#0f172a" stop-opacity="0.18"/>
           <stop offset="100%" stop-color="#0f172a" stop-opacity="0"/>
         </radialGradient>
-        <linearGradient id="g3dSuit_${uid}" x1="16" y1="14" x2="40" y2="38" gradientUnits="userSpaceOnUse">
+        <linearGradient id="trailJacket_${uid}" x1="18" y1="18" x2="46" y2="42" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#ffffff" stop-opacity="0.34"/>
+          <stop offset="30%" stop-color="#475569" stop-opacity="1"/>
+          <stop offset="100%" stop-color="#1e293b" stop-opacity="1"/>
+        </linearGradient>
+        <linearGradient id="trailAccent_${uid}" x1="16" y1="16" x2="48" y2="44" gradientUnits="userSpaceOnUse">
           <stop offset="0%" stop-color="#ffffff" stop-opacity="0.42"/>
           <stop offset="35%" stop-color="${suitColor}" stop-opacity="1"/>
-          <stop offset="100%" stop-color="#090d16" stop-opacity="0.72"/>
+          <stop offset="100%" stop-color="#7c2d12" stop-opacity="0.88"/>
         </linearGradient>
-        <radialGradient id="g3dHelmet_${uid}" cx="36%" cy="28%" r="65%">
-          <stop offset="0%" stop-color="#ffffff"/>
-          <stop offset="28%" stop-color="${suitColor}"/>
-          <stop offset="88%" stop-color="#0f172a"/>
+        <radialGradient id="trailHelmet_${uid}" cx="38%" cy="26%" r="68%">
+          <stop offset="0%" stop-color="#e2e8f0"/>
+          <stop offset="42%" stop-color="#94a3b8"/>
+          <stop offset="85%" stop-color="#334155"/>
+          <stop offset="100%" stop-color="#0f172a"/>
         </radialGradient>
-        <linearGradient id="g3dTire_${uid}" x1="23" y1="34" x2="33" y2="50" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stop-color="#475569"/>
-          <stop offset="45%" stop-color="#1e293b"/>
+        <linearGradient id="trailSand_${uid}" x1="18" y1="10" x2="46" y2="54" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#fde68a"/>
+          <stop offset="55%" stop-color="#d6b882"/>
+          <stop offset="100%" stop-color="#927546"/>
+        </linearGradient>
+        <linearGradient id="trailTire_${uid}" x1="25" y1="36" x2="39" y2="56" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#64748b"/>
+          <stop offset="48%" stop-color="#1e293b"/>
           <stop offset="100%" stop-color="#020617"/>
         </linearGradient>
       </defs>
 
-      <!-- Sombra 3D proyectada en el suelo -->
-      <ellipse cx="28" cy="33" rx="13.5" ry="17.5" fill="url(#g3dShadow_${uid})"/>
+      <!-- Sombra proyectada en el suelo bajo el motorista y la trail -->
+      <ellipse cx="32" cy="36" rx="15.5" ry="20.5" fill="url(#trailShadow_${uid})"/>
 
-      <!-- Rueda delantera 3D y guardabarros alto enduro -->
-      <rect x="25" y="4.5" width="6" height="11" rx="3" fill="#0f172a"/>
-      <path d="M23.5 12.2C23.5 9.8 25.4 8.2 28 8.2C30.6 8.2 32.5 9.8 32.5 12.2L31.4 17H24.6L23.5 12.2Z" fill="${suitColor}"/>
-      <path d="M24.5 11.4C26 9.8 30 9.8 31.5 11.4" stroke="rgba(255,255,255,0.65)" stroke-width="1.3" stroke-linecap="round"/>
+      <!-- Rueda delantera con tacos y guardabarros alto de pico -->
+      <rect x="28.2" y="4.5" width="7.6" height="12.5" rx="3.8" fill="url(#trailTire_${uid})" stroke="#020617" stroke-width="1"/>
+      <path d="M26.2 12.2L32 9.4L37.8 12.2L35.4 17.5H28.6L26.2 12.2Z" fill="#334155" stroke="#0f172a" stroke-width="0.9"/>
+      <path d="M25.5 14.5C28.5 12.8 35.5 12.8 38.5 14.5" stroke="${suitColor}" stroke-width="2.4" stroke-linecap="round"/>
+      <!-- Cupula transparente y faro delantero -->
+      <path d="M27.8 16.5C29.5 14.2 34.5 14.2 36.2 16.5L35 20.5H29L27.8 16.5Z" fill="#cbd5e1" fill-opacity="0.65" stroke="#94a3b8" stroke-width="0.9"/>
 
-      <!-- Manillar con paramanos y retrovisores -->
-      <path d="M13.5 19.2L21 17.5H35L42.5 19.2" stroke="#1e293b" stroke-width="3" stroke-linecap="round"/>
-      <circle cx="12.2" cy="18.6" r="2.1" fill="#334155" stroke="#94a3b8" stroke-width="0.8"/>
-      <circle cx="43.8" cy="18.6" r="2.1" fill="#334155" stroke="#94a3b8" stroke-width="0.8"/>
-      <path d="M14.2 18.8C16 17.4 18.2 17.6 19.6 18.6" stroke="${suitColor}" stroke-width="2.4" stroke-linecap="round"/>
-      <path d="M41.8 18.8C40 17.4 37.8 17.6 36.4 18.6" stroke="${suitColor}" stroke-width="2.4" stroke-linecap="round"/>
+      <!-- Manillar ancho con paramanos y retrovisores -->
+      <path d="M13.5 21.5L22 19.5H42L50.5 21.5" stroke="#1e293b" stroke-width="3.2" stroke-linecap="round"/>
+      <ellipse cx="12.2" cy="20.2" rx="2.3" ry="1.6" fill="#334155" stroke="#94a3b8" stroke-width="0.8"/>
+      <ellipse cx="51.8" cy="20.2" rx="2.3" ry="1.6" fill="#334155" stroke="#94a3b8" stroke-width="0.8"/>
+      <path d="M14.2 21.2C16.2 19.6 18.6 19.8 20.2 20.8" fill="url(#trailAccent_${uid})"/>
+      <path d="M49.8 21.2C47.8 19.6 45.4 19.8 43.8 20.8" fill="url(#trailAccent_${uid})"/>
 
-      <!-- Brazos del motorista en 3D -->
-      <path d="M15.8 19.5C17.2 22 19.6 24.2 21.8 25" stroke="${suitColor}" stroke-width="4.4" stroke-linecap="round"/>
-      <path d="M40.2 19.5C38.8 22 36.4 24.2 34.2 25" stroke="${suitColor}" stroke-width="4.4" stroke-linecap="round"/>
-      <circle cx="15.2" cy="19.2" r="2.1" fill="#0f172a"/>
-      <circle cx="40.8" cy="19.2" r="2.1" fill="#0f172a"/>
+      <!-- Brazos y guantes del piloto en 3D -->
+      <path d="M16.5 22C18.2 25 20.8 27.5 23.2 28.4" stroke="url(#trailJacket_${uid})" stroke-width="5.2" stroke-linecap="round"/>
+      <path d="M47.5 22C45.8 25 43.2 27.5 40.8 28.4" stroke="url(#trailJacket_${uid})" stroke-width="5.2" stroke-linecap="round"/>
+      <path d="M17.5 23.2L20.6 25.8" stroke="url(#trailAccent_${uid})" stroke-width="3.2" stroke-linecap="round"/>
+      <path d="M46.5 23.2L43.4 25.8" stroke="url(#trailAccent_${uid})" stroke-width="3.2" stroke-linecap="round"/>
+      <circle cx="15.8" cy="21.4" r="2.3" fill="#1e293b"/>
+      <circle cx="48.2" cy="21.4" r="2.3" fill="#1e293b"/>
 
-      <!-- Rueda trasera 3D con volumen y taco central -->
-      <rect x="23.4" y="36.5" width="9.2" height="14.5" rx="4.6" fill="url(#g3dTire_${uid})" stroke="#020617" stroke-width="1"/>
-      <rect x="26.5" y="38" width="3" height="11.5" rx="1.5" fill="#475569" opacity="0.65"/>
-      <!-- Escape lateral 3D -->
-      <rect x="32.8" y="33.5" width="3.2" height="9.5" rx="1.6" fill="#64748b" stroke="#1e293b" stroke-width="0.9"/>
+      <!-- Rueda trasera gruesa de tacos + parrilla trasera + escape -->
+      <rect x="26.2" y="40.5" width="11.6" height="16.5" rx="5.5" fill="url(#trailTire_${uid})" stroke="#020617" stroke-width="1.1"/>
+      <path d="M27.5 43H36.5M27.5 46.5H36.5M27.5 50H36.5M27.5 53.5H36.5" stroke="#64748b" stroke-width="1.3" stroke-linecap="round" opacity="0.65"/>
+      <!-- Escape lateral plateado -->
+      <rect x="36.6" y="37.2" width="3.8" height="10.8" rx="1.8" fill="#cbd5e1" stroke="#334155" stroke-width="0.9"/>
+      <!-- Parrilla trasera portaequipajes -->
+      <rect x="25.2" y="36.2" width="13.6" height="5.2" rx="1.8" fill="#94a3b8" stroke="#334155" stroke-width="0.9"/>
+      <path d="M27.4 37.8H36.6M27.4 39.8H36.6" stroke="#475569" stroke-width="0.9"/>
+      <!-- Colín trasero y piloto trasero -->
+      <path d="M25.6 38.2H38.4L37.2 43.2H26.8L25.6 38.2Z" fill="url(#trailAccent_${uid})"/>
+      <rect x="29.4" y="41.4" width="5.2" height="2.2" rx="1" fill="#ef4444"/>
 
-      <!-- Colin trasero + piloto trasero LED -->
-      <path d="M23.2 34.2H32.8L31.2 40.5H24.8L23.2 34.2Z" fill="${suitColor}" stroke="rgba(255,255,255,0.4)" stroke-width="0.8"/>
-      <rect x="25.6" y="39" width="4.8" height="2" rx="1" fill="#ef4444"/>
+      <!-- Piernas y botas off-road en 3D -->
+      <path d="M22.8 33.5L20.8 42.2" stroke="url(#trailSand_${uid})" stroke-width="5.2" stroke-linecap="round"/>
+      <path d="M41.2 33.5L43.2 42.2" stroke="url(#trailSand_${uid})" stroke-width="5.2" stroke-linecap="round"/>
+      <ellipse cx="20.4" cy="43.5" rx="2.9" ry="2" fill="url(#trailSand_${uid})" stroke="#5c492c" stroke-width="0.8"/>
+      <ellipse cx="43.6" cy="43.5" rx="2.9" ry="2" fill="url(#trailSand_${uid})" stroke="#5c492c" stroke-width="0.8"/>
 
-      <!-- Botas y piernas en perspectiva 3D -->
-      <path d="M21.2 29.5L19.6 37.5" stroke="#0f172a" stroke-width="4.2" stroke-linecap="round"/>
-      <path d="M34.8 29.5L36.4 37.5" stroke="#0f172a" stroke-width="4.2" stroke-linecap="round"/>
-      <ellipse cx="19.2" cy="38.4" rx="2.3" ry="1.5" fill="#334155"/>
-      <ellipse cx="36.8" cy="38.4" rx="2.3" ry="1.5" fill="#334155"/>
+      <!-- Torso / chaqueta trail 3D con arnes y franjas de color -->
+      <rect x="21.4" y="23.5" width="21.2" height="16.5" rx="8.2" fill="url(#trailJacket_${uid})" stroke="#0f172a" stroke-width="1"/>
+      <path d="M22.4 26.2C25.5 24.5 38.5 24.5 41.6 26.2L40.4 31.2C36.5 30.2 27.5 30.2 23.6 31.2L22.4 26.2Z" fill="url(#trailAccent_${uid})"/>
+      <path d="M26.5 31.5H37.5L36.5 37.5H27.5L26.5 31.5Z" fill="url(#trailSand_${uid})" stroke="#334155" stroke-width="0.7"/>
+      <path d="M24.2 25.5V38.5M39.8 25.5V38.5" stroke="#1e293b" stroke-width="1.4"/>
 
-      <!-- Torso / chaqueta trail 3D con volumen y mochila hidratacion -->
-      <rect x="19.6" y="21.5" width="16.8" height="14.5" rx="7.2" fill="${suitColor}"/>
-      <rect x="19.6" y="21.5" width="16.8" height="14.5" rx="7.2" fill="url(#g3dSuit_${uid})" stroke="rgba(255,255,255,0.55)" stroke-width="1.1"/>
-      <rect x="24.4" y="24.2" width="7.2" height="9.4" rx="3.2" fill="#0f172a" opacity="0.34"/>
-      <path d="M25.5 25.5H30.5" stroke="rgba(255,255,255,0.55)" stroke-width="1.2" stroke-linecap="round"/>
-
-      <!-- Casco 3D con brillo especular y visera frontal -->
-      <circle cx="28" cy="23.4" r="6.8" fill="url(#g3dHelmet_${uid})" stroke="#ffffff" stroke-width="1.6"/>
-      <path d="M22.4 20.4C24.2 17.6 31.8 17.6 33.6 20.4C31.3 19.3 24.7 19.3 22.4 20.4Z" fill="#020617"/>
-      <ellipse cx="25.6" cy="21.6" rx="2.1" ry="1.1" transform="rotate(-24 25.6 21.6)" fill="#ffffff" opacity="0.72"/>
+      <!-- Casco adventure 3D con visera y mentonera estilizada -->
+      <circle cx="32" cy="23.2" r="9.4" fill="url(#trailHelmet_${uid})" stroke="#1e293b" stroke-width="1.1"/>
+      <path d="M23.2 22.8C26.5 21.2 37.5 21.2 40.8 22.8L39.8 27.4C36.2 26.4 27.8 26.4 24.2 27.4L23.2 22.8Z" fill="url(#trailAccent_${uid})"/>
+      <path d="M24.8 16.5C28.5 14.4 35.5 14.4 39.2 16.5L36.8 19.6H27.2L24.8 16.5Z" fill="url(#trailSand_${uid})" stroke="#5c492c" stroke-width="0.7"/>
+      <path d="M28.2 13.8C30.8 13.1 33.2 13.1 35.8 13.8" stroke="#f8fafc" stroke-width="1.5" stroke-linecap="round" opacity="0.75"/>
     </svg>`;
   }
-
   function createRiderIcon(label, suitColor, isSelf = false, isStale = false, headingDeg = null) {
     const safeLabel = escapeXml(String(label || '').trim() || 'Piloto');
     const rot = typeof headingDeg === 'number' && !isNaN(headingDeg)
@@ -5147,13 +5164,33 @@ window.addEventListener('offline', () => {
 
   function getSelectedOfflineSources() {
     const choice = document.getElementById('offlineLayerChoice')?.value || 'dmd2_trail';
-    if (choice === 'dmd2_trail') return [{ key: 'dmd2_trail', tpl: DMD2_TRAIL_TILE_URL }];
-    if (choice === 'osm_base') return [{ key: 'osm_base', tpl: OSM_BASE_TILE_URL }];
-    if (choice === 'satelite') return [{ key: 'satelite', tpl: SAT_IGN_TILE_URL, fallbackTpl: SAT_ESRI_TILE_URL }];
-    if (choice === 'google_maps') return [{ key: 'google_maps', tpl: GOOGLE_MAPS_TILE_URL }];
+    const dmd2Mirrors = [
+      'https://a.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png',
+      'https://b.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png',
+      'https://c.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png',
+      'https://tile.opentopomap.org/{z}/{x}/{y}.png'
+    ];
+    const osmMirrors = [
+      'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+      'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
+      'https://b.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png'
+    ];
+    const satMirrors = [
+      SAT_IGN_TILE_URL,
+      SAT_ESRI_TILE_URL
+    ];
+    const gmapsMirrors = [
+      'https://mt0.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
+      'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
+      'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png'
+    ];
+    if (choice === 'dmd2_trail') return [{ key: 'dmd2_trail', mirrors: dmd2Mirrors }];
+    if (choice === 'osm_base') return [{ key: 'osm_base', mirrors: osmMirrors }];
+    if (choice === 'satelite') return [{ key: 'satelite', mirrors: satMirrors }];
+    if (choice === 'google_maps') return [{ key: 'google_maps', mirrors: gmapsMirrors }];
     return [
-      { key: 'dmd2_trail', tpl: DMD2_TRAIL_TILE_URL },
-      { key: 'osm_base', tpl: OSM_BASE_TILE_URL }
+      { key: 'dmd2_trail', mirrors: dmd2Mirrors },
+      { key: 'osm_base', mirrors: osmMirrors }
     ];
   }
 
@@ -5161,6 +5198,7 @@ window.addEventListener('offline', () => {
     const tasks = [];
     const seen = new Set();
     for (const src of sources) {
+      const mirrorList = Array.isArray(src.mirrors) && src.mirrors.length ? src.mirrors : [src.tpl];
       for (let z = minZ; z <= maxZ; z++) {
         const x1 = lon2tile(box.west, z), x2 = lon2tile(box.east, z);
         const y1 = lat2tile(box.north, z), y2 = lat2tile(box.south, z);
@@ -5169,13 +5207,13 @@ window.addEventListener('offline', () => {
             const id = `${src.key}/${z}/${x}/${y}`;
             if (seen.has(id)) continue;
             seen.add(id);
+            const urls = mirrorList.map(m => m.replace('{z}', z).replace('{x}', x).replace('{y}', y));
             tasks.push({
               layerKey: src.key,
               z,
               x,
               y,
-              url: src.tpl.replace('{z}', z).replace('{x}', x).replace('{y}', y),
-              fallbackUrl: src.fallbackTpl ? src.fallbackTpl.replace('{z}', z).replace('{x}', x).replace('{y}', y) : null
+              urls
             });
           }
         }
@@ -5200,6 +5238,26 @@ window.addEventListener('offline', () => {
     } catch (e) {}
   }
 
+  async function fetchTileBlobWithTimeout(url, timeoutMs = 6500) {
+    const ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    const timer = ctrl ? setTimeout(() => ctrl.abort(), timeoutMs) : null;
+    try {
+      const res = await fetch(url, {
+        mode: 'cors',
+        cache: 'no-store',
+        signal: ctrl ? ctrl.signal : undefined
+      });
+      if (!res || !res.ok) return null;
+      const blob = await res.blob();
+      if (!blob || blob.size < 120) return null;
+      return blob;
+    } catch (e) {
+      return null;
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
+  }
+
   async function batchDownloadTilesToDeviceFolder(taskList, labelSuccess) {
     await ensurePersistentStorageQuota();
     let rootDir = await ensureTrailSyncFolderReady(false);
@@ -5208,6 +5266,14 @@ window.addEventListener('offline', () => {
     }
     if (!rootDir) {
       return showToast('⚠️ Selecciona la carpeta TrailSync en tu dispositivo para guardar los mapas');
+    }
+
+    // Pre-create top-level 'mapas' directory once instead of re-checking permissions on every single tile
+    let mapasRoot = null;
+    try {
+      mapasRoot = await rootDir.getDirectoryHandle('mapas', { create: true });
+    } catch (e) {
+      return showToast('⚠️ Sin permiso de escritura en la carpeta TrailSync. Pulsa "Elegir carpeta" de nuevo.');
     }
 
     cancelOfflineDownloadFlag = false;
@@ -5221,42 +5287,69 @@ window.addEventListener('offline', () => {
 
     let done = 0;
     let savedCount = 0;
-    const batchSize = 10;
+    let failedCount = 0;
+    let savedBytes = 0;
+    const batchSize = 5;
+    let consecutiveEmptyBatches = 0;
 
     for (let i = 0; i < taskList.length; i += batchSize) {
       if (cancelOfflineDownloadFlag) break;
-      await Promise.all(taskList.slice(i, i + batchSize).map(async task => {
+      let batchSaved = 0;
+
+      await Promise.all(taskList.slice(i, i + batchSize).map(async (task, slotIdx) => {
         try {
           const already = await readTileBlobFromDeviceFolder(task.layerKey, task.z, task.x, task.y);
-          if (!already) {
-            let r = null;
-            try {
-              r = await fetch(task.url, { mode: 'cors', cache: 'no-store' });
-            } catch (e1) {}
-            if ((!r || !r.ok) && task.fallbackUrl) {
-              try {
-                r = await fetch(task.fallbackUrl, { mode: 'cors', cache: 'no-store' });
-              } catch (e2) {}
-            }
-            if (r && r.ok) {
-              const blob = await r.blob();
-              if (blob && blob.size > 0) {
-                const ok = await writeTileBlobToDeviceFolder(task.layerKey, task.z, task.x, task.y, blob);
-                if (ok) savedCount++;
-              }
-            }
-          } else {
+          if (already) {
             savedCount++;
+            batchSaved++;
+            savedBytes += already.size || 20000;
+          } else {
+            const candidateUrls = Array.isArray(task.urls) && task.urls.length ? task.urls : [task.url];
+            // Rotate starting mirror across slots so we don't hammer a single tile subdomain
+            const startOffset = (i + slotIdx) % candidateUrls.length;
+            let blob = null;
+            for (let m = 0; m < candidateUrls.length; m++) {
+              const u = candidateUrls[(startOffset + m) % candidateUrls.length];
+              blob = await fetchTileBlobWithTimeout(u, 6500);
+              if (blob) break;
+            }
+            if (blob) {
+              const layerDir = await mapasRoot.getDirectoryHandle(task.layerKey, { create: true });
+              const zDir = await layerDir.getDirectoryHandle(String(task.z), { create: true });
+              const xDir = await zDir.getDirectoryHandle(String(task.x), { create: true });
+              const fileHandle = await xDir.getFileHandle(`${task.y}.png`, { create: true });
+              const writable = await fileHandle.createWritable();
+              await writable.write(blob);
+              await writable.close();
+              savedCount++;
+              batchSaved++;
+              savedBytes += blob.size || 20000;
+            } else {
+              failedCount++;
+            }
           }
-        } catch (e) {}
+        } catch (e) {
+          failedCount++;
+        }
         done++;
       }));
 
+      if (batchSaved === 0) {
+        consecutiveEmptyBatches++;
+        // Brief backoff if the tile server temporarily throttles requests
+        await new Promise(r => setTimeout(r, Math.min(1800, 250 * consecutiveEmptyBatches)));
+      } else {
+        consecutiveEmptyBatches = 0;
+        await new Promise(r => setTimeout(r, 35));
+      }
+
       const pct = Math.min(100, Math.round((done / Math.max(1, taskList.length)) * 100));
       bar.style.width = pct + '%';
-      const estMb = ((savedCount * 24) / 1024).toFixed(1);
-      lbl.textContent = `Guardando en ${rootDir.name}/mapas/: ${done} / ${taskList.length} teselas (${pct}% · ~${estMb} MB)`;
-      if (done % (batchSize * 12) === 0) {
+      const realMb = (savedBytes / (1024 * 1024)).toFixed(1);
+      const failNote = failedCount > 0 ? ` · ${failedCount} omitidas` : '';
+      lbl.textContent = `Guardando en ${rootDir.name}/mapas/: ${savedCount} guardadas (${done}/${taskList.length} · ${pct}% · ${realMb} MB${failNote})`;
+
+      if (done % (batchSize * 15) === 0) {
         refreshOfflineStats();
         updateDynamicMapScale();
       }
@@ -5272,11 +5365,10 @@ window.addEventListener('offline', () => {
       return;
     }
 
-    lbl.textContent = `${labelSuccess} · Carpeta ${rootDir.name}/mapas/`;
+    lbl.textContent = `${labelSuccess} · ${savedCount} archivos en ${rootDir.name}/mapas/`;
     showToast(`${labelSuccess} en carpeta ${rootDir.name}/`);
     speakAlert('Descarga de mapa offline completada en carpeta TrailSync');
   }
-
   async function downloadIberianPeninsulaOneClick() {
     const btn = document.getElementById('btnDownloadPeninsula');
     btn.disabled = true;
@@ -5477,7 +5569,7 @@ window.addEventListener('offline', () => {
     }).join('\n');
 
     return `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="TrailSync v15.1.0" xmlns="http://www.topografix.com/GPX/1/1">
+<gpx version="1.1" creator="TrailSync v15.1.2" xmlns="http://www.topografix.com/GPX/1/1">
   <metadata><name>${escapeXml(titleText)}</name>${descTag}</metadata>
   <trk><name>${escapeXml(titleText)}</name>${descTag}<trkseg>
 ${trkpts}
