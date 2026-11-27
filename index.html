@@ -10,7 +10,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
   <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
-  <title>TrailSync v15.2.10 — Capas Online/Offline limpias y carpeta local TrailSync en el dispositivo</title>
+  <title>TrailSync v15.2.11 — Capas Online/Offline limpias y carpeta local TrailSync en el dispositivo</title>
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
         onerror="this.onerror=null;this.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';" />
@@ -1030,6 +1030,16 @@
     .rain-lock-hint {
       display: none;
     }
+    body:has(#rain-lock-shield.open) .bottom-actions,
+    body.rain-lock-active .bottom-actions {
+      bottom: 122px;
+    }
+    @media (orientation: landscape) and (max-height: 540px) {
+      body:has(#rain-lock-shield.open) .bottom-actions,
+      body.rain-lock-active .bottom-actions {
+        bottom: 113px;
+      }
+    }
 
     /* MODALS & BOTTOM SHEETS */
     .modal-backdrop {
@@ -1298,7 +1308,7 @@
       </button>
     </div>
     <div style="text-align:center;font-size:11px;color:#64748b;margin-top:8px;">
-      Versión 15.2.10 · Capas Online/Offline + Carpeta local TrailSync en dispositivo
+      Versión 15.2.11 · Capas Online/Offline + Carpeta local TrailSync en dispositivo
     </div>
   </div>
 </div>
@@ -1429,14 +1439,6 @@
           </button>
         </div>
 
-        <button class="menu-item-btn mi-route" onclick="closeQuickMenu();openRoutePlannerForCenter()">
-          <span>🧭</span> <span>Crear ruta a punto</span>
-        </button>
-
-        <button class="menu-item-btn mi-pin" onclick="closeQuickMenu();openModal('waypointModal')">
-          <span>📌</span> <span>Marcar punto / peligro</span>
-        </button>
-
         <button class="menu-item-btn mi-invite" onclick="closeQuickMenu();shareGroupInvite()">
           <span>📲</span> <span>Invitar amigos (<span id="floatCodeText">BS482X</span>)</span>
         </button>
@@ -1447,10 +1449,6 @@
 
         <button class="menu-item-btn mi-offline" onclick="closeQuickMenu();openOfflineModal()">
           <span>🇪🇸🇵🇹</span> <span>Descargar mapa offline</span>
-        </button>
-
-        <button class="menu-item-btn mi-gpx" onclick="closeQuickMenu();openLocalRoutesRepoModal()">
-          <span>📚</span> <span>Mis rutas guardadas</span>
         </button>
 
         <label class="menu-item-btn mi-gpx" style="margin:0;">
@@ -2099,7 +2097,7 @@
     <h2>Ajustes de ruta y App</h2>
     <div style="background:#18141a;padding:10px 12px;border-radius:12px;margin-bottom:12px;border:1px solid #334155;display:flex;align-items:center;justify-content:space-between;gap:8px;">
       <div>
-        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">15.2.10</span></div>
+        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">15.2.11</span></div>
         <div style="font-size:11px;color:#94a3b8;" id="webVerStatusLabel">Comprobando actualizaciones en la web...</div>
       </div>
       <button class="solid-btn" style="flex:0 0 auto;background:#16a34a;color:#fff;padding:8px 12px;font-size:12px;" onclick="manualCheckForUpdates()">🔄 Buscar / Actualizar</button>
@@ -2180,7 +2178,7 @@
     } catch (e) {}
   });
 
-  const APP_VERSION = '15.2.10';
+  const APP_VERSION = '15.2.11';
   let swWaitingWorker = null;
   let remoteVersionFound = null;
 
@@ -2493,6 +2491,7 @@
     syncLockedTelemetryValues();
     resetUnlockHoldVisuals();
     document.getElementById('rain-lock-shield').classList.add('open');
+    document.body.classList.add('rain-lock-active');
     showToast('🌧️ Táctil bloqueado por lluvia. Mantén 3s el candado rojo para desbloquear.');
   }
 
@@ -2504,6 +2503,7 @@
     isRainLocked = false;
     cancelUnlockHold();
     document.getElementById('rain-lock-shield').classList.remove('open');
+    document.body.classList.remove('rain-lock-active');
     showToast('🔓 Pantalla táctil desbloqueada');
   }
 
@@ -2896,6 +2896,15 @@
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   }
 
+  function formatElapsedTelemetryTime(startMs) {
+    const safeStart = (typeof startMs === 'number' && startMs > 0) ? startMs : Date.now();
+    const elapsedSec = Math.max(0, Math.floor((Date.now() - safeStart) / 1000));
+    const hh = Math.floor(elapsedSec / 3600);
+    const mm = String(Math.floor((elapsedSec % 3600) / 60)).padStart(2, '0');
+    const ss = String(elapsedSec % 60).padStart(2, '0');
+    return hh > 0 ? `${hh}:${mm}` : `${mm}:${ss}`;
+  }
+
   function updateTelemetryUI() {
     const speedEl = document.getElementById('telemSpeed');
     const distEl = document.getElementById('telemDist');
@@ -2905,13 +2914,18 @@
     if (distEl) distEl.textContent = totalDistanceKm.toFixed(1);
     if (ascEl) ascEl.textContent = `+${Math.round(totalAscentM)}m`;
     if (timeEl) {
-      const elapsedSec = Math.max(0, Math.floor((Date.now() - rideStartTime) / 1000));
-      const hh = Math.floor(elapsedSec / 3600);
-      const mm = String(Math.floor((elapsedSec % 3600) / 60)).padStart(2, '0');
-      const ss = String(elapsedSec % 60).padStart(2, '0');
-      timeEl.textContent = hh > 0 ? `${hh}:${mm}` : `${mm}:${ss}`;
+      timeEl.textContent = formatElapsedTelemetryTime(rideStartTime);
     }
+    syncLockedTelemetryValues();
   }
+
+  setInterval(() => {
+    const timeEl = document.getElementById('telemTime');
+    if (timeEl) {
+      timeEl.textContent = formatElapsedTelemetryTime(rideStartTime);
+    }
+    syncLockedTelemetryValues();
+  }, 1000);
 
   // Perpendicular distance (degrees) for Douglas-Peucker geometry simplification
   function perpendicularDistDeg(pt, lineStart, lineEnd) {
@@ -6035,7 +6049,7 @@ window.addEventListener('offline', () => {
     }).join('\n');
 
     return `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="TrailSync v15.2.10" xmlns="http://www.topografix.com/GPX/1/1">
+<gpx version="1.1" creator="TrailSync v15.2.11" xmlns="http://www.topografix.com/GPX/1/1">
   <metadata><name>${escapeXml(titleText)}</name>${descTag}</metadata>
   <trk><name>${escapeXml(titleText)}</name>${descTag}<trkseg>
 ${trkpts}
