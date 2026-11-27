@@ -10,7 +10,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
   <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
-  <title>TrailSync v14.24 — Salida de Audio por Auriculares Bluetooth y Seguimiento del Dispositivo</title>
+  <title>TrailSync v14.33 — Repositorio Local de Rutas con Cargar y Eliminar</title>
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
         onerror="this.onerror=null;this.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';" />
@@ -1191,14 +1191,7 @@
         🔄 Actualizar app <span id="newVersionBadge"></span>
       </button>
 
-      <button type="button" id="btnTempShareAudioLog" onclick="exportAndShareAudioLogViaWhatsApp()"
-              title="Temporal: Enviar log completo de audio/WebRTC por WhatsApp y descargar archivo .txt"
-              style="display:inline-flex;align-items:center;gap:6px;background:#16a34a;color:#ffffff;border:1.5px solid #4ade80;border-radius:999px;padding:6px 12px;font-size:11.5px;font-weight:800;box-shadow:0 4px 14px rgba(0,0,0,0.45);cursor:pointer;">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91C21.95 6.45 17.5 2 12.04 2zm5.82 14.01c-.24.68-1.41 1.3-1.95 1.38-.5.08-1.13.11-1.82-.11-.42-.13-.96-.31-1.65-.61-2.9-1.25-4.79-4.17-4.94-4.36-.14-.19-1.18-1.57-1.18-3 0-1.43.75-2.13 1.02-2.42.27-.29.59-.36.79-.36.2 0 .39.01.56.01.18 0 .42-.07.66.5.24.58.82 2.01.89 2.16.07.14.12.31.02.5-.1.19-.15.31-.29.48-.14.17-.31.38-.44.51-.15.14-.3.3-.13.59.17.29.76 1.25 1.63 2.03 1.12 1 2.06 1.31 2.35 1.45.29.15.46.12.63-.07.17-.19.73-.85.92-1.14.19-.29.39-.24.66-.14.27.1 1.7.8 1.99.95.29.14.48.22.55.34.07.12.07.69-.17 1.37z"/>
-        </svg>
-        <span>Log Audio WA</span>
-      </button>
+
     </div>
 
     <!-- TOP-CENTER: GROUP MEMBER BUBBLES -->
@@ -1272,6 +1265,10 @@
 
         <button class="menu-item-btn mi-offline" onclick="closeQuickMenu();openOfflineModal()">
           <span>🇪🇸🇵🇹</span> <span>Descargar mapa offline</span>
+        </button>
+
+        <button class="menu-item-btn mi-gpx" onclick="closeQuickMenu();openLocalRoutesRepoModal()">
+          <span>📚</span> <span>Mis rutas guardadas</span>
         </button>
 
         <label class="menu-item-btn mi-gpx" style="margin:0;">
@@ -1750,6 +1747,7 @@
 
     <div class="btn-row" style="margin-top:8px;">
       <button class="solid-btn" style="background:#0284c7;color:#fff;" onclick="toggleLegalOverlayVisibility()" id="btnToggleLegalLines">👁️ Ocultar colores en mapa</button>
+      <button class="solid-btn" style="background:#1e293b;color:#38bdf8;border:1px solid #38bdf8;" onclick="closeModal('routeLegalModal');checkActiveRouteLegality(true, true);">🔄 Reanalizar</button>
       <button class="solid-btn" style="background:#334155;color:#fff;" onclick="closeModal('routeLegalModal')">Cerrar</button>
     </div>
   </div>
@@ -1820,13 +1818,77 @@
   </div>
 </div>
 
+<!-- MODAL: LOCAL ROUTES REPOSITORY (LOAD, VIEW DETAILS/PHOTOS, SHARE OR DELETE) -->
+<div class="modal-backdrop" id="localRoutesRepoModal">
+  <div class="modal-card">
+    <h2>📚 Repositorio de rutas guardadas</h2>
+    <p style="font-size:12.5px;color:#cbd5e1;margin-bottom:10px;">
+      Consulta tus rutas guardadas con su descripción y fotos, cárgalas en el mapa o elimina las que ya no necesites.
+    </p>
+
+    <div id="localRepoRoutesContainer" style="max-height:360px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;margin-bottom:10px;"></div>
+
+    <div class="btn-row">
+      <button type="button" class="solid-btn" style="background:#334155;color:#fff;" onclick="closeModal('localRoutesRepoModal')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: SAVE FINISHED ROUTE (NAME, DESCRIPTION, PHOTOS & OPTIONAL EXPORT) -->
+<div class="modal-backdrop" id="saveFinishedRouteModal">
+  <div class="modal-card">
+    <h2>💾 ¿Guardar ruta realizada?</h2>
+    <p id="saveRouteSummaryMetrics" style="font-size:12.5px;color:#cbd5e1;margin-bottom:10px;">
+      Has detenido la grabación. Indica los datos si quieres guardar esta ruta en tu historial o descargar el paquete.
+    </p>
+
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px;">
+      <div>
+        <label style="display:block;font-size:11.5px;color:#94a3b8;margin-bottom:3px;font-weight:700;">Nombre de la ruta *</label>
+        <input id="saveRouteNameInput" type="text" placeholder="Ej. Pistas Guriezo - Castro Urdiales"
+               style="width:100%;box-sizing:border-box;background:#111622;color:#f8fafc;border:1px solid #334155;border-radius:9px;padding:8px 10px;font-size:13px;" />
+      </div>
+
+      <div>
+        <label style="display:block;font-size:11.5px;color:#94a3b8;margin-bottom:3px;font-weight:700;">Descripción y notas del recorrido</label>
+        <textarea id="saveRouteDescInput" rows="3" placeholder="Estado de las pistas, puntos de interés, dificultad, observaciones..."
+                  style="width:100%;box-sizing:border-box;background:#111622;color:#f8fafc;border:1px solid #334155;border-radius:9px;padding:8px 10px;font-size:12.5px;resize:vertical;"></textarea>
+      </div>
+
+      <div>
+        <label style="display:block;font-size:11.5px;color:#94a3b8;margin-bottom:4px;font-weight:700;">Fotos de la ruta (opcional)</label>
+        <input id="saveRoutePhotosInput" type="file" accept="image/*" multiple onchange="handleSaveRoutePhotosSelect(event)"
+               style="width:100%;font-size:12px;color:#cbd5e1;" />
+        <div id="saveRoutePhotosPreview" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;"></div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:7px;margin-top:8px;">
+      <button type="button" class="solid-btn" style="width:100%;background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;border:1px solid #4ade80;padding:10px 12px;font-size:13px;" onclick="confirmSaveFinishedRoute(true)">
+        💾 Guardar ruta + descargar .GPX y fotos
+      </button>
+      <button type="button" class="solid-btn" style="width:100%;background:#0284c7;color:#fff;padding:9px 12px;font-size:12.5px;" onclick="confirmSaveFinishedRoute(false)">
+        📁 Guardar solo en mis rutas locales
+      </button>
+      <button type="button" class="solid-btn" style="width:100%;background:#334155;color:#cbd5e1;padding:8px 12px;font-size:12px;" onclick="discardSaveFinishedRoute()">
+        No guardar (solo finalizar)
+      </button>
+    </div>
+
+    <div id="savedLocalRoutesSection" style="margin-top:12px;border-top:1px solid #334155;padding-top:10px;display:none;">
+      <div style="font-size:12px;font-weight:800;color:#f8fafc;margin-bottom:6px;">📚 Rutas guardadas en este dispositivo</div>
+      <div id="savedLocalRoutesList" style="max-height:150px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;"></div>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: SETTINGS + APP UPDATE CHECK + GROUP ALERTS -->
 <div class="modal-backdrop" id="settingsModal">
   <div class="modal-card">
     <h2>Ajustes de ruta y App</h2>
     <div style="background:#18141a;padding:10px 12px;border-radius:12px;margin-bottom:12px;border:1px solid #334155;display:flex;align-items:center;justify-content:space-between;gap:8px;">
       <div>
-        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">14.24.0</span></div>
+        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">14.33.0</span></div>
         <div style="font-size:11px;color:#94a3b8;" id="webVerStatusLabel">Comprobando actualizaciones en la web...</div>
       </div>
       <button class="solid-btn" style="flex:0 0 auto;background:#16a34a;color:#fff;padding:8px 12px;font-size:12px;" onclick="manualCheckForUpdates()">🔄 Buscar / Actualizar</button>
@@ -1858,7 +1920,7 @@
 </div>
 
 <script>
-  const APP_VERSION = '14.24.0';
+  const APP_VERSION = '14.33.0';
   let swWaitingWorker = null;
   let remoteVersionFound = null;
 
@@ -2341,7 +2403,14 @@
   let totalAscentM = 0;
   let lastAltitudeM = null;
   let currentSpeedKmh = 0;
-  let offlineMessageQueue = JSON.parse(localStorage.getItem('trailsync_offline_queue') || '[]');
+  let offlineMessageQueue = (() => {
+    try {
+      const parsed = JSON.parse(localStorage.getItem('trailsync_offline_queue') || '[]');
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+      return [];
+    }
+  })();
 
   let plannedCoords = [];
 
@@ -2743,23 +2812,45 @@ function keepOriginalRouteAndNavigate() {
     await checkActiveRouteLegality(true);
   }
 
-  async function checkActiveRouteLegality(openReportModal = true) {
+  async async function checkActiveRouteLegality(openReportModal = true, forceRefresh = false) {
     if (!plannedCoords || plannedCoords.length < 2) {
       return showToast('Primero genera una ruta o carga un archivo GPX');
     }
 
+    const currentRouteKey = (activeSharedRoute && activeSharedRoute.id)
+      ? activeSharedRoute.id
+      : `${plannedCoords.length}_${plannedCoords[0][0].toFixed(5)}_${plannedCoords[plannedCoords.length - 1][0].toFixed(5)}`;
+
+    if (!forceRefresh && lastLegalAuditResult && lastLegalAuditResult.routeKey === currentRouteKey) {
+      if (legalOverlayLayer && !map.hasLayer(legalOverlayLayer)) {
+        legalOverlayLayer.addTo(map);
+        legalOverlayVisible = true;
+      }
+      if (openReportModal) {
+        openModal('routeLegalModal');
+        showToast('⚡ Informe legal cargado al instante desde memoria');
+      }
+      return;
+    }
+
     const btn = document.getElementById('btnCheckRouteLegal');
     const pill = document.getElementById('floatingLegalCheckPill');
-    if (btn) { btn.disabled = true; btn.textContent = '⏳ Analizando legalidad...'; }
-    if (pill) { pill.textContent = '⏳ Comprobando legalidad...'; }
+    const setLegalProgress = (pct, label) => {
+      const clamped = Math.max(0, Math.min(100, Math.round(pct)));
+      const text = `⏳ Legalidad ${clamped}% · ${label}`;
+      if (btn) { btn.disabled = true; btn.textContent = text; }
+      if (pill) { pill.textContent = text; }
+    };
+
+    setLegalProgress(5, 'Preparando tramos...');
 
     try {
       const sampled = sampleRouteForLegalAudit(plannedCoords, 55);
-      const bounds = L.latLngBounds(sampled).pad(0.08);
+      const bounds = L.latLngBounds(sampled).pad(0.04);
       const s = bounds.getSouth().toFixed(5), w = bounds.getWest().toFixed(5);
       const n = bounds.getNorth().toFixed(5), e = bounds.getEast().toFixed(5);
 
-      const overpassQuery = `[out:json][timeout:18];(
+      const overpassQuery = `[out:json][timeout:10];(
         way["highway"](${s},${w},${n},${e});
         way["boundary"="protected_area"](${s},${w},${n},${e});
         way["leisure"="nature_reserve"](${s},${w},${n},${e});
@@ -2770,18 +2861,27 @@ function keepOriginalRouteAndNavigate() {
         'https://overpass.kumi.systems/api/interpreter'
       ];
 
+      setLegalProgress(15, 'Consultando mapa...');
+
       let osmElements = null;
-      for (const ep of endpoints) {
+      for (let epIdx = 0; epIdx < endpoints.length; epIdx++) {
+        const ep = endpoints[epIdx];
+        setLegalProgress(15 + epIdx * 15, epIdx === 0 ? 'Servidor principal...' : 'Servidor alternativo...');
         try {
+          const controller = new AbortController();
+          const tid = setTimeout(() => controller.abort(), 8500);
           const resp = await fetch(ep, {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
-            body: 'data=' + encodeURIComponent(overpassQuery)
+            body: 'data=' + encodeURIComponent(overpassQuery),
+            signal: controller.signal
           });
+          clearTimeout(tid);
           if (resp.ok) {
             const json = await resp.json();
             if (json && Array.isArray(json.elements)) {
               osmElements = json.elements;
+              setLegalProgress(45, 'Cartografía recibida');
               break;
             }
           }
@@ -2789,15 +2889,16 @@ function keepOriginalRouteAndNavigate() {
       }
 
       if (!osmElements) {
-        throw new Error('No se pudo consultar la cartografía pública (revisa tu conexión)');
+        throw new Error(!navigator.onLine ? 'Sin conexión a Internet para consultar la cartografía legal' : 'Servidores cartográficos ocupados en este momento; inténtalo de nuevo en unos segundos');
       }
 
       const highwayWays = osmElements.filter(el => el.type === 'way' && el.tags && el.tags.highway && Array.isArray(el.geometry) && el.geometry.length >= 2);
       const protectedPolys = osmElements.filter(el => el.type === 'way' && el.tags && (el.tags.boundary === 'protected_area' || el.tags.leisure === 'nature_reserve') && Array.isArray(el.geometry) && el.geometry.length >= 4);
 
-      // Classify each sampled segment
+      // Classify each sampled segment with live percentage (45% -> 88%)
       const rawSegments = [];
-      for (let i = 0; i < sampled.length - 1; i++) {
+      const totalSegs = Math.max(1, sampled.length - 1);
+      for (let i = 0; i < totalSegs; i++) {
         const p1 = sampled[i], p2 = sampled[i + 1];
         const midLat = (p1[0] + p2[0]) / 2;
         const midLon = (p1[1] + p2[1]) / 2;
@@ -2812,7 +2913,7 @@ function keepOriginalRouteAndNavigate() {
         }
 
         let bestWay = null;
-        let bestDistM = 45; // max 45m snap radius
+        let bestDistM = 45;
         for (const way of highwayWays) {
           const g = way.geometry;
           for (let k = 0; k < g.length - 1; k++) {
@@ -2831,7 +2932,17 @@ function keepOriginalRouteAndNavigate() {
           level: verdict.level,
           reason: verdict.reason
         });
+
+        if (i % 6 === 0 || i === totalSegs - 1) {
+          const segPct = 45 + ((i + 1) / totalSegs) * 43;
+          setLegalProgress(segPct, `Tramo ${i + 1}/${totalSegs}`);
+          if (i % 12 === 0) {
+            await new Promise(r => setTimeout(r, 0));
+          }
+        }
       }
+
+      setLegalProgress(90, 'Pintando ruta...');
 
       // Merge contiguous segments with same level & reason
       const merged = [];
@@ -2850,17 +2961,42 @@ function keepOriginalRouteAndNavigate() {
         }
       }
 
-      // Paint color-coded segments on map
+      function extractFullRouteSubpath(origCoords, startPt, endPt) {
+        if (!Array.isArray(origCoords) || origCoords.length < 2) return [startPt, endPt];
+        let bestStartIdx = 0, bestStartDist = Infinity;
+        let bestEndIdx = origCoords.length - 1, bestEndDist = Infinity;
+        for (let i = 0; i < origCoords.length; i++) {
+          const dS = Math.hypot(origCoords[i][0] - startPt[0], origCoords[i][1] - startPt[1]);
+          if (dS < bestStartDist) { bestStartDist = dS; bestStartIdx = i; }
+        }
+        const searchStart = bestStartIdx;
+        for (let j = searchStart; j < origCoords.length; j++) {
+          const dE = Math.hypot(origCoords[j][0] - endPt[0], origCoords[j][1] - endPt[1]);
+          if (dE <= bestEndDist) { bestEndDist = dE; bestEndIdx = j; }
+        }
+        if (bestEndIdx <= bestStartIdx) return [startPt, endPt];
+        const slice = origCoords.slice(bestStartIdx, bestEndIdx + 1);
+        slice[0] = startPt;
+        slice[slice.length - 1] = endPt;
+        return slice;
+      }
+
       if (legalOverlayLayer) {
         legalOverlayLayer.clearLayers();
         legalOverlayVisible = true;
         if (!map.hasLayer(legalOverlayLayer)) legalOverlayLayer.addTo(map);
         const colorMap = { green: '#22c55e', amber: '#f59e0b', red: '#ef4444' };
+        const baseRouteWeight = (plannedLine && plannedLine.options && plannedLine.options.weight) ? plannedLine.options.weight : 6;
         merged.forEach(m => {
-          L.polyline(m.coords, {
+          const firstPt = m.coords[0];
+          const lastPt = m.coords[m.coords.length - 1];
+          const exactPath = extractFullRouteSubpath(plannedCoords, firstPt, lastPt);
+          L.polyline(exactPath, {
             color: colorMap[m.level] || '#22c55e',
-            weight: 9,
-            opacity: 0.92
+            weight: baseRouteWeight,
+            opacity: 0.94,
+            lineCap: 'round',
+            lineJoin: 'round'
           }).bindPopup(`<strong>${m.level === 'red' ? '🔴 Tramo restringido' : (m.level === 'amber' ? '🟠 Precaución / Protegido' : '🟢 Sin restricción')}</strong><br>${escapeXml(m.reason)}<br>Longitud: ${m.km.toFixed(2)} km`).addTo(legalOverlayLayer);
         });
       }
@@ -2872,7 +3008,7 @@ function keepOriginalRouteAndNavigate() {
         else redKm += m.km;
       });
 
-      lastLegalAuditResult = { greenKm, amberKm, redKm, segments: merged };
+      lastLegalAuditResult = { routeKey: currentRouteKey, greenKm, amberKm, redKm, segments: merged };
 
       document.getElementById('legalGreenKm').textContent = `${greenKm.toFixed(1)} km`;
       document.getElementById('legalAmberKm').textContent = `${amberKm.toFixed(1)} km`;
@@ -2899,6 +3035,8 @@ function keepOriginalRouteAndNavigate() {
           <div style="color:#cbd5e1;font-size:11.5px;">${escapeXml(m.reason)}</div>
         </div>`;
       }).join('');
+
+      setLegalProgress(100, 'Completado');
 
       if (btn) {
         btn.disabled = false;
@@ -2945,6 +3083,7 @@ function keepOriginalRouteAndNavigate() {
 
   function clearSharedRoute() {
     activeSharedRoute = null;
+    lastSeenRouteId = null;
     plannedCoords = [];
     plannedLine.setLatLngs([]);
     clearLegalOverlay();
@@ -3266,12 +3405,12 @@ function keepOriginalRouteAndNavigate() {
 
     if (mode.pistaStyle) {
       mapEl.classList.add('offline-pista-mode');
-      plannedLine.setStyle({ weight: 8, color: '#dc2626' });
+      if (plannedLine) plannedLine.setStyle({ weight: 8, color: '#dc2626' });
     } else if (mode.dmd2Style) {
       mapEl.classList.add('dmd2-trail-mode');
-      plannedLine.setStyle({ weight: 7, color: baseRouteColor });
+      if (plannedLine) plannedLine.setStyle({ weight: 7, color: baseRouteColor });
     } else {
-      plannedLine.setStyle({ weight: 6, color: baseRouteColor });
+      if (plannedLine) plannedLine.setStyle({ weight: 6, color: baseRouteColor });
     }
 
     const lp1 = document.getElementById('layerNamePill'); if (lp1) lp1.textContent = `🗺️ Capa: ${mode.title} ▾`;
@@ -3522,6 +3661,15 @@ function keepOriginalRouteAndNavigate() {
   }
 
   async function leaveGroupNow() {
+    if (recordedTrack.length >= 5 || totalDistanceKm >= 0.2) {
+      isRecording = false;
+      const pill = document.getElementById('livePill');
+      const shape = document.getElementById('recIconShape');
+      if (pill) { pill.textContent = 'DETENIDO'; pill.classList.add('paused'); }
+      if (shape) shape.className = 'rec-play';
+      openSaveFinishedRoutePrompt(true);
+      return;
+    }
     if (typeof setGroupVoiceMode === 'function' && groupVoiceMode !== 'off') {
       await setGroupVoiceMode('off');
     }
@@ -3668,7 +3816,7 @@ window.addEventListener('offline', () => {
       brokers.forEach((brokerUrl, idx) => {
         try {
           const client = window.mqtt.connect(brokerUrl, {
-            clientId: `ts1424_${myPeerId}_${idx}_${Math.floor(Math.random()*999)}`,
+            clientId: `ts1433_${myPeerId}_${idx}_${Math.floor(Math.random()*999)}`,
             reconnectPeriod: 3000,
             connectTimeout: 8000
           });
@@ -3797,13 +3945,19 @@ window.addEventListener('offline', () => {
     }
 
     const isNewFriend = !peers[msg.peerId];
+    const peerStatusText = msg.kind === 'SOS'
+      ? '🆘 S.O.S.'
+      : (msg.kind === 'STOP'
+        ? msg.reason
+        : (msg.kind === 'ZONE_ALERT' ? `🚫 Zona restr.: ${msg.zoneReason || ''}`.trim() : 'En ruta'));
+
     peers[msg.peerId] = {
       nick: msg.nick || 'Amigo',
       lat: msg.lat,
       lon: msg.lon,
       speedKmh: typeof msg.speedKmh === 'number' ? msg.speedKmh : 0,
       lastSeen: Date.now(),
-      status: msg.kind === 'SOS' ? '🆘 S.O.S.' : (msg.kind === 'STOP' ? msg.reason : 'En ruta')
+      status: peerStatusText
     };
     peerAlertedIds.delete(msg.peerId);
 
@@ -3813,6 +3967,10 @@ window.addEventListener('offline', () => {
     } else if (msg.kind === 'STOP') {
       showToast(`✋ ${peers[msg.peerId].nick} pide parada: ${msg.reason || ''}`);
       speakAlert(`${peers[msg.peerId].nick} pide parada: ${msg.reason || ''}`);
+    } else if (msg.kind === 'ZONE_ALERT') {
+      const zReason = msg.zoneReason || 'zona restringida';
+      showToast(`🚫 ${peers[msg.peerId].nick} ha entrado en zona restringida: ${zReason}`);
+      speakAlert(`Atención, ${peers[msg.peerId].nick} ha entrado en zona restringida: ${zReason}`);
     }
 
     updatePeerMarkers();
@@ -4082,12 +4240,33 @@ window.addEventListener('offline', () => {
     return createFallbackTopoCanvas(coords, modeObj.pistaStyle);
   }
 
+  
+  const inFlightTileCacheUrls = new Set();
+  async function autoCacheLoadedTileUrl(tileUrl) {
+    if (!tileUrl || !navigator.onLine || !('caches' in window)) return;
+    if (inFlightTileCacheUrls.has(tileUrl)) return;
+    inFlightTileCacheUrls.add(tileUrl);
+    try {
+      const cache = await caches.open(TILE_CACHE_NAME);
+      const exists = await cache.match(tileUrl);
+      if (!exists) {
+        const resp = await fetch(tileUrl, { mode: 'cors' });
+        if (resp && resp.ok) {
+          await cache.put(tileUrl, resp);
+        }
+      }
+    } catch (e) {
+      // Ignore CORS or transient network errors so tile rendering is never affected
+    } finally {
+      inFlightTileCacheUrls.delete(tileUrl);
+    }
+  }
+
   function buildOfflineTileLayer(modeObj) {
     const OfflineLayer = L.TileLayer.extend({
       createTile: function(coords, done) {
         const tile = document.createElement('img');
         tile.alt = '';
-        tile.crossOrigin = 'anonymous';
         const url = this.getTileUrl(coords);
         const fallbackUrl = modeObj.fallbackUrl
           ? modeObj.fallbackUrl.replace('{z}', coords.z).replace('{x}', coords.x).replace('{y}', coords.y)
@@ -4120,17 +4299,15 @@ window.addEventListener('offline', () => {
 
         const loadFromNetwork = () => {
           let triedSecondary = false;
+          let activeSrcUrl = url;
           tile.onload = () => {
-            if (navigator.onLine) {
-              fetch(tile.src, { mode: 'cors' })
-                .then(r => { if (r.ok) caches.open(TILE_CACHE_NAME).then(c => c.put(url, r)); })
-                .catch(() => {});
-            }
+            if (activeSrcUrl) autoCacheLoadedTileUrl(activeSrcUrl);
             done(null, tile);
           };
           tile.onerror = () => {
             if (!triedSecondary && fallbackUrl && navigator.onLine) {
               triedSecondary = true;
+              activeSrcUrl = fallbackUrl;
               tile.src = fallbackUrl;
             } else {
               serveOfflineCachedOrFallback();
@@ -4484,6 +4661,267 @@ window.addEventListener('offline', () => {
     }
   }
 
+
+  // --- POST-ROUTE SAVE PROMPT (NAME, DESCRIPTION, PHOTOS & OPTIONAL GPX/PHOTO EXPORT) ---
+  let pendingRoutePhotos = [];
+  let leaveGroupAfterSavePrompt = false;
+
+  function getSavedLocalRoutes() {
+    try {
+      const raw = JSON.parse(localStorage.getItem('trailsync_saved_routes_v1') || '[]');
+      return Array.isArray(raw) ? raw : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function setSavedLocalRoutes(list) {
+    try {
+      localStorage.setItem('trailsync_saved_routes_v1', JSON.stringify(list.slice(0, 25)));
+    } catch (e) {
+      // Fallback without photos if storage quota is tight
+      try {
+        const compact = list.slice(0, 25).map(r => ({ ...r, photoThumbs: [] }));
+        localStorage.setItem('trailsync_saved_routes_v1', JSON.stringify(compact));
+      } catch (e2) {}
+    }
+  }
+
+  function createCompressedThumbDataUrl(file) {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          const maxDim = 480;
+          let w = img.naturalWidth || 480;
+          let h = img.naturalHeight || 480;
+          if (w > maxDim || h > maxDim) {
+            if (w >= h) { h = Math.round((h * maxDim) / w); w = maxDim; }
+            else { w = Math.round((w * maxDim) / h); h = maxDim; }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL('image/jpeg', 0.72));
+        };
+        img.onerror = () => resolve(null);
+        img.src = reader.result;
+      };
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function handleSaveRoutePhotosSelect(ev) {
+    const files = Array.from((ev && ev.target && ev.target.files) || []);
+    const preview = document.getElementById('saveRoutePhotosPreview');
+    pendingRoutePhotos = [];
+    if (preview) preview.innerHTML = '';
+
+    for (const f of files.slice(0, 6)) {
+      const thumbUrl = await createCompressedThumbDataUrl(f);
+      pendingRoutePhotos.push({ file: f, name: f.name, thumbUrl });
+      if (preview && thumbUrl) {
+        const imgEl = document.createElement('img');
+        imgEl.src = thumbUrl;
+        imgEl.alt = f.name;
+        imgEl.style.cssText = 'width:58px;height:58px;object-fit:cover;border-radius:8px;border:1px solid #475569;';
+        preview.appendChild(imgEl);
+      }
+    }
+  }
+
+  function buildSavedRouteCardHtml(r, idx, detailed = false) {
+    const thumbs = Array.isArray(r.photoThumbs) ? r.photoThumbs : [];
+    const descHtml = (detailed && r.description)
+      ? `<div style="font-size:11.5px;color:#cbd5e1;margin-top:4px;line-height:1.35;">${escapeXml(r.description)}</div>`
+      : '';
+    const photosHtml = (detailed && thumbs.length)
+      ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;">${thumbs.map(src => `<img src="${src}" alt="" style="width:54px;height:54px;object-fit:cover;border-radius:7px;border:1px solid #475569;" />`).join('')}</div>`
+      : '';
+
+    return `<div style="background:#18141a;border:1px solid #334155;border-radius:10px;padding:8px 10px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+        <div style="min-width:0;flex:1;">
+          <div style="font-size:12.5px;font-weight:800;color:#f8fafc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeXml(r.name)}</div>
+          <div style="font-size:11px;color:#94a3b8;margin-top:2px;">${Number(r.distanceKm || 0).toFixed(1)} km · +${Math.round(r.ascentM || 0)} m · 📷 ${thumbs.length} · ${escapeXml(r.dateStr || '')}</div>
+          ${descHtml}
+        </div>
+        <div style="display:flex;gap:5px;flex:0 0 auto;">
+          <button type="button" class="solid-btn" style="background:#0284c7;color:#fff;padding:5px 9px;font-size:11px;" onclick="loadSavedLocalRouteOntoMap(${idx})">🗺️ Cargar</button>
+          <button type="button" class="solid-btn" style="background:#991b1b;color:#fecaca;border:1px solid #ef4444;padding:5px 8px;font-size:11px;" title="Eliminar ruta guardada" onclick="deleteSavedLocalRoute(${idx})">🗑️</button>
+        </div>
+      </div>
+      ${photosHtml}
+    </div>`;
+  }
+
+  function renderSavedLocalRoutesList() {
+    const routes = getSavedLocalRoutes();
+
+    const sec = document.getElementById('savedLocalRoutesSection');
+    const listEl = document.getElementById('savedLocalRoutesList');
+    if (sec && listEl) {
+      if (!routes.length) {
+        sec.style.display = 'none';
+      } else {
+        sec.style.display = 'block';
+        listEl.innerHTML = routes.map((r, idx) => buildSavedRouteCardHtml(r, idx, false)).join('');
+      }
+    }
+
+    const repoContainer = document.getElementById('localRepoRoutesContainer');
+    if (repoContainer) {
+      if (!routes.length) {
+        repoContainer.innerHTML = `<div style="background:#18141a;border:1px solid #334155;border-radius:10px;padding:14px;text-align:center;color:#94a3b8;font-size:12.5px;">
+          Todavía no tienes rutas guardadas en este dispositivo.<br>Al detener una grabación podrás guardarla con nombre, descripción y fotos.
+        </div>`;
+      } else {
+        repoContainer.innerHTML = routes.map((r, idx) => buildSavedRouteCardHtml(r, idx, true)).join('');
+      }
+    }
+  }
+
+  function openLocalRoutesRepoModal() {
+    renderSavedLocalRoutesList();
+    openModal('localRoutesRepoModal');
+  }
+
+  function deleteSavedLocalRoute(idx) {
+    const routes = getSavedLocalRoutes();
+    const target = routes[idx];
+    if (!target) return;
+    if (!window.confirm(`¿Eliminar la ruta "${target.name}" de tus rutas guardadas?`)) return;
+    routes.splice(idx, 1);
+    setSavedLocalRoutes(routes);
+    renderSavedLocalRoutesList();
+    showToast(`🗑️ Ruta "${target.name}" eliminada del repositorio`);
+  }
+
+  function loadSavedLocalRouteOntoMap(idx) {
+    const routes = getSavedLocalRoutes();
+    const item = routes[idx];
+    if (!item || !Array.isArray(item.coords) || item.coords.length < 2) {
+      return showToast('⚠️ Esta ruta guardada no tiene puntos suficientes');
+    }
+    applySharedGroupRoute({
+      id: item.id,
+      title: item.name,
+      author: userNick,
+      color: '#ea580c',
+      distanceKm: item.distanceKm,
+      coords: item.coords,
+      ts: Date.now()
+    }, false);
+    fitSharedRouteBounds();
+    closeModal('saveFinishedRouteModal');
+    closeModal('localRoutesRepoModal');
+    showToast(`🧭 Ruta "${item.name}" cargada en el mapa`);
+  }
+
+  function openSaveFinishedRoutePrompt(afterLeaveGroup = false) {
+    leaveGroupAfterSavePrompt = Boolean(afterLeaveGroup);
+    pendingRoutePhotos = [];
+    const nameInput = document.getElementById('saveRouteNameInput');
+    const descInput = document.getElementById('saveRouteDescInput');
+    const photosInput = document.getElementById('saveRoutePhotosInput');
+    const preview = document.getElementById('saveRoutePhotosPreview');
+    const metricsEl = document.getElementById('saveRouteSummaryMetrics');
+
+    const defaultTitle = (activeSharedRoute && activeSharedRoute.title)
+      ? activeSharedRoute.title
+      : `${groupName} (${new Date().toLocaleDateString()})`;
+    if (nameInput) nameInput.value = defaultTitle;
+    if (descInput) descInput.value = '';
+    if (photosInput) photosInput.value = '';
+    if (preview) preview.innerHTML = '';
+
+    const ptsCount = recordedTrack.length > 1 ? recordedTrack.length : plannedCoords.length;
+    const distShown = recordedTrack.length > 1 ? totalDistanceKm : computeTotalDistanceKm(plannedCoords);
+    if (metricsEl) {
+      metricsEl.textContent = `Recorrido: ${distShown.toFixed(1)} km · +${Math.round(totalAscentM)} m · ${ptsCount} puntos. ¿Quieres guardar esta ruta con nombre, descripción y fotos?`;
+    }
+
+    renderSavedLocalRoutesList();
+    openModal('saveFinishedRouteModal');
+  }
+
+  async function finalizeAfterSavePrompt() {
+    closeModal('saveFinishedRouteModal');
+    if (leaveGroupAfterSavePrompt) {
+      leaveGroupAfterSavePrompt = false;
+      if (typeof setGroupVoiceMode === 'function' && groupVoiceMode !== 'off') {
+        await setGroupVoiceMode('off');
+      }
+      await publishGroupLeaveNotice();
+      returnToLobby(false);
+      showToast('🚪 Has salido del grupo y se ha avisado a los compañeros');
+    }
+  }
+
+  async function discardSaveFinishedRoute() {
+    showToast('⏹️ Ruta finalizada sin guardar');
+    await finalizeAfterSavePrompt();
+  }
+
+  async function confirmSaveFinishedRoute(downloadFiles = true) {
+    const rawName = (document.getElementById('saveRouteNameInput')?.value || '').trim();
+    const routeTitle = rawName || `${groupName} (${new Date().toLocaleDateString()})`;
+    const routeDesc = (document.getElementById('saveRouteDescInput')?.value || '').trim();
+
+    const coordsToSave = recordedTrack.length > 1
+      ? recordedTrack.map(p => [p.lat, p.lon])
+      : [...plannedCoords];
+    const distKm = recordedTrack.length > 1
+      ? totalDistanceKm
+      : computeTotalDistanceKm(coordsToSave);
+
+    const entry = {
+      id: 'saved_' + Date.now(),
+      name: routeTitle,
+      description: routeDesc,
+      distanceKm: Number(distKm.toFixed(2)),
+      ascentM: Math.round(totalAscentM),
+      dateStr: new Date().toLocaleDateString(),
+      coords: simplifyRoutePreservingTurns(coordsToSave, 3500),
+      photoThumbs: pendingRoutePhotos.map(p => p.thumbUrl).filter(Boolean)
+    };
+
+    const existing = getSavedLocalRoutes();
+    existing.unshift(entry);
+    setSavedLocalRoutes(existing);
+
+    if (downloadFiles) {
+      exportRecordedGPX({
+        customName: routeTitle,
+        customDesc: routeDesc,
+        photoNames: pendingRoutePhotos.map(p => p.name)
+      });
+      // Also download attached route photos with matching route prefix so nothing is lost
+      const safeBase = routeTitle.replace(/[^a-zA-Z0-9_-]+/g, '_');
+      pendingRoutePhotos.forEach((p, idx) => {
+        if (!p.file) return;
+        const ext = (p.name.split('.').pop() || 'jpg').toLowerCase();
+        const url = URL.createObjectURL(p.file);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${safeBase}_foto_${idx + 1}.${ext}`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      });
+      showToast(`💾 Ruta "${routeTitle}" guardada y descargada (.GPX + ${pendingRoutePhotos.length} fotos)`);
+    } else {
+      showToast(`📁 Ruta "${routeTitle}" guardada en tu dispositivo`);
+    }
+
+    await finalizeAfterSavePrompt();
+  }
+
   function toggleLiveRecording() {
     const pill = document.getElementById('livePill');
     const shape = document.getElementById('recIconShape');
@@ -4492,8 +4930,7 @@ window.addEventListener('offline', () => {
       if (pill) { pill.textContent = 'DETENIDO'; pill.classList.add('paused'); }
       shape.className = 'rec-play';
       recordIncident('STOP_TRACK', 'Fin de grabación en vivo');
-      exportRecordedGPX();
-      showToast('💾 Ruta detenida y archivo .GPX descargado');
+      openSaveFinishedRoutePrompt(false);
     } else {
       isRecording = true;
       if (pill) { pill.textContent = 'EN VIVO'; pill.classList.remove('paused'); }
@@ -4503,23 +4940,36 @@ window.addEventListener('offline', () => {
     }
   }
 
-  function exportRecordedGPX() {
+  function exportRecordedGPX(meta = {}) {
+    const titleText = (meta.customName || `${groupName} - ${new Date().toLocaleDateString()}`).trim();
+    const userDesc = (meta.customDesc || '').trim();
+    const photosNote = Array.isArray(meta.photoNames) && meta.photoNames.length
+      ? ` | Fotos adjuntas (${meta.photoNames.length}): ${meta.photoNames.join(', ')}`
+      : '';
+    const metricsSummary = `Distancia: ${totalDistanceKm.toFixed(2)} km | Desnivel+: ${Math.round(totalAscentM)} m | Puntos: ${recordedTrack.length} | Waypoints: ${recordedIncidents.length}${photosNote}`;
+    const fullDesc = userDesc ? `${userDesc} — ${metricsSummary}` : metricsSummary;
+
+    const trackPointsSource = recordedTrack.length > 1
+      ? recordedTrack
+      : plannedCoords.map(c => ({ lat: c[0], lon: c[1], ele: 0, time: new Date().toISOString() }));
+
     const wptsXml = recordedIncidents.map(i =>
       `  <wpt lat="${i.lat.toFixed(6)}" lon="${i.lon.toFixed(6)}">\n    <time>${i.time}</time>\n    <name>${escapeXml(i.title)}</name>\n    <type>${escapeXml(i.type)}</type>\n  </wpt>`
     ).join('\n');
-    const trkptsXml = recordedTrack.map(p =>
-      `      <trkpt lat="${p.lat.toFixed(6)}" lon="${p.lon.toFixed(6)}">\n        <ele>${p.ele}</ele>\n        <time>${p.time}</time>\n      </trkpt>`
+    const trkptsXml = trackPointsSource.map(p =>
+      `      <trkpt lat="${p.lat.toFixed(6)}" lon="${p.lon.toFixed(6)}">\n        <ele>${p.ele || 0}</ele>\n        <time>${p.time || new Date().toISOString()}</time>\n      </trkpt>`
     ).join('\n');
     const gpx = `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="TrailSync GPX Group Tracker v14" xmlns="http://www.topografix.com/GPX/1/1">
+<gpx version="1.1" creator="TrailSync GPX Group Tracker" xmlns="http://www.topografix.com/GPX/1/1">
   <metadata>
-    <name>${escapeXml(groupName)} - ${new Date().toLocaleDateString()}</name>
-    <desc>Distancia: ${totalDistanceKm.toFixed(2)} km | Desnivel+: ${Math.round(totalAscentM)} m | Puntos: ${recordedTrack.length} | Waypoints: ${recordedIncidents.length}</desc>
+    <name>${escapeXml(titleText)}</name>
+    <desc>${escapeXml(fullDesc)}</desc>
     <time>${new Date().toISOString()}</time>
   </metadata>
 ${wptsXml}
   <trk>
-    <name>Recorrido (${userNick})</name>
+    <name>${escapeXml(titleText)} (${escapeXml(userNick)})</name>
+    <desc>${escapeXml(fullDesc)}</desc>
     <trkseg>
 ${trkptsXml}
     </trkseg>
@@ -4529,7 +4979,8 @@ ${trkptsXml}
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${groupName.replace(/\s+/g,'_')}_${new Date().toISOString().slice(0,16).replace(/[:T]/g,'-')}.gpx`;
+    const safeFileBase = titleText.replace(/[^a-zA-Z0-9_-]+/g, '_');
+    a.download = `${safeFileBase}_${new Date().toISOString().slice(0,16).replace(/[:T]/g,'-')}.gpx`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -5864,6 +6315,126 @@ ${trkptsXml}
     reader.readAsText(file);
   }
 
+  
+  // --- LIVE PROHIBITED / RESTRICTED ZONE ALERT WHILE RIDING (EVEN WITHOUT ACTIVE ROUTE OR GPX) ---
+  let lastLiveZoneQueryPos = null;
+  let lastLiveZoneQueryTs = 0;
+  let lastLiveZoneAlertKey = '';
+  let lastLiveZoneAlertTs = 0;
+  let liveZoneCheckInFlight = false;
+
+  async function checkLiveZoneRestrictionAtUserPos(lat, lon) {
+    if (isFamilySpectator || !navigator.onLine) return;
+    if (typeof lat !== 'number' || typeof lon !== 'number' || isNaN(lat) || isNaN(lon)) return;
+    if (liveZoneCheckInFlight) return;
+
+    const now = Date.now();
+    const movedFromQueryMeters = lastLiveZoneQueryPos
+      ? haversineKm(lastLiveZoneQueryPos[0], lastLiveZoneQueryPos[1], lat, lon) * 1000
+      : 9999;
+
+    // Only re-query cartography when moved >= 120m or at least 20s since last check
+    if (movedFromQueryMeters < 120 && (now - lastLiveZoneQueryTs) < 20000) return;
+
+    liveZoneCheckInFlight = true;
+    lastLiveZoneQueryPos = [lat, lon];
+    lastLiveZoneQueryTs = now;
+
+    try {
+      // ~350m box around current rider position
+      const dLat = 0.0032;
+      const dLon = 0.0042;
+      const s = (lat - dLat).toFixed(5);
+      const n = (lat + dLat).toFixed(5);
+      const w = (lon - dLon).toFixed(5);
+      const e = (lon + dLon).toFixed(5);
+
+      const query = `[out:json][timeout:6];(
+        way["highway"](${s},${w},${n},${e});
+        way["boundary"="protected_area"](${s},${w},${n},${e});
+        way["leisure"="nature_reserve"](${s},${w},${n},${e});
+      );out body geom;`;
+
+      const endpoints = [
+        'https://overpass-api.de/api/interpreter',
+        'https://overpass.kumi.systems/api/interpreter'
+      ];
+
+      let elements = null;
+      for (const ep of endpoints) {
+        try {
+          const ctrl = new AbortController();
+          const tid = setTimeout(() => ctrl.abort(), 5500);
+          const resp = await fetch(ep, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+            body: 'data=' + encodeURIComponent(query),
+            signal: ctrl.signal
+          });
+          clearTimeout(tid);
+          if (resp.ok) {
+            const json = await resp.json();
+            if (json && Array.isArray(json.elements)) {
+              elements = json.elements;
+              break;
+            }
+          }
+        } catch (e) {}
+      }
+
+      if (!elements) return;
+
+      const highwayWays = elements.filter(el => el.type === 'way' && el.tags && el.tags.highway && Array.isArray(el.geometry) && el.geometry.length >= 2);
+      const protectedPolys = elements.filter(el => el.type === 'way' && el.tags && (el.tags.boundary === 'protected_area' || el.tags.leisure === 'nature_reserve') && Array.isArray(el.geometry) && el.geometry.length >= 4);
+
+      let protectedName = null;
+      for (const poly of protectedPolys) {
+        if (pointInPolygon(lat, lon, poly.geometry)) {
+          protectedName = poly.tags.name || 'Espacio Natural Protegido';
+          break;
+        }
+      }
+
+      let bestWay = null;
+      let bestDistM = 35;
+      for (const way of highwayWays) {
+        const g = way.geometry;
+        for (let k = 0; k < g.length - 1; k++) {
+          const dM = pointToSegmentDistMeters(lat, lon, g[k].lat, g[k].lon, g[k + 1].lat, g[k + 1].lon);
+          if (dM < bestDistM) {
+            bestDistM = dM;
+            bestWay = way;
+          }
+        }
+      }
+
+      const verdict = classifyOsmTagsForTrail(bestWay ? bestWay.tags : null, protectedName);
+      if (verdict.level === 'red' || verdict.level === 'amber') {
+        const alertKey = `${verdict.level}|${verdict.reason}`;
+        const alertAgeMs = Date.now() - lastLiveZoneAlertTs;
+        if (alertKey !== lastLiveZoneAlertKey || alertAgeMs > 45000) {
+          lastLiveZoneAlertKey = alertKey;
+          lastLiveZoneAlertTs = Date.now();
+
+          if (verdict.level === 'red') {
+            const msg = `🚫 ZONA PROHIBIDA / RESTRINGIDA: ${verdict.reason}`;
+            showToast(msg);
+            speakAlert(`Atención, zona restringida: ${verdict.reason}`);
+            recordIncident('PROHIBITED_ZONE', msg, true);
+            broadcastState('ZONE_ALERT', { zoneLevel: 'red', zoneReason: verdict.reason });
+          } else {
+            const msg = `⚠️ ZONA REGULADA / PRECAUCIÓN: ${verdict.reason}`;
+            showToast(msg);
+            speakAlert(`Precaución, ${verdict.reason}`);
+          }
+        }
+      }
+    } catch (e) {
+    } finally {
+      liveZoneCheckInFlight = false;
+    }
+  }
+
   function enableRealGPS(silent = false) {
     if (!navigator.geolocation) {
       if (!silent) showToast('GPS no soportado en este dispositivo');
@@ -5917,6 +6488,7 @@ ${trkptsXml}
       if (courseUpMode) applyMapOrientation();
 
       recordPoint(userPos[0], userPos[1], Math.round(pos.coords.altitude || 0));
+      checkLiveZoneRestrictionAtUserPos(userPos[0], userPos[1]);
       broadcastState('POS');
     }, err => {
       if (!silent) showToast('Permiso GPS pendiente o denegado: ' + err.message);
