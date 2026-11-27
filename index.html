@@ -10,7 +10,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
   <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
-  <title>TrailSync v14.33 — Repositorio Local de Rutas con Cargar y Eliminar</title>
+  <title>TrailSync v15.0 — GPS Físico Prioritario, Aviso de Entrada y Notificaciones Condicionadas</title>
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
         onerror="this.onerror=null;this.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';" />
@@ -1076,7 +1076,7 @@
 <div id="lobby-screen">
   <div>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-      <div class="lobby-title">🧭 TrailSync <span class="free-pill">v14 · TELEMETRÍA + LLUVIA</span></div>
+      <div class="lobby-title">🧭 TrailSync <span class="free-pill">v15 · GPS + GRUPO</span></div>
     </div>
 
     <div id="inviteBanner" class="invite-banner">
@@ -1417,7 +1417,13 @@
           </svg>
         </button>
       </div>
+    
+    <div style="text-align:center;margin-top:6px;">
+      <button type="button" onclick="resetAppCacheAndReload()" style="background:transparent;border:none;color:#94a3b8;font-size:11.5px;text-decoration:underline;cursor:pointer;padding:6px;">
+        🔄 Reiniciar caché / reparar inicio si se queda bloqueado
+      </button>
     </div>
+</div>
   </div>
 </div>
 
@@ -1888,7 +1894,7 @@
     <h2>Ajustes de ruta y App</h2>
     <div style="background:#18141a;padding:10px 12px;border-radius:12px;margin-bottom:12px;border:1px solid #334155;display:flex;align-items:center;justify-content:space-between;gap:8px;">
       <div>
-        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">14.33.0</span></div>
+        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">15.0.0</span></div>
         <div style="font-size:11px;color:#94a3b8;" id="webVerStatusLabel">Comprobando actualizaciones en la web...</div>
       </div>
       <button class="solid-btn" style="flex:0 0 auto;background:#16a34a;color:#fff;padding:8px 12px;font-size:12px;" onclick="manualCheckForUpdates()">🔄 Buscar / Actualizar</button>
@@ -1920,7 +1926,56 @@
 </div>
 
 <script>
-  const APP_VERSION = '14.33.0';
+  function safeStorageGet(key, fallback = '') {
+    try {
+      const v = localStorage.getItem(key);
+      return v === null ? fallback : v;
+    } catch (e) {
+      return fallback;
+    }
+  }
+  function safeStorageSet(key, val) {
+    try {
+      localStorage.setItem(key, String(val));
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+  function safeStorageRemove(key) {
+    try {
+      localStorage.removeItem(key);
+    } catch (e) {}
+  }
+  async function resetAppCacheAndReload() {
+    try { safeStorageRemove('trailsync_active_group_code'); safeStorageRemove('trailsync_active_group_name'); } catch (e) {}
+    try {
+      if ('serviceWorker' in navigator) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map(r => r.unregister()));
+      }
+      if ('caches' in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map(k => caches.delete(k)));
+      }
+    } catch (e) {}
+    location.replace(location.pathname + '?reset=' + Date.now());
+  }
+  window.addEventListener('error', (ev) => {
+    try {
+      if (ev && ev.message) {
+        const t = document.getElementById('toast');
+        if (t) {
+          t.textContent = '⚠️ Aviso: ' + ev.message;
+          t.style.display = 'block';
+          clearTimeout(t._timer);
+          t._timer = setTimeout(() => { t.style.display = 'none'; }, 4000);
+        }
+      }
+    } catch (e) {}
+  });
+
+  const APP_VERSION = '15.0.0';
   let swWaitingWorker = null;
   let remoteVersionFound = null;
 
@@ -2375,6 +2430,13 @@
   let myPeerId = localStorage.getItem('trailsync_peer_id') || ('peer_' + Math.random().toString(36).slice(2, 10));
   localStorage.setItem('trailsync_peer_id', myPeerId);
 
+  
+  let hasValidGpsFix = false;
+  let gpsFixSource = 'none';
+  let gpsLastAccuracyM = null;
+  let gpsFallbackTimer = null;
+  let rideStartedAndPositioned = false;
+
   let userPos = [43.3485, -3.3145];
   let prevUserPos = null;
   let currentHeadingDeg = 0;
@@ -2433,10 +2495,12 @@
   const familyRiderParam = urlParams.get('rider');
 
   function cacheLobbyFields() {
-    const nEl = document.getElementById('lobbyNickInput');
-    const gEl = document.getElementById('lobbyGroupNameInput');
-    if (nEl && nEl.value.trim()) localStorage.setItem('trailsync_nick', nEl.value.trim());
-    if (gEl && gEl.value.trim()) localStorage.setItem('trailsync_last_group_name', gEl.value.trim());
+    try {
+      const nEl = document.getElementById('lobbyNickInput');
+      const gEl = document.getElementById('lobbyGroupNameInput');
+      if (nEl && nEl.value.trim()) safeStorageSet('trailsync_nick', nEl.value.trim());
+      if (gEl && gEl.value.trim()) safeStorageSet('trailsync_last_group_name', gEl.value.trim());
+    } catch (e) {}
   }
 
   (function restoreCachedLobbyFields() {
@@ -3456,36 +3520,58 @@ function keepOriginalRouteAndNavigate() {
   }
 
   function createAndEnterGroup() {
-    const rawNick = (document.getElementById('lobbyNickInput').value || '').trim();
-    if (!rawNick) {
-      document.getElementById('lobbyNickInput').focus();
-      return showToast('Escribe tu nombre o indicativo antes de entrar');
+    try {
+      const nickEl = document.getElementById('lobbyNickInput');
+      const rawNick = ((nickEl && nickEl.value) || '').trim();
+      if (!rawNick) {
+        if (nickEl) nickEl.focus();
+        return showToast('Escribe tu nombre o indicativo antes de entrar');
+      }
+      userNick = rawNick;
+      const gEl = document.getElementById('lobbyGroupNameInput');
+      groupName = ((gEl && gEl.value) || 'Ruta en grupo').trim() || 'Ruta en grupo';
+      groupCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+      isFamilySpectator = false;
+      saveActiveGroupSession();
+      enterTracker();
+    } catch (e) {
+      const lobby = document.getElementById('lobby-screen');
+      const appEl = document.getElementById('app');
+      if (lobby) lobby.style.display = 'none';
+      if (appEl) appEl.classList.add('active');
     }
-    userNick = rawNick;
-    groupName = (document.getElementById('lobbyGroupNameInput').value || 'Ruta en grupo').trim();
-    groupCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-    isFamilySpectator = false;
-    saveActiveGroupSession();
-    enterTracker();
   }
 
   function joinExistingGroup() {
-    const rawNick = (document.getElementById('lobbyNickInput').value || '').trim();
-    if (!rawNick) {
-      document.getElementById('lobbyNickInput').focus();
-      return showToast('Escribe tu nombre o indicativo antes de unirte');
+    try {
+      const nickEl = document.getElementById('lobbyNickInput');
+      const rawNick = ((nickEl && nickEl.value) || '').trim();
+      if (!rawNick) {
+        if (nickEl) nickEl.focus();
+        return showToast('Escribe tu nombre o indicativo antes de unirte');
+      }
+      userNick = rawNick;
+      const codeEl = document.getElementById('lobbyJoinCodeInput');
+      const code = ((codeEl && codeEl.value) || '').trim().toUpperCase();
+      if (code.length < 4) return showToast('Introduce un código de grupo válido (mín. 4 caracteres)');
+      groupCode = code;
+      groupName = invitedGroupName ? decodeURIComponent(invitedGroupName) : (safeStorageGet('trailsync_active_group_name', '') || ('Grupo ' + code));
+      isFamilySpectator = false;
+      saveActiveGroupSession();
+      enterTracker();
+    } catch (e) {
+      const lobby = document.getElementById('lobby-screen');
+      const appEl = document.getElementById('app');
+      if (lobby) lobby.style.display = 'none';
+      if (appEl) appEl.classList.add('active');
     }
-    userNick = rawNick;
-    const code = (document.getElementById('lobbyJoinCodeInput').value || '').trim().toUpperCase();
-    if (code.length < 4) return showToast('Introduce un código de grupo válido (mín. 4 caracteres)');
-    groupCode = code;
-    groupName = invitedGroupName ? decodeURIComponent(invitedGroupName) : (localStorage.getItem('trailsync_active_group_name') || ('Grupo ' + code));
-    isFamilySpectator = false;
-    saveActiveGroupSession();
-    enterTracker();
   }
 
   function enterTracker(isAutoRestore = false) {
+    hasValidGpsFix = false;
+    gpsFixSource = 'none';
+    rideStartedAndPositioned = false;
+    firstFriendAutoFitted = false;
     document.body.classList.toggle('family-spectator-mode', isFamilySpectator);
     document.getElementById('lobby-screen').style.display = 'none';
     document.getElementById('app').classList.add('active');
@@ -3816,7 +3902,7 @@ window.addEventListener('offline', () => {
       brokers.forEach((brokerUrl, idx) => {
         try {
           const client = window.mqtt.connect(brokerUrl, {
-            clientId: `ts1433_${myPeerId}_${idx}_${Math.floor(Math.random()*999)}`,
+            clientId: `ts1500_${myPeerId}_${idx}_${Math.floor(Math.random()*999)}`,
             reconnectPeriod: 3000,
             connectTimeout: 8000
           });
@@ -3867,6 +3953,7 @@ window.addEventListener('offline', () => {
 
   async function broadcastState(kind, extra = {}) {
     if (isFamilySpectator) return;
+    if (!hasValidGpsFix && kind !== 'LEAVE_GROUP' && kind !== 'VOICE_SIG') return;
     if (familyExpireAt && Date.now() > familyExpireAt) {
       stopFamilyShare();
       showToast('⏱️ El enlace temporal para la familia ha caducado');
@@ -3877,6 +3964,9 @@ window.addEventListener('offline', () => {
       kind,
       lat: userPos[0],
       lon: userPos[1],
+      gpsSource: gpsFixSource,
+      hasFix: hasValidGpsFix,
+      rideStarted: rideStartedAndPositioned,
       heading: currentHeadingDeg,
       speedKmh: Math.round(currentSpeedKmh),
       ts: Date.now(),
@@ -3978,12 +4068,13 @@ window.addEventListener('offline', () => {
 
     if (isNewFriend) {
       if (!isFamilySpectator) {
-        showToast(`🏍️ ${peers[msg.peerId].nick} se ha conectado al mapa`);
-        broadcastState('POS');
+        showToast(`🏍️ ${peers[msg.peerId].nick} ha entrado al grupo`);
+        speakAlert(`${peers[msg.peerId].nick} ha entrado al grupo`);
+        if (hasValidGpsFix) broadcastState('POS');
         if (activeSharedRoute) publishGroupRoute(activeSharedRoute);
         if (groupVoiceMode !== 'off') sendVoiceSignal(msg.peerId, 'JOIN');
       }
-      if (!firstFriendAutoFitted) {
+      if (!firstFriendAutoFitted && hasValidGpsFix && msg.hasFix !== false) {
         firstFriendAutoFitted = true;
         setTimeout(() => fitAllGroupMembers(), 400);
       }
@@ -3998,6 +4089,11 @@ window.addEventListener('offline', () => {
   function checkGroupSeparationAndTimeouts() {
     const alertEnabled = document.getElementById('groupSeparationAlertToggle')?.checked;
     let hasWarning = false;
+    if (!hasRideStartedAndPositioned()) {
+      const radarEl = document.getElementById('groupRadarPill');
+      if (radarEl) radarEl.classList.remove('alert-warn');
+      return;
+    }
     Object.entries(peers).forEach(([id, p]) => {
       const staleSec = Math.round((Date.now() - p.lastSeen) / 1000);
       if (staleSec > 90) {
@@ -4007,6 +4103,8 @@ window.addEventListener('offline', () => {
         speakAlert(`${goneNick} ha salido del grupo`);
         return;
       }
+      const isDefaultPeerPos = (Math.abs(p.lat - 43.3485) < 0.0001 && Math.abs(p.lon - (-3.3145)) < 0.0001);
+      if (isDefaultPeerPos) return;
       const distKm = haversineKm(userPos[0], userPos[1], p.lat, p.lon);
       const isDelayed = staleSec > 45 || distKm > 1.5;
       if (isDelayed) {
@@ -4933,10 +5031,11 @@ window.addEventListener('offline', () => {
       openSaveFinishedRoutePrompt(false);
     } else {
       isRecording = true;
+      rideStartedAndPositioned = hasValidGpsFix;
       if (pill) { pill.textContent = 'EN VIVO'; pill.classList.remove('paused'); }
       shape.className = 'rec-square';
       recordIncident('RESUME_TRACK', 'Reanudación de grabación');
-      showToast('● Grabación en vivo reanudada');
+      showToast(hasValidGpsFix ? '● Grabación en vivo reanudada' : '● Grabación iniciada (esperando señal GPS)');
     }
   }
 
@@ -6324,7 +6423,7 @@ ${trkptsXml}
   let liveZoneCheckInFlight = false;
 
   async function checkLiveZoneRestrictionAtUserPos(lat, lon) {
-    if (isFamilySpectator || !navigator.onLine) return;
+    if (isFamilySpectator || !navigator.onLine || !hasRideStartedAndPositioned()) return;
     if (typeof lat !== 'number' || typeof lon !== 'number' || isNaN(lat) || isNaN(lon)) return;
     if (liveZoneCheckInFlight) return;
 
@@ -6435,16 +6534,92 @@ ${trkptsXml}
     }
   }
 
+
+  function hasRideStartedAndPositioned() {
+    return Boolean(rideStartedAndPositioned && hasValidGpsFix && isRecording);
+  }
+
+  function applyFallbackPosition(lat, lon, sourceLabel) {
+    if (hasValidGpsFix) return;
+    if (typeof lat !== 'number' || typeof lon !== 'number' || isNaN(lat) || isNaN(lon)) return;
+    hasValidGpsFix = true;
+    gpsFixSource = sourceLabel;
+    userPos = [lat, lon];
+    prevUserPos = [lat, lon];
+    rideStartedAndPositioned = isRecording;
+    if (userMarker && map) {
+      userMarker.setLatLng(userPos);
+      userMarker.setIcon(createRiderIcon(`${userNick} (tú) · ${sourceLabel}`, '#f59e0b', true));
+      map.setView(userPos, Math.max(map.getZoom(), 15));
+    }
+    if (rideStartedAndPositioned) {
+      recordPoint(userPos[0], userPos[1], 0);
+      broadcastState('POS');
+    }
+  }
+
+  function requestFallbackLocationIfNoGpsFix() {
+    if (hasValidGpsFix) return;
+    if (activeSharedRoute && Array.isArray(activeSharedRoute.coords) && activeSharedRoute.coords.length > 0) {
+      const c0 = activeSharedRoute.coords[0];
+      if (Array.isArray(c0) && c0.length >= 2) {
+        applyFallbackPosition(c0[0], c0[1], 'Ruta/Red');
+        return;
+      }
+    }
+    if (navigator.geolocation) {
+      try {
+        navigator.geolocation.getCurrentPosition(
+          pos => {
+            if (!hasValidGpsFix) {
+              applyFallbackPosition(pos.coords.latitude, pos.coords.longitude, 'Red/WiFi');
+            }
+          },
+          () => {},
+          { enableHighAccuracy: false, maximumAge: 60000, timeout: 5000 }
+        );
+      } catch (e) {}
+    }
+    try {
+      const savedLat = parseFloat(safeStorageGet('trailsync_last_valid_lat', ''));
+      const savedLon = parseFloat(safeStorageGet('trailsync_last_valid_lon', ''));
+      if (!hasValidGpsFix && !isNaN(savedLat) && !isNaN(savedLon)) {
+        applyFallbackPosition(savedLat, savedLon, 'Última pos.');
+      }
+    } catch (e) {}
+  }
+
   function enableRealGPS(silent = false) {
+    if (gpsFallbackTimer) {
+      clearTimeout(gpsFallbackTimer);
+      gpsFallbackTimer = null;
+    }
     if (!navigator.geolocation) {
-      if (!silent) showToast('GPS no soportado en este dispositivo');
+      if (!silent) showToast('GPS físico no soportado; buscando ubicación alternativa');
+      requestFallbackLocationIfNoGpsFix();
       return;
     }
+    gpsFallbackTimer = setTimeout(() => {
+      if (!hasValidGpsFix) {
+        requestFallbackLocationIfNoGpsFix();
+      }
+    }, 6000);
+
     if (realGpsWatch !== null) navigator.geolocation.clearWatch(realGpsWatch);
     realGpsWatch = navigator.geolocation.watchPosition(pos => {
-      const firstFix = !realGpsActive;
+      if (gpsFallbackTimer) {
+        clearTimeout(gpsFallbackTimer);
+        gpsFallbackTimer = null;
+      }
+      const firstFix = !realGpsActive || !hasValidGpsFix;
       realGpsActive = true;
+      hasValidGpsFix = true;
+      gpsFixSource = 'GPS físico';
+      gpsLastAccuracyM = typeof pos.coords.accuracy === 'number' ? Math.round(pos.coords.accuracy) : null;
       const newPos = [pos.coords.latitude, pos.coords.longitude];
+      safeStorageSet('trailsync_last_valid_lat', newPos[0]);
+      safeStorageSet('trailsync_last_valid_lon', newPos[1]);
+      if (isRecording) rideStartedAndPositioned = true;
 
       const movedMeters = prevUserPos ? haversineKm(prevUserPos[0], prevUserPos[1], newPos[0], newPos[1]) * 1000 : 999;
       if (typeof pos.coords.speed === 'number' && !isNaN(pos.coords.speed) && pos.coords.speed >= 0) {
@@ -6491,8 +6666,9 @@ ${trkptsXml}
       checkLiveZoneRestrictionAtUserPos(userPos[0], userPos[1]);
       broadcastState('POS');
     }, err => {
-      if (!silent) showToast('Permiso GPS pendiente o denegado: ' + err.message);
-    }, { enableHighAccuracy: true, maximumAge: 2000, timeout: 10000 });
+      if (!silent) showToast('GPS físico sin señal o permiso: usando alternativa');
+      requestFallbackLocationIfNoGpsFix();
+    }, { enableHighAccuracy: true, maximumAge: 1500, timeout: 8000 });
     if (!silent) {
       closeModal('settingsModal');
       showToast('📡 GPS real activado');
