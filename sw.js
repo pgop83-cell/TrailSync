@@ -1,5 +1,4 @@
-const APP_CACHE = 'trailsync-app-shell-v15-0-4';
-const TILE_CACHE = 'trailsync-peninsula-tiles-v2';
+const APP_CACHE = 'trailsync-app-shell-v15-0-5';
 const APP_ASSETS = [
   './',
   './index.html',
@@ -22,7 +21,7 @@ self.addEventListener('message', event => {
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== APP_CACHE && k !== TILE_CACHE).map(k => caches.delete(k)))
+      Promise.all(keys.filter(k => k !== APP_CACHE).map(k => caches.delete(k)))
     )
   );
   self.clients.claim();
@@ -38,25 +37,16 @@ self.addEventListener('fetch', event => {
     return;
   }
 
+  // No interceptar ni guardar teselas de mapas en caché del navegador
   if (
     url.includes('tile.openstreetmap.org') ||
     url.includes('tile-cyclosm.openstreetmap.fr') ||
     url.includes('opentopomap.org') ||
     url.includes('arcgisonline.com') ||
     url.includes('ign.es') ||
-    url.includes('basemaps.cartocdn.com')
+    url.includes('basemaps.cartocdn.com') ||
+    url.includes('google.com/vt')
   ) {
-    event.respondWith(
-      caches.open(TILE_CACHE).then(cache =>
-        cache.match(event.request).then(cached => {
-          if (cached) return cached;
-          return fetch(event.request).then(resp => {
-            if (resp && resp.ok) cache.put(event.request, resp.clone());
-            return resp;
-          }).catch(() => cached);
-        })
-      )
-    );
     return;
   }
 

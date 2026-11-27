@@ -10,7 +10,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
   <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
-  <title>TrailSync v15.0.4 — Auditoría legal ultrarrápida (carrera servidores) y priorización de vía legal</title>
+  <title>TrailSync v15.0.5 — Capas Online/Offline limpias y carpeta local TrailSync en el dispositivo</title>
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
         onerror="this.onerror=null;this.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';" />
@@ -1192,7 +1192,7 @@
       </button>
     </div>
     <div style="text-align:center;font-size:11px;color:#64748b;margin-top:8px;">
-      Versión 15.0.4 · Auditoría legal ultrarrápida · Prioridad vía legal en tramos superpuestos
+      Versión 15.0.5 · Capas Online/Offline + Carpeta local TrailSync en dispositivo
     </div>
   </div>
 </div>
@@ -1649,36 +1649,52 @@
   </div>
 </div>
 
-<!-- MODAL: DESCARGAR PENÍNSULA IBÉRICA / DMD2 TRAIL OFFLINE -->
+<!-- MODAL: DESCARGAR MAPAS OFFLINE EN CARPETA DEL DISPOSITIVO -->
 <div class="modal-backdrop" id="offlineModal">
   <div class="modal-card">
-    <h2>🇪🇸🇵🇹 Descargar Mapas Offline (DMD2 + Topo)</h2>
-    <p>Descarga en tu teléfono las teselas de <strong>DMD2 Trail / Pistas</strong> y el mapa base de <strong>España y Portugal</strong> para navegar por pistas sin cobertura.</p>
+    <h2>📁 Mapas Offline en Carpeta TrailSync</h2>
+    <p style="font-size:12.5px;color:#cbd5e1;margin-bottom:10px;">
+      Los mapas descargados y tus rutas guardadas <strong>no se guardan en la caché temporal del navegador</strong>: se escriben directamente en la carpeta <strong>TrailSync</strong> de tu dispositivo (<code>TrailSync/mapas/</code> y <code>TrailSync/rutas/</code>).
+    </p>
+
+    <div style="background:#0f172a;border:1px solid #38bdf8;border-radius:12px;padding:10px 12px;margin-bottom:10px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+        <div style="min-width:0;flex:1;">
+          <div style="font-size:12px;font-weight:800;color:#f8fafc;">📂 Carpeta del dispositivo: <span id="deviceFolderNameLabel" style="color:#38bdf8;">Sin vincular</span></div>
+          <div id="deviceFolderStatusHint" style="font-size:11px;color:#94a3b8;margin-top:2px;">Selecciona o crea una carpeta llamada <strong>TrailSync</strong> en tu almacenamiento.</div>
+        </div>
+        <button type="button" class="solid-btn" style="flex:0 0 auto;background:#0284c7;color:#fff;padding:8px 11px;font-size:12px;" onclick="pickTrailSyncDeviceFolder(true)">
+          📂 Elegir carpeta
+        </button>
+      </div>
+    </div>
 
     <div style="margin-bottom:10px;">
-      <label class="field-label">Capa a descargar offline:</label>
+      <label class="field-label">Capa a descargar en TrailSync/mapas/:</label>
       <select id="offlineLayerChoice" style="width:100%;background:#161b26;color:#fff;border:1px solid #475569;border-radius:10px;padding:9px;font-size:13px;">
         <option value="dmd2_trail">🧭 DMD2 Trail / Pistas (Senderos y pistas marcados)</option>
-        <option value="osm_base">🗺️ Mapa Base Carreteras / Pistas (OSM)</option>
-        <option value="both">📦 Ambos (DMD2 Trail + Mapa Base)</option>
+        <option value="osm_base">🗺️ OpenStreetMap (Carreteras y caminos)</option>
+        <option value="satelite">🛰️ Satélite (Ortofoto aérea)</option>
+        <option value="google_maps">📍 Google Maps (Mapa estándar sin satélite)</option>
+        <option value="both">📦 Pack Trail (DMD2 Trail + OpenStreetMap)</option>
       </select>
     </div>
 
     <div style="background:#18141a;padding:12px;border-radius:12px;margin-bottom:12px;font-size:13px;">
-      <div><strong>Estado almacenamiento:</strong> <span id="offlineStorageInfo">0 teselas</span></div>
-      <div id="offlineQuotaInfo" style="font-size:11.5px;color:#38bdf8;margin-top:3px;">Calculando cuota persistente del dispositivo...</div>
+      <div><strong>Estado carpeta mapas:</strong> <span id="offlineStorageInfo">0 teselas en carpeta</span></div>
+      <div id="offlineQuotaInfo" style="font-size:11.5px;color:#38bdf8;margin-top:3px;">Almacenamiento directo en carpeta física (sin caché web)</div>
       <div class="progress-bar-wrap"><div class="progress-bar-fill" id="offlineProgressBar"></div></div>
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:4px;">
-        <div id="offlineProgressLabel" style="font-size:12px;color:#94a3b8;flex:1;">Elige pack completo o descarga por zona sin límites</div>
+        <div id="offlineProgressLabel" style="font-size:12px;color:#94a3b8;flex:1;">Vincula tu carpeta TrailSync y descarga por zona o península</div>
         <button type="button" id="btnCancelOfflineDl" onclick="cancelOfflineDownload()" style="display:none;background:#dc2626;color:#fff;border:none;border-radius:8px;padding:5px 10px;font-size:11.5px;font-weight:800;cursor:pointer;">⏹ Detener</button>
       </div>
     </div>
 
     <button class="solid-btn" style="background:#f97316;color:#fff;width:100%;padding:13px;font-size:14px;margin-bottom:8px;" id="btnDownloadPeninsula" onclick="downloadIberianPeninsulaOneClick()">
-      ⬇️ Descarga COMPLETA España + Portugal (Z5–13 + Zona/Ruta Z14–16 · hasta ~1 GB)
+      ⬇️ Descarga COMPLETA España + Portugal en carpeta (Z5–13 + Zona/Ruta Z14–16)
     </button>
 
-    <label class="field-label" style="margin-top:6px;">O descarga completa de alta resolución por zona (Zoom 10–16 · Pistas al detalle):</label>
+    <label class="field-label" style="margin-top:6px;">O descarga de alta resolución por zona (Zoom 10–16) en TrailSync/mapas/:</label>
     <div style="display:flex;gap:6px;margin-bottom:10px;">
       <select id="regionSelect" style="flex:1;background:#161b26;color:#fff;border:1px solid #475569;border-radius:10px;padding:9px;font-size:13px;">
         <option value="current">📍 Zona visible en pantalla / Ruta activa</option>
@@ -1690,10 +1706,10 @@
         <option value="sur">☀️ Andalucía y Sierra Nevada</option>
         <option value="portugal">🇵🇹 Portugal Norte y Centro</option>
       </select>
-      <button class="solid-btn" style="flex:0 0 auto;background:#0284c7;color:#fff;padding:0 14px;" onclick="downloadSelectedRegion()">Bajar zona</button>
+      <button id="btnDownloadRegion" class="solid-btn" style="flex:0 0 auto;background:#0284c7;color:#fff;padding:0 14px;" onclick="downloadSelectedRegion()">Bajar zona</button>
     </div>
 
-    <button class="solid-btn" style="background:#334155;color:#fca5a5;width:100%;margin-bottom:10px;" onclick="clearOfflineMapCache()">🗑️ Vaciar mapas offline</button>
+    <button class="solid-btn" style="background:#334155;color:#fca5a5;width:100%;margin-bottom:10px;" onclick="clearOfflineMapCache()">🗑️ Borrar mapas de la carpeta TrailSync/mapas</button>
     <div style="text-align:right;"><button style="background:none;border:none;color:#94a3b8;font-weight:700;" onclick="closeModal('offlineModal')">Cerrar</button></div>
   </div>
 </div>
@@ -1982,7 +1998,7 @@
     <h2>Ajustes de ruta y App</h2>
     <div style="background:#18141a;padding:10px 12px;border-radius:12px;margin-bottom:12px;border:1px solid #334155;display:flex;align-items:center;justify-content:space-between;gap:8px;">
       <div>
-        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">15.0.4</span></div>
+        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">15.0.5</span></div>
         <div style="font-size:11px;color:#94a3b8;" id="webVerStatusLabel">Comprobando actualizaciones en la web...</div>
       </div>
       <button class="solid-btn" style="flex:0 0 auto;background:#16a34a;color:#fff;padding:8px 12px;font-size:12px;" onclick="manualCheckForUpdates()">🔄 Buscar / Actualizar</button>
@@ -2063,7 +2079,7 @@
     } catch (e) {}
   });
 
-  const APP_VERSION = '15.0.4';
+  const APP_VERSION = '15.0.5';
   let swWaitingWorker = null;
   let remoteVersionFound = null;
 
@@ -2403,15 +2419,19 @@
   }
 
   const TILE_CACHE_NAME = 'trailsync-peninsula-tiles-v2';
-  const DMD2_TRAIL_TILE_URL = 'https://a.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png';
-  const OSM_BASE_TILE_URL   = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+  const DMD2_TRAIL_TILE_URL  = 'https://a.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png';
+  const OSM_BASE_TILE_URL    = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+  const SAT_IGN_TILE_URL     = 'https://www.ign.es/wmts/pnoa-ma?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=OI.OrthoimageCoverage&STYLE=default&TILEMATRIXSET=GoogleMapsCompatible&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT=image/jpeg';
+  const SAT_ESRI_TILE_URL    = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+  const GOOGLE_MAPS_TILE_URL = 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}';
 
   const LAYER_MODES = [
     {
       key: 'dmd2_trail',
+      group: 'online',
       title: 'DMD2 Trail / Pistas',
       badge: 'DMD2',
-      desc: 'Estilo off-road: pistas forestales, caminos y curvas de nivel resaltadas · descargable offline',
+      desc: 'Online · Pistas forestales, senderos y curvas de nivel resaltadas',
       url: DMD2_TRAIL_TILE_URL,
       fallbackUrl: 'https://tile.opentopomap.org/{z}/{x}/{y}.png',
       cacheOnly: false,
@@ -2420,53 +2440,10 @@
       maxZoom: 18
     },
     {
-      key: 'auto',
-      title: 'Automático',
-      desc: 'Offline si está descargado; si no, topográfico',
-      url: 'https://tile.opentopomap.org/{z}/{x}/{y}.png',
-      fallbackUrl: OSM_BASE_TILE_URL,
-      cacheOnly: false,
-      pistaStyle: false,
-      dmd2Style: false,
-      maxZoom: 17
-    },
-    {
-      key: 'offline',
-      title: 'Offline',
-      desc: 'Los mapas descargados en el móvil · funciona sin cobertura',
-      url: DMD2_TRAIL_TILE_URL,
-      fallbackUrl: OSM_BASE_TILE_URL,
-      cacheOnly: true,
-      pistaStyle: false,
-      dmd2Style: false,
-      maxZoom: 18
-    },
-    {
-      key: 'offline_pista',
-      title: 'Offline Pista',
-      desc: 'Fondo claro y pistas más gruesas, para leer los cruces · sin cobertura',
-      url: OSM_BASE_TILE_URL,
-      fallbackUrl: 'https://tile.opentopomap.org/{z}/{x}/{y}.png',
-      cacheOnly: false,
-      pistaStyle: true,
-      dmd2Style: false,
-      maxZoom: 18
-    },
-    {
-      key: 'outdoors',
-      title: 'Topográfico Outdoors',
-      desc: 'Curvas de nivel y senderos · necesita conexión',
-      url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
-      fallbackUrl: 'https://tile.opentopomap.org/{z}/{x}/{y}.png',
-      cacheOnly: false,
-      pistaStyle: false,
-      dmd2Style: false,
-      maxZoom: 18
-    },
-    {
       key: 'osm',
+      group: 'online',
       title: 'OpenStreetMap',
-      desc: 'Callejero estándar · necesita conexión',
+      desc: 'Online · Callejero y red estándar de caminos y carreteras',
       url: OSM_BASE_TILE_URL,
       fallbackUrl: 'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
       cacheOnly: false,
@@ -2475,26 +2452,41 @@
       maxZoom: 19
     },
     {
-      key: 'opentopo',
-      title: 'OpenTopoMap',
-      desc: 'Relieve sombreado · necesita conexión',
-      url: 'https://tile.opentopomap.org/{z}/{x}/{y}.png',
-      fallbackUrl: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
-      cacheOnly: false,
-      pistaStyle: false,
-      dmd2Style: false,
-      maxZoom: 17
-    },
-    {
-      key: 'satelite_ign',
-      title: 'Satélite (España)',
-      desc: 'Ortofoto del IGN, solo España · necesita conexión',
-      url: 'https://www.ign.es/wmts/pnoa-ma?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=OI.OrthoimageCoverage&STYLE=default&TILEMATRIXSET=GoogleMapsCompatible&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT=image/jpeg',
-      fallbackUrl: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+      key: 'satelite',
+      group: 'online',
+      title: 'Satélite',
+      desc: 'Online · Ortofoto aérea de alta resolución (IGN España / Mundial)',
+      url: SAT_IGN_TILE_URL,
+      fallbackUrl: SAT_ESRI_TILE_URL,
       cacheOnly: false,
       pistaStyle: false,
       dmd2Style: false,
       maxZoom: 19
+    },
+    {
+      key: 'google_maps',
+      group: 'online',
+      title: 'Google Maps (Mapa)',
+      desc: 'Online · Cartografía Google estándar sin satélite (carreteras y núcleos)',
+      url: GOOGLE_MAPS_TILE_URL,
+      fallbackUrl: OSM_BASE_TILE_URL,
+      cacheOnly: false,
+      pistaStyle: false,
+      dmd2Style: false,
+      maxZoom: 20
+    },
+    {
+      key: 'offline',
+      group: 'offline',
+      title: 'Mapa Offline (Carpeta TrailSync)',
+      badge: 'OFFLINE',
+      desc: 'Sin conexión · Lee los mapas guardados en la carpeta TrailSync del dispositivo',
+      url: DMD2_TRAIL_TILE_URL,
+      fallbackUrl: OSM_BASE_TILE_URL,
+      cacheOnly: true,
+      pistaStyle: false,
+      dmd2Style: true,
+      maxZoom: 18
     }
   ];
 
@@ -3661,24 +3653,40 @@ function keepOriginalRouteAndNavigate() {
   }
 
   function getActiveLayerObj() {
+    if (selectedLayerKey === 'satelite_ign') selectedLayerKey = 'satelite';
+    if (selectedLayerKey === 'auto' || selectedLayerKey === 'outdoors' || selectedLayerKey === 'opentopo') selectedLayerKey = 'dmd2_trail';
+    if (selectedLayerKey === 'offline_pista') selectedLayerKey = 'offline';
     return LAYER_MODES.find(l => l.key === selectedLayerKey) || LAYER_MODES[0];
   }
 
   function renderLayersMenu() {
     const container = document.getElementById('layersListContainer');
-    container.innerHTML = LAYER_MODES.map(layer => {
-      const isSelected = layer.key === selectedLayerKey;
-      const badgeHtml = layer.badge ? `<span class="dmd2-tag">${layer.badge}</span>` : '';
-      return `
-        <div class="layer-option-row ${isSelected ? 'selected' : ''}" onclick="selectMapLayer('${layer.key}')">
-          <div class="custom-radio"><div class="custom-radio-dot"></div></div>
-          <div>
-            <div class="layer-opt-title">${layer.title} ${badgeHtml}</div>
-            <div class="layer-opt-desc">${layer.desc}</div>
+    const onlineLayers = LAYER_MODES.filter(l => l.group === 'online');
+    const offlineLayers = LAYER_MODES.filter(l => l.group === 'offline');
+
+    const renderGroup = (headerTitle, items) => {
+      const rows = items.map(layer => {
+        const isSelected = layer.key === selectedLayerKey;
+        const badgeHtml = layer.badge ? `<span class="dmd2-tag">${layer.badge}</span>` : '';
+        return `
+          <div class="layer-option-row ${isSelected ? 'selected' : ''}" onclick="selectMapLayer('${layer.key}')">
+            <div class="custom-radio"><div class="custom-radio-dot"></div></div>
+            <div>
+              <div class="layer-opt-title">${layer.title} ${badgeHtml}</div>
+              <div class="layer-opt-desc">${layer.desc}</div>
+            </div>
           </div>
-        </div>
+        `;
+      }).join('');
+      return `
+        <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.6px;color:#94a3b8;margin:8px 2px 4px;">${headerTitle}</div>
+        ${rows}
       `;
-    }).join('');
+    };
+
+    container.innerHTML =
+      renderGroup('🌐 Mapas Online (Requieren conexión)', onlineLayers) +
+      renderGroup('📴 Mapas Offline (Carpeta TrailSync en dispositivo)', offlineLayers);
   }
 
   function openLayersModal() {
@@ -4488,9 +4496,9 @@ window.addEventListener('offline', () => {
   const ALL_TILE_TEMPLATES = [
     DMD2_TRAIL_TILE_URL,
     OSM_BASE_TILE_URL,
-    'https://tile.opentopomap.org/{z}/{x}/{y}.png',
-    'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
-    'https://www.ign.es/wmts/pnoa-ma?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=OI.OrthoimageCoverage&STYLE=default&TILEMATRIXSET=GoogleMapsCompatible&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT=image/jpeg'
+    SAT_IGN_TILE_URL,
+    SAT_ESRI_TILE_URL,
+    GOOGLE_MAPS_TILE_URL
   ];
 
   function createOverscaledFromParentBitmap(bitmap, dz, dx, dy, isPista) {
@@ -4509,27 +4517,226 @@ window.addEventListener('offline', () => {
     return canvas.toDataURL('image/png');
   }
 
-  async function findCachedTileResponse(cache, z, x, y, preferredUrl) {
-    if (preferredUrl) {
-      const exact = await cache.match(preferredUrl);
-      if (exact) return exact;
+  // --- DEVICE FOLDER STORAGE ENGINE (TrailSync/mapas & TrailSync/rutas - NO BROWSER CACHE) ---
+  const FS_HANDLE_DB = 'trailsync_device_folder_db_v1';
+  const FS_HANDLE_STORE = 'handles';
+  let trailSyncRootDirHandle = null;
+  let trailSyncUsingPrivateOpfs = false;
+
+  function openHandleDb() {
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open(FS_HANDLE_DB, 1);
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        if (!db.objectStoreNames.contains(FS_HANDLE_STORE)) {
+          db.createObjectStore(FS_HANDLE_STORE);
+        }
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async function saveStoredDirHandle(handle) {
+    try {
+      const db = await openHandleDb();
+      await new Promise((resolve, reject) => {
+        const tx = db.transaction(FS_HANDLE_STORE, 'readwrite');
+        tx.objectStore(FS_HANDLE_STORE).put(handle, 'rootDir');
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+    } catch (e) {}
+  }
+
+  async function loadStoredDirHandle() {
+    try {
+      const db = await openHandleDb();
+      return await new Promise((resolve) => {
+        const tx = db.transaction(FS_HANDLE_STORE, 'readonly');
+        const req = tx.objectStore(FS_HANDLE_STORE).get('rootDir');
+        req.onsuccess = () => resolve(req.result || null);
+        req.onerror = () => resolve(null);
+      });
+    } catch (e) {
+      return null;
     }
-    for (const tpl of ALL_TILE_TEMPLATES) {
-      const candidate = tpl.replace('{z}', z).replace('{x}', x).replace('{y}', y);
-      const hit = await cache.match(candidate);
-      if (hit) return hit;
+  }
+
+  async function verifyDirPermission(handle, write = true) {
+    if (!handle) return false;
+    const opts = { mode: write ? 'readwrite' : 'read' };
+    if ((await handle.queryPermission(opts)) === 'granted') return true;
+    if ((await handle.requestPermission(opts)) === 'granted') return true;
+    return false;
+  }
+
+  async function ensureTrailSyncFolderReady(promptUser = false) {
+    if (trailSyncRootDirHandle) {
+      try {
+        const ok = await verifyDirPermission(trailSyncRootDirHandle, true);
+        if (ok) {
+          await trailSyncRootDirHandle.getDirectoryHandle('mapas', { create: true });
+          await trailSyncRootDirHandle.getDirectoryHandle('rutas', { create: true });
+          updateDeviceFolderUi();
+          return trailSyncRootDirHandle;
+        }
+      } catch (e) {}
     }
+
+    const stored = await loadStoredDirHandle();
+    if (stored) {
+      try {
+        const ok = await verifyDirPermission(stored, true);
+        if (ok) {
+          trailSyncRootDirHandle = stored;
+          trailSyncUsingPrivateOpfs = false;
+          await trailSyncRootDirHandle.getDirectoryHandle('mapas', { create: true });
+          await trailSyncRootDirHandle.getDirectoryHandle('rutas', { create: true });
+          updateDeviceFolderUi();
+          return trailSyncRootDirHandle;
+        }
+      } catch (e) {}
+    }
+
+    if (promptUser && typeof window.showDirectoryPicker === 'function') {
+      try {
+        const picked = await window.showDirectoryPicker({
+          id: 'trailsync-device-folder',
+          mode: 'readwrite',
+          startIn: 'documents'
+        });
+        // If the user selected a parent folder (e.g. Documents), create/open 'TrailSync' inside it unless already named TrailSync
+        let appDir = picked;
+        if ((picked.name || '').toLowerCase() !== 'trailsync') {
+          appDir = await picked.getDirectoryHandle('TrailSync', { create: true });
+        }
+        await appDir.getDirectoryHandle('mapas', { create: true });
+        await appDir.getDirectoryHandle('rutas', { create: true });
+        trailSyncRootDirHandle = appDir;
+        trailSyncUsingPrivateOpfs = false;
+        await saveStoredDirHandle(appDir);
+        updateDeviceFolderUi();
+        return appDir;
+      } catch (err) {
+        if (err && err.name === 'AbortError') return null;
+      }
+    }
+
+    // Fallback to Origin Private File System (OPFS) folder 'TrailSync' (still file-based, NOT browser Cache API)
+    if (navigator.storage && typeof navigator.storage.getDirectory === 'function') {
+      try {
+        const opfsRoot = await navigator.storage.getDirectory();
+        const appDir = await opfsRoot.getDirectoryHandle('TrailSync', { create: true });
+        await appDir.getDirectoryHandle('mapas', { create: true });
+        await appDir.getDirectoryHandle('rutas', { create: true });
+        trailSyncRootDirHandle = appDir;
+        trailSyncUsingPrivateOpfs = true;
+        updateDeviceFolderUi();
+        return appDir;
+      } catch (e) {}
+    }
+
+    updateDeviceFolderUi();
     return null;
   }
 
-  async function resolveOfflineTileDataUrl(cache, coords, modeObj, preferredUrl) {
-    const exactResp = await findCachedTileResponse(cache, coords.z, coords.x, coords.y, preferredUrl);
-    if (exactResp) {
-      const blob = await exactResp.blob();
-      return URL.createObjectURL(blob);
+  async function pickTrailSyncDeviceFolder(showFeedback = true) {
+    if (typeof window.showDirectoryPicker !== 'function') {
+      await ensureTrailSyncFolderReady(false);
+      if (showFeedback) {
+        showToast('ℹ️ Este navegador Android restringe el selector de carpetas; usando almacenamiento de archivos local TrailSync y descarga directa GPX');
+      }
+      await refreshOfflineStats();
+      return trailSyncRootDirHandle;
+    }
+    const dir = await ensureTrailSyncFolderReady(true);
+    if (dir && showFeedback) {
+      showToast(`📂 Carpeta vinculada: ${dir.name}/ (mapas y rutas)`);
+      await refreshOfflineStats();
+      await syncSavedRoutesFromDeviceFolder();
+    }
+    return dir;
+  }
+
+  function updateDeviceFolderUi() {
+    const nameLbl = document.getElementById('deviceFolderNameLabel');
+    const hintLbl = document.getElementById('deviceFolderStatusHint');
+    if (!nameLbl || !hintLbl) return;
+    if (trailSyncRootDirHandle && !trailSyncUsingPrivateOpfs) {
+      nameLbl.textContent = `${trailSyncRootDirHandle.name}/ (Vinculada ✅)`;
+      nameLbl.style.color = '#4ade80';
+      hintLbl.innerHTML = `Guardando archivos reales en <code>${trailSyncRootDirHandle.name}/mapas/</code> y <code>${trailSyncRootDirHandle.name}/rutas/</code> (sin caché web).`;
+    } else if (trailSyncRootDirHandle && trailSyncUsingPrivateOpfs) {
+      nameLbl.textContent = 'TrailSync/ (Almacenamiento local app)';
+      nameLbl.style.color = '#38bdf8';
+      hintLbl.innerHTML = 'Pulsa <strong>Elegir carpeta</strong> para vincular una carpeta visible en tu móvil (ej. Documentos/TrailSync).';
+    } else {
+      nameLbl.textContent = 'Sin vincular';
+      nameLbl.style.color = '#fbbf24';
+      hintLbl.innerHTML = 'Selecciona o crea la carpeta <strong>TrailSync</strong> en tu dispositivo para guardar mapas y rutas.';
+    }
+  }
+
+  function inferLayerFolderKeyFromUrl(tileUrl) {
+    if (!tileUrl) return 'dmd2_trail';
+    if (tileUrl.includes('cyclosm')) return 'dmd2_trail';
+    if (tileUrl.includes('tile.openstreetmap.org')) return 'osm_base';
+    if (tileUrl.includes('ign.es') || tileUrl.includes('World_Imagery')) return 'satelite';
+    if (tileUrl.includes('google.com/vt')) return 'google_maps';
+    return 'dmd2_trail';
+  }
+
+  async function writeTileBlobToDeviceFolder(layerKey, z, x, y, blob) {
+    const root = await ensureTrailSyncFolderReady(false);
+    if (!root || !blob) return false;
+    try {
+      const mapasDir = await root.getDirectoryHandle('mapas', { create: true });
+      const layerDir = await mapasDir.getDirectoryHandle(layerKey, { create: true });
+      const zDir = await layerDir.getDirectoryHandle(String(z), { create: true });
+      const xDir = await zDir.getDirectoryHandle(String(x), { create: true });
+      const fileHandle = await xDir.getFileHandle(`${y}.png`, { create: true });
+      const writable = await fileHandle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  async function readTileBlobFromDeviceFolder(preferredLayerKey, z, x, y) {
+    const root = await ensureTrailSyncFolderReady(false);
+    if (!root) return null;
+    const candidateLayers = [preferredLayerKey, 'dmd2_trail', 'osm_base', 'satelite', 'google_maps']
+      .filter((v, idx, arr) => v && arr.indexOf(v) === idx);
+    try {
+      const mapasDir = await root.getDirectoryHandle('mapas', { create: false });
+      for (const lKey of candidateLayers) {
+        try {
+          const layerDir = await mapasDir.getDirectoryHandle(lKey, { create: false });
+          const zDir = await layerDir.getDirectoryHandle(String(z), { create: false });
+          const xDir = await zDir.getDirectoryHandle(String(x), { create: false });
+          const fileHandle = await xDir.getFileHandle(`${y}.png`, { create: false });
+          const file = await fileHandle.getFile();
+          if (file && file.size > 0) return file;
+        } catch (e1) {}
+      }
+    } catch (e) {}
+    return null;
+  }
+
+  async function resolveOfflineTileDataUrl(coords, modeObj) {
+    const preferredLayer = modeObj && modeObj.key && modeObj.key !== 'offline'
+      ? (modeObj.key === 'osm' ? 'osm_base' : modeObj.key)
+      : 'dmd2_trail';
+
+    const exactBlob = await readTileBlobFromDeviceFolder(preferredLayer, coords.z, coords.x, coords.y);
+    if (exactBlob) {
+      return URL.createObjectURL(exactBlob);
     }
 
-    // Look up to 5 parent zoom levels up so high-zoom/un-cached tiles still show real cached map imagery offline
+    // Look up to 5 parent zoom levels up inside TrailSync/mapas so high-zoom tiles still render crisp offline
     for (let dz = 1; dz <= 5 && coords.z - dz >= 3; dz++) {
       const pz = coords.z - dz;
       const factor = Math.pow(2, dz);
@@ -4538,59 +4745,34 @@ window.addEventListener('offline', () => {
       const dx = coords.x - px * factor;
       const dy = coords.y - py * factor;
 
-      const parentResp = await findCachedTileResponse(cache, pz, px, py, null);
-      if (parentResp) {
-        const pBlob = await parentResp.blob();
-        if (pBlob && pBlob.size > 0) {
-          try {
-            const bitmap = await createImageBitmap(pBlob);
-            const dataUrl = createOverscaledFromParentBitmap(bitmap, dz, dx, dy, modeObj.pistaStyle);
-            if (bitmap.close) bitmap.close();
-            return dataUrl;
-          } catch (e) {
-            const pUrl = URL.createObjectURL(pBlob);
-            const dataUrl = await new Promise(resolve => {
-              const tmpImg = new Image();
-              tmpImg.onload = () => {
-                const out = createOverscaledFromParentBitmap(tmpImg, dz, dx, dy, modeObj.pistaStyle);
-                URL.revokeObjectURL(pUrl);
-                resolve(out);
-              };
-              tmpImg.onerror = () => {
-                URL.revokeObjectURL(pUrl);
-                resolve(null);
-              };
-              tmpImg.src = pUrl;
-            });
-            if (dataUrl) return dataUrl;
-          }
+      const parentBlob = await readTileBlobFromDeviceFolder(preferredLayer, pz, px, py);
+      if (parentBlob && parentBlob.size > 0) {
+        try {
+          const bitmap = await createImageBitmap(parentBlob);
+          const dataUrl = createOverscaledFromParentBitmap(bitmap, dz, dx, dy, modeObj.pistaStyle);
+          if (bitmap.close) bitmap.close();
+          return dataUrl;
+        } catch (e) {
+          const pUrl = URL.createObjectURL(parentBlob);
+          const dataUrl = await new Promise(resolve => {
+            const tmpImg = new Image();
+            tmpImg.onload = () => {
+              const out = createOverscaledFromParentBitmap(tmpImg, dz, dx, dy, modeObj.pistaStyle);
+              URL.revokeObjectURL(pUrl);
+              resolve(out);
+            };
+            tmpImg.onerror = () => {
+              URL.revokeObjectURL(pUrl);
+              resolve(null);
+            };
+            tmpImg.src = pUrl;
+          });
+          if (dataUrl) return dataUrl;
         }
       }
     }
 
     return createFallbackTopoCanvas(coords, modeObj.pistaStyle);
-  }
-
-  
-  const inFlightTileCacheUrls = new Set();
-  async function autoCacheLoadedTileUrl(tileUrl) {
-    if (!tileUrl || !navigator.onLine || !('caches' in window)) return;
-    if (inFlightTileCacheUrls.has(tileUrl)) return;
-    inFlightTileCacheUrls.add(tileUrl);
-    try {
-      const cache = await caches.open(TILE_CACHE_NAME);
-      const exists = await cache.match(tileUrl);
-      if (!exists) {
-        const resp = await fetch(tileUrl, { mode: 'cors' });
-        if (resp && resp.ok) {
-          await cache.put(tileUrl, resp);
-        }
-      }
-    } catch (e) {
-      // Ignore CORS or transient network errors so tile rendering is never affected
-    } finally {
-      inFlightTileCacheUrls.delete(tileUrl);
-    }
   }
 
   function buildOfflineTileLayer(modeObj) {
@@ -4603,76 +4785,54 @@ window.addEventListener('offline', () => {
           ? modeObj.fallbackUrl.replace('{z}', coords.z).replace('{x}', coords.x).replace('{y}', coords.y)
           : null;
 
-        const serveOfflineCachedOrFallback = () => {
-          if ('caches' in window) {
-            caches.open(TILE_CACHE_NAME).then(async cache => {
-              const resolvedSrc = await resolveOfflineTileDataUrl(cache, coords, modeObj, url);
-              const isObjectUrl = resolvedSrc.startsWith('blob:');
-              tile.onload = () => {
-                if (isObjectUrl) URL.revokeObjectURL(resolvedSrc);
-                done(null, tile);
-              };
-              tile.onerror = () => {
-                if (isObjectUrl) URL.revokeObjectURL(resolvedSrc);
-                tile.onload = () => done(null, tile);
-                tile.src = createFallbackTopoCanvas(coords, modeObj.pistaStyle);
-              };
-              tile.src = resolvedSrc;
-            }).catch(() => {
+        const serveOfflineFromFolderOrFallback = () => {
+          resolveOfflineTileDataUrl(coords, modeObj).then(resolvedSrc => {
+            const isObjectUrl = resolvedSrc.startsWith('blob:');
+            tile.onload = () => {
+              if (isObjectUrl) URL.revokeObjectURL(resolvedSrc);
+              done(null, tile);
+            };
+            tile.onerror = () => {
+              if (isObjectUrl) URL.revokeObjectURL(resolvedSrc);
               tile.onload = () => done(null, tile);
               tile.src = createFallbackTopoCanvas(coords, modeObj.pistaStyle);
-            });
-          } else {
+            };
+            tile.src = resolvedSrc;
+          }).catch(() => {
             tile.onload = () => done(null, tile);
             tile.src = createFallbackTopoCanvas(coords, modeObj.pistaStyle);
-          }
+          });
         };
 
         const loadFromNetwork = () => {
           let triedSecondary = false;
-          let activeSrcUrl = url;
           tile.onload = () => {
-            if (activeSrcUrl) autoCacheLoadedTileUrl(activeSrcUrl);
             done(null, tile);
           };
           tile.onerror = () => {
             if (!triedSecondary && fallbackUrl && navigator.onLine) {
               triedSecondary = true;
-              activeSrcUrl = fallbackUrl;
               tile.src = fallbackUrl;
             } else {
-              serveOfflineCachedOrFallback();
+              serveOfflineFromFolderOrFallback();
             }
           };
           tile.src = url;
         };
 
+        // Offline layer OR device without network: read exclusively from TrailSync/mapas folder (NO browser cache)
         if (modeObj.cacheOnly || !navigator.onLine) {
-          serveOfflineCachedOrFallback();
+          serveOfflineFromFolderOrFallback();
           return tile;
         }
 
-        if ('caches' in window) {
-          caches.open(TILE_CACHE_NAME).then(async cache => {
-            const hit = await findCachedTileResponse(cache, coords.z, coords.x, coords.y, url);
-            if (hit) {
-              const b = await hit.blob();
-              const u = URL.createObjectURL(b);
-              tile.onload = () => { URL.revokeObjectURL(u); done(null, tile); };
-              tile.onerror = () => { URL.revokeObjectURL(u); loadFromNetwork(); };
-              tile.src = u;
-            } else {
-              loadFromNetwork();
-            }
-          }).catch(() => loadFromNetwork());
-        } else {
-          loadFromNetwork();
-        }
+        // Online layers load directly from network without writing to browser cache
+        loadFromNetwork();
         return tile;
       }
     });
     return new OfflineLayer(modeObj.url, {
-      attribution: '&copy; OpenStreetMap / CyclOSM DMD2 / IGN / Esri',
+      attribution: '&copy; CyclOSM DMD2 / OpenStreetMap / IGN / Google Maps',
       maxZoom: modeObj.maxZoom || 18
     });
   }
@@ -4697,6 +4857,16 @@ window.addEventListener('offline', () => {
       }).catch(() => {});
     }
 
+    // Purge any legacy tile cache so maps are never held in browser cache
+    if ('caches' in window) {
+      caches.delete(TILE_CACHE_NAME).catch(() => {});
+    }
+
+    ensureTrailSyncFolderReady(false).then(() => {
+      refreshOfflineStats();
+      syncSavedRoutesFromDeviceFolder();
+    });
+
     checkWebVersionUpdate(false);
     updateOfflineQueueBadge();
 
@@ -4708,7 +4878,9 @@ window.addEventListener('offline', () => {
     if (wgCb) wgCb.checked = windNoiseGateEnabled;
 
     map = L.map('map', { zoomControl: false, zoomSnap: 0.5, zoomDelta: 0.5 }).setView(userPos, 16.5);
-    map.on('zoomend moveend', () => updateDynamicMapScale());
+    map.on('zoomend moveend', () => {
+      updateDynamicMapScale();
+    });
     map.on('dragstart', () => {
       registerManualMapExplore();
     });
@@ -4726,7 +4898,15 @@ window.addEventListener('offline', () => {
     backtrackLine = L.polyline([], { color: '#4f46e5', weight: 4, dashArray: '5, 6' }).addTo(map);
     incidentLayer = L.layerGroup().addTo(map);
     sharedWaypointsLayer = L.layerGroup().addTo(map);
-    userMarker = L.marker(userPos, { icon: createRiderIcon(userNick + ' (tú)', '#f59e0b', true) }).addTo(map);
+
+    userMarker = L.marker(userPos, { icon: makeUserNavIcon(0, '#0284c7') }).addTo(map);
+    userMarker.bindTooltip(`${userNick} (Tú)`, { permanent: false, direction: 'top' });
+
+    map.on('click', e => {
+      if (isRainLocked || isFamilySpectator) return;
+      if (!e.originalEvent || !e.originalEvent.shiftKey) return;
+      placeDestinationPin(e.latlng.lat, e.latlng.lng, true);
+    });
 
     map.on('contextmenu', e => {
       if (isRainLocked || isFamilySpectator) return;
@@ -4744,27 +4924,44 @@ window.addEventListener('offline', () => {
         showToast('⏱️ Este enlace de seguimiento familiar ha caducado');
       } else {
         isFamilySpectator = true;
-        userNick = 'Espectador';
-        groupCode = familyToken.toUpperCase();
-        groupName = familyRiderParam ? `Ruta de ${decodeURIComponent(familyRiderParam)}` : 'Seguimiento Familiar';
-        enterTracker(false);
+        groupCode = familyToken;
+        groupName = 'Seguimiento Familiar';
+        document.getElementById('lobby').style.display = 'none';
+        document.getElementById('app').classList.add('active');
+        document.getElementById('spectatorBanner').style.display = 'flex';
+        document.getElementById('groupNameHeader').textContent = 'Modo Espectador Familiar';
+        document.getElementById('groupCodeHeader').textContent = `Código: ${groupCode}`;
+        updateBottomControlsVisibility();
+        connectGroupSync();
+        startHeartbeatLoop();
       }
-    } else if (invitedCode) {
-      // Show start screen with invite banner and code prefilled so the user can enter their name and tap Unirse
-      const cEl = document.getElementById('lobbyJoinCodeInput');
-      if (cEl) cEl.value = invitedCode.toUpperCase();
-      const bEl = document.getElementById('inviteBanner');
-      if (bEl) bEl.style.display = 'block';
+    } else if (urlGroupParam && !savedActiveCode) {
+      const gInput = document.getElementById('lobbyGroupCode');
+      if (gInput) {
+        gInput.value = urlGroupParam;
+        cacheLobbyFields();
+      }
+    } else if (savedActiveCode && savedActiveName) {
+      groupCode = savedActiveCode;
+      groupName = savedActiveName;
+      document.getElementById('lobby').style.display = 'none';
+      document.getElementById('app').classList.add('active');
+      document.getElementById('groupNameHeader').textContent = groupName;
+      document.getElementById('groupCodeHeader').textContent = `Grupo: ${groupCode}`;
+      updateBottomControlsVisibility();
+      startRealGpsTracking();
+      connectGroupSync();
+      startHeartbeatLoop();
     }
+  }
 
+  function startHeartbeatLoop() {
+    if (heartbeatTimer) clearInterval(heartbeatTimer);
     let heartbeatTick = 0;
-    setInterval(() => {
-      updateTelemetryUI();
-      checkGroupSeparationAndTimeouts();
-      updateGroupRadarLabel();
-      updatePeerMarkers();
+    heartbeatTimer = setInterval(() => {
       heartbeatTick++;
-      if (!isFamilySpectator && groupCode) {
+      refreshPeerMarkers();
+      if (!isFamilySpectator && hasValidGpsFix && groupCode) {
         if (isRecording || heartbeatTick % 6 === 0) {
           broadcastState('POS');
         }
@@ -4772,31 +4969,47 @@ window.addEventListener('offline', () => {
     }, 2500);
   }
 
-  // --- OFFLINE TILE DOWNLOADER ---
+  // --- OFFLINE TILE DOWNLOADER TO DEVICE FOLDER (NO CACHE) ---
   function lon2tile(lon, z) { return Math.floor((lon + 180) / 360 * Math.pow(2, z)); }
   function lat2tile(lat, z) { return Math.floor((1 - Math.log(Math.tan(lat * Math.PI / 180) + 1 / Math.cos(lat * Math.PI / 180)) / Math.PI) / 2 * Math.pow(2, z)); }
 
-  function getSelectedOfflineTemplates() {
+  function getSelectedOfflineSources() {
     const choice = document.getElementById('offlineLayerChoice')?.value || 'dmd2_trail';
-    if (choice === 'dmd2_trail') return [DMD2_TRAIL_TILE_URL];
-    if (choice === 'osm_base') return [OSM_BASE_TILE_URL];
-    return [DMD2_TRAIL_TILE_URL, OSM_BASE_TILE_URL];
+    if (choice === 'dmd2_trail') return [{ key: 'dmd2_trail', tpl: DMD2_TRAIL_TILE_URL }];
+    if (choice === 'osm_base') return [{ key: 'osm_base', tpl: OSM_BASE_TILE_URL }];
+    if (choice === 'satelite') return [{ key: 'satelite', tpl: SAT_IGN_TILE_URL, fallbackTpl: SAT_ESRI_TILE_URL }];
+    if (choice === 'google_maps') return [{ key: 'google_maps', tpl: GOOGLE_MAPS_TILE_URL }];
+    return [
+      { key: 'dmd2_trail', tpl: DMD2_TRAIL_TILE_URL },
+      { key: 'osm_base', tpl: OSM_BASE_TILE_URL }
+    ];
   }
 
-  function buildTileUrlsFromBox(box, minZ, maxZ, templates) {
-    const urls = new Set();
-    for (const tpl of templates) {
+  function buildTileTasksFromBox(box, minZ, maxZ, sources) {
+    const tasks = [];
+    const seen = new Set();
+    for (const src of sources) {
       for (let z = minZ; z <= maxZ; z++) {
         const x1 = lon2tile(box.west, z), x2 = lon2tile(box.east, z);
         const y1 = lat2tile(box.north, z), y2 = lat2tile(box.south, z);
         for (let x = Math.min(x1, x2); x <= Math.max(x1, x2); x++) {
           for (let y = Math.min(y1, y2); y <= Math.max(y1, y2); y++) {
-            urls.add(tpl.replace('{z}', z).replace('{x}', x).replace('{y}', y));
+            const id = `${src.key}/${z}/${x}/${y}`;
+            if (seen.has(id)) continue;
+            seen.add(id);
+            tasks.push({
+              layerKey: src.key,
+              z,
+              x,
+              y,
+              url: src.tpl.replace('{z}', z).replace('{x}', x).replace('{y}', y),
+              fallbackUrl: src.fallbackTpl ? src.fallbackTpl.replace('{z}', z).replace('{x}', x).replace('{y}', y) : null
+            });
           }
         }
       }
     }
-    return [...urls];
+    return tasks;
   }
 
   let cancelOfflineDownloadFlag = false;
@@ -4815,12 +5028,17 @@ window.addEventListener('offline', () => {
     } catch (e) {}
   }
 
-  async function batchCacheUrls(urlList, labelSuccess) {
-    if (!('caches' in window)) return showToast('Tu navegador no soporta almacenamiento offline');
+  async function batchDownloadTilesToDeviceFolder(taskList, labelSuccess) {
     await ensurePersistentStorageQuota();
-    cancelOfflineDownloadFlag = false;
+    let rootDir = await ensureTrailSyncFolderReady(false);
+    if (!rootDir && typeof window.showDirectoryPicker === 'function') {
+      rootDir = await pickTrailSyncDeviceFolder(false);
+    }
+    if (!rootDir) {
+      return showToast('⚠️ Selecciona la carpeta TrailSync en tu dispositivo para guardar los mapas');
+    }
 
-    const cache = await caches.open(TILE_CACHE_NAME);
+    cancelOfflineDownloadFlag = false;
     const bar = document.getElementById('offlineProgressBar');
     const lbl = document.getElementById('offlineProgressLabel');
     const cancelBtn = document.getElementById('btnCancelOfflineDl');
@@ -4830,35 +5048,45 @@ window.addEventListener('offline', () => {
     }
 
     let done = 0;
-    const batchSize = 14;
+    let savedCount = 0;
+    const batchSize = 10;
 
-    for (let i = 0; i < urlList.length; i += batchSize) {
+    for (let i = 0; i < taskList.length; i += batchSize) {
       if (cancelOfflineDownloadFlag) break;
-      await Promise.all(urlList.slice(i, i + batchSize).map(async u => {
+      await Promise.all(taskList.slice(i, i + batchSize).map(async task => {
         try {
-          const existing = await cache.match(u);
-          if (!existing) {
+          const already = await readTileBlobFromDeviceFolder(task.layerKey, task.z, task.x, task.y);
+          if (!already) {
             let r = null;
             try {
-              r = await fetch(u, { mode: 'cors' });
-            } catch (e1) {
-              r = await fetch(u, { mode: 'no-cors' });
+              r = await fetch(task.url, { mode: 'cors', cache: 'no-store' });
+            } catch (e1) {}
+            if ((!r || !r.ok) && task.fallbackUrl) {
+              try {
+                r = await fetch(task.fallbackUrl, { mode: 'cors', cache: 'no-store' });
+              } catch (e2) {}
             }
-            if (r && (r.ok || r.type === 'opaque')) {
-              await cache.put(u, r);
+            if (r && r.ok) {
+              const blob = await r.blob();
+              if (blob && blob.size > 0) {
+                const ok = await writeTileBlobToDeviceFolder(task.layerKey, task.z, task.x, task.y, blob);
+                if (ok) savedCount++;
+              }
             }
+          } else {
+            savedCount++;
           }
         } catch (e) {}
         done++;
       }));
 
-      const pct = Math.round((done / urlList.length) * 100);
+      const pct = Math.min(100, Math.round((done / Math.max(1, taskList.length)) * 100));
       bar.style.width = pct + '%';
-      const estMb = (done * 0.024).toFixed(0);
-      lbl.textContent = `Descargando ${done} / ${urlList.length} teselas (${pct}% · ~${estMb} MB)`;
-      if (done % (batchSize * 14) === 0) {
+      const estMb = ((savedCount * 24) / 1024).toFixed(1);
+      lbl.textContent = `Guardando en ${rootDir.name}/mapas/: ${done} / ${taskList.length} teselas (${pct}% · ~${estMb} MB)`;
+      if (done % (batchSize * 12) === 0) {
         refreshOfflineStats();
-    updateDynamicMapScale();
+        updateDynamicMapScale();
       }
     }
 
@@ -4867,92 +5095,141 @@ window.addEventListener('offline', () => {
     await refreshOfflineStats();
 
     if (cancelOfflineDownloadFlag) {
-      lbl.textContent = `⏸ Descarga pausada (${done} teselas procesadas; lo guardado queda en caché)`;
-      showToast('⏸ Descarga pausada. Puedes reanudarla cuando quieras.');
+      lbl.textContent = `⏸ Descarga pausada (${savedCount} teselas guardadas en ${rootDir.name}/mapas/)`;
+      showToast('⏸ Descarga pausada. Los archivos ya escritos están en tu carpeta TrailSync.');
       return;
     }
 
-    lbl.textContent = labelSuccess;
-    showToast(labelSuccess);
-    speakAlert('Descarga de mapa offline completada');
+    lbl.textContent = `${labelSuccess} · Carpeta ${rootDir.name}/mapas/`;
+    showToast(`${labelSuccess} en carpeta ${rootDir.name}/`);
+    speakAlert('Descarga de mapa offline completada en carpeta TrailSync');
   }
 
   async function downloadIberianPeninsulaOneClick() {
     const btn = document.getElementById('btnDownloadPeninsula');
     btn.disabled = true;
-    btn.textContent = '⏳ Preparando descarga completa España + Portugal...';
-    const templates = getSelectedOfflineTemplates();
+    btn.textContent = '⏳ Preparando descarga España + Portugal en carpeta...';
+    const sources = getSelectedOfflineSources();
 
-    // Full Iberian Peninsula coverage from overview (Z5) down to detailed roads/trails (Z13)
-    const peninsulaFullUrls = buildTileUrlsFromBox(IBERIAN_BOUNDS, 5, 13, templates).slice(0, 36000);
+    const peninsulaFullTasks = buildTileTasksFromBox(IBERIAN_BOUNDS, 5, 13, sources).slice(0, 36000);
 
-    // Plus ultra-high detail (Z14–16) around active route or ~65 km radius around rider's region
     const baseBounds = plannedCoords.length > 1
       ? plannedLine.getBounds().extend(userPos).pad(0.35)
       : L.latLngBounds([userPos, userPos]).pad(0.55);
-    const corridorBox = {
+    const localDetailBox = {
       south: baseBounds.getSouth(),
       west: baseBounds.getWest(),
       north: baseBounds.getNorth(),
       east: baseBounds.getEast()
     };
-    const ultraDetailUrls = buildTileUrlsFromBox(corridorBox, 14, 16, templates).slice(0, 8000);
+    const localHighDetailTasks = buildTileTasksFromBox(localDetailBox, 14, 16, sources).slice(0, 12000);
 
-    const combined = [...new Set([...peninsulaFullUrls, ...ultraDetailUrls])];
-    btn.textContent = `⏳ Descargando ${combined.length} teselas (~${(combined.length * 0.024).toFixed(0)} MB)...`;
-    await batchCacheUrls(combined, `✅ España + Portugal completos guardados (${combined.length} teselas)`);
+    const seen = new Set(peninsulaFullTasks.map(t => `${t.layerKey}/${t.z}/${t.x}/${t.y}`));
+    const mergedTasks = [...peninsulaFullTasks];
+    for (const t of localHighDetailTasks) {
+      const k = `${t.layerKey}/${t.z}/${t.x}/${t.y}`;
+      if (!seen.has(k)) {
+        seen.add(k);
+        mergedTasks.push(t);
+      }
+    }
+
+    await batchDownloadTilesToDeviceFolder(
+      mergedTasks,
+      `✅ Península + zona detallada guardadas (${mergedTasks.length} teselas)`
+    );
     btn.disabled = false;
-    btn.textContent = '✅ España + Portugal descargados (Actualizar)';
+    btn.textContent = '⬇️ Descarga COMPLETA España + Portugal en carpeta (Z5–13 + Zona/Ruta Z14–16)';
   }
 
   async function downloadSelectedRegion() {
     const val = document.getElementById('regionSelect').value;
     const btn = document.getElementById('btnDownloadRegion');
     if (btn) btn.disabled = true;
-    const templates = getSelectedOfflineTemplates();
+    const sources = getSelectedOfflineSources();
     const box = val === 'current'
       ? { south: map.getBounds().pad(0.35).getSouth(), west: map.getBounds().pad(0.35).getWest(), north: map.getBounds().pad(0.35).getNorth(), east: map.getBounds().pad(0.35).getEast() }
       : REGION_BOXES[val];
-    const urls = buildTileUrlsFromBox(box, 10, 16, templates).slice(0, 22000);
-    await batchCacheUrls(urls, `✅ Zona completa al detalle descargada (${urls.length} teselas)`);
+    const tasks = buildTileTasksFromBox(box, 10, 16, sources).slice(0, 22000);
+    await batchDownloadTilesToDeviceFolder(tasks, `✅ Zona al detalle guardada (${tasks.length} teselas)`);
     if (btn) btn.disabled = false;
   }
 
   async function clearOfflineMapCache() {
     if ('caches' in window) {
-      await caches.delete(TILE_CACHE_NAME);
-      localStorage.removeItem('peninsulaOfflineReady');
-      document.getElementById('offlineProgressBar').style.width = '0%';
-      document.getElementById('offlineProgressLabel').textContent = 'Caché vaciada.';
-      refreshOfflineStats();
-    updateDynamicMapScale();
-      showToast('🗑️ Mapas offline eliminados');
+      await caches.delete(TILE_CACHE_NAME).catch(() => {});
     }
+    const root = await ensureTrailSyncFolderReady(false);
+    if (root) {
+      try {
+        await root.removeEntry('mapas', { recursive: true });
+        await root.getDirectoryHandle('mapas', { create: true });
+      } catch (e) {}
+    }
+    localStorage.removeItem('peninsulaOfflineReady');
+    const bar = document.getElementById('offlineProgressBar');
+    const lbl = document.getElementById('offlineProgressLabel');
+    if (bar) bar.style.width = '0%';
+    if (lbl) lbl.textContent = 'Carpeta TrailSync/mapas vaciada.';
+    await refreshOfflineStats();
+    updateDynamicMapScale();
+    showToast('🗑️ Mapas eliminados de la carpeta TrailSync/mapas');
+  }
+
+  async function countFilesAndBytesRecursive(dirHandle) {
+    let count = 0;
+    let bytes = 0;
+    try {
+      for await (const [, entry] of dirHandle.entries()) {
+        if (entry.kind === 'file') {
+          count++;
+          try {
+            const f = await entry.getFile();
+            bytes += f.size || 0;
+          } catch (e) {}
+        } else if (entry.kind === 'directory') {
+          const sub = await countFilesAndBytesRecursive(entry);
+          count += sub.count;
+          bytes += sub.bytes;
+        }
+      }
+    } catch (e) {}
+    return { count, bytes };
   }
 
   async function refreshOfflineStats() {
-    if (!('caches' in window)) return;
-    const cache = await caches.open(TILE_CACHE_NAME);
-    const keys = await cache.keys();
-    const ready = localStorage.getItem('peninsulaOfflineReady') === '1' || keys.length > 200;
-    const pb = document.getElementById('peninsulaBadge'); if (pb) pb.textContent = ready ? `Lista (${keys.length} teselas)` : `${keys.length} teselas`;
+    updateDeviceFolderUi();
     const el = document.getElementById('offlineStorageInfo');
     const qEl = document.getElementById('offlineQuotaInfo');
+    const pb = document.getElementById('peninsulaBadge');
 
-    let usedMbText = `~${(keys.length * 0.024).toFixed(1)} MB`;
-    if (navigator.storage && navigator.storage.estimate) {
+    const root = await ensureTrailSyncFolderReady(false);
+    let tileCount = 0;
+    let totalBytes = 0;
+
+    if (root) {
       try {
-        const est = await navigator.storage.estimate();
-        const usedMb = ((est.usage || 0) / (1024 * 1024)).toFixed(1);
-        const quotaMb = ((est.quota || 0) / (1024 * 1024)).toFixed(0);
-        const isPersisted = (navigator.storage.persisted && await navigator.storage.persisted());
-        if (est.usage && est.usage > 0) usedMbText = `${usedMb} MB`;
-        if (qEl) {
-          qEl.textContent = `Espacio disponible en navegador: ${quotaMb} MB · Almacenamiento fijo: ${isPersisted ? 'Activo ✅' : 'Listo'}`;
-        }
+        const mapasDir = await root.getDirectoryHandle('mapas', { create: true });
+        const stats = await countFilesAndBytesRecursive(mapasDir);
+        tileCount = stats.count;
+        totalBytes = stats.bytes;
       } catch (e) {}
     }
-    if (el) el.textContent = `${keys.length} teselas (${usedMbText}) · ${ready ? 'Offline activo' : 'Pendiente'}`;
+
+    const ready = localStorage.getItem('peninsulaOfflineReady') === '1' || tileCount > 50;
+    const usedMbText = totalBytes > 0
+      ? `${(totalBytes / (1024 * 1024)).toFixed(1)} MB`
+      : `~${(tileCount * 0.024).toFixed(1)} MB`;
+
+    if (pb) pb.textContent = ready ? `Carpeta (${tileCount} teselas)` : `${tileCount} teselas`;
+    if (qEl) {
+      qEl.textContent = root
+        ? `Destino: ${root.name}/mapas/ · Sin caché del navegador`
+        : 'Vincula la carpeta TrailSync para guardar mapas en el dispositivo';
+    }
+    if (el) {
+      el.textContent = `${tileCount} archivos (${usedMbText}) · ${ready ? 'Listo sin conexión' : 'Pendiente'}`;
+    }
   }
 
   function openOfflineModal() { refreshOfflineStats(); openModal('offlineModal'); }
@@ -5003,14 +5280,127 @@ window.addEventListener('offline', () => {
 
   function setSavedLocalRoutes(list) {
     try {
-      localStorage.setItem('trailsync_saved_routes_v1', JSON.stringify(list.slice(0, 25)));
+      localStorage.setItem('trailsync_saved_routes_v1', JSON.stringify(list.slice(0, 50)));
     } catch (e) {
-      // Fallback without photos if storage quota is tight
       try {
-        const compact = list.slice(0, 25).map(r => ({ ...r, photoThumbs: [] }));
+        const compact = list.slice(0, 50).map(r => ({ ...r, photoThumbs: [] }));
         localStorage.setItem('trailsync_saved_routes_v1', JSON.stringify(compact));
       } catch (e2) {}
     }
+  }
+
+  function buildGpxXmlString(coords, meta = {}) {
+    const titleText = meta.customName || `${groupName} (${new Date().toLocaleDateString()})`;
+    const descParts = [];
+    if (meta.customDesc) descParts.push(meta.customDesc);
+    if (Array.isArray(meta.photoNames) && meta.photoNames.length) {
+      descParts.push(`Fotos adjuntas: ${meta.photoNames.join(', ')}`);
+    }
+    const descTag = descParts.length ? `<desc>${escapeXml(descParts.join(' | '))}</desc>` : '';
+    const trkpts = (coords || []).map(p => {
+      const lat = Array.isArray(p) ? p[0] : p.lat;
+      const lon = Array.isArray(p) ? p[1] : p.lon;
+      const ele = (!Array.isArray(p) && typeof p.ele === 'number') ? p.ele : 65;
+      return `      <trkpt lat="${Number(lat).toFixed(6)}" lon="${Number(lon).toFixed(6)}"><ele>${Math.round(ele)}</ele></trkpt>`;
+    }).join('\n');
+
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="TrailSync v15.0.5" xmlns="http://www.topografix.com/GPX/1/1">
+  <metadata><name>${escapeXml(titleText)}</name>${descTag}</metadata>
+  <trk><name>${escapeXml(titleText)}</name>${descTag}<trkseg>
+${trkpts}
+  </trkseg></trk>
+</gpx>`;
+  }
+
+  async function writeRouteFilesToDeviceFolder(entry, rawCoords, photos = []) {
+    const root = await ensureTrailSyncFolderReady(false);
+    if (!root) return false;
+    try {
+      const rutasDir = await root.getDirectoryHandle('rutas', { create: true });
+      const safeBase = (entry.name || 'ruta_trailsync')
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9_-]+/g, '_')
+        .replace(/^_+|_+$/g, '') || ('ruta_' + Date.now());
+
+      // 1. Write standard .gpx file in TrailSync/rutas/
+      const gpxContent = buildGpxXmlString(rawCoords, {
+        customName: entry.name,
+        customDesc: entry.description,
+        photoNames: photos.map(p => p.name)
+      });
+      const gpxHandle = await rutasDir.getFileHandle(`${safeBase}.gpx`, { create: true });
+      const gpxWriter = await gpxHandle.createWritable();
+      await gpxWriter.write(new Blob([gpxContent], { type: 'application/gpx+xml' }));
+      await gpxWriter.close();
+
+      // 2. Write metadata .json in TrailSync/rutas/ so repository survives cache clears
+      const jsonHandle = await rutasDir.getFileHandle(`${safeBase}.json`, { create: true });
+      const jsonWriter = await jsonHandle.createWritable();
+      await jsonWriter.write(new Blob([JSON.stringify({ ...entry, fileBase: safeBase }, null, 2)], { type: 'application/json' }));
+      await jsonWriter.close();
+
+      // 3. Write attached photos into TrailSync/rutas/
+      for (let i = 0; i < photos.length; i++) {
+        const p = photos[i];
+        if (!p || !p.file) continue;
+        const ext = (p.name.split('.').pop() || 'jpg').toLowerCase();
+        const imgHandle = await rutasDir.getFileHandle(`${safeBase}_foto_${i + 1}.${ext}`, { create: true });
+        const imgWriter = await imgHandle.createWritable();
+        await imgWriter.write(p.file);
+        await imgWriter.close();
+      }
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  async function deleteRouteFilesFromDeviceFolder(entry) {
+    const root = await ensureTrailSyncFolderReady(false);
+    if (!root || !entry) return;
+    try {
+      const rutasDir = await root.getDirectoryHandle('rutas', { create: false });
+      const safeBase = entry.fileBase || (entry.name || '')
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9_-]+/g, '_')
+        .replace(/^_+|_+$/g, '');
+      if (!safeBase) return;
+      for await (const [fname] of rutasDir.entries()) {
+        if (fname === `${safeBase}.gpx` || fname === `${safeBase}.json` || fname.startsWith(`${safeBase}_foto_`)) {
+          try { await rutasDir.removeEntry(fname); } catch (e1) {}
+        }
+      }
+    } catch (e) {}
+  }
+
+  async function syncSavedRoutesFromDeviceFolder() {
+    const root = await ensureTrailSyncFolderReady(false);
+    if (!root) return;
+    try {
+      const rutasDir = await root.getDirectoryHandle('rutas', { create: true });
+      const folderEntries = [];
+      for await (const [fname, handle] of rutasDir.entries()) {
+        if (handle.kind === 'file' && fname.endsWith('.json')) {
+          try {
+            const file = await handle.getFile();
+            const parsed = JSON.parse(await file.text());
+            if (parsed && parsed.name && Array.isArray(parsed.coords)) {
+              folderEntries.push(parsed);
+            }
+          } catch (e1) {}
+        }
+      }
+      if (folderEntries.length > 0) {
+        const local = getSavedLocalRoutes();
+        const mapById = new Map();
+        [...folderEntries, ...local].forEach(item => {
+          if (item && item.id) mapById.set(item.id, item);
+        });
+        setSavedLocalRoutes([...mapById.values()]);
+        renderSavedLocalRoutesList();
+      }
+    } catch (e) {}
   }
 
   function createCompressedThumbDataUrl(file) {
@@ -5073,12 +5463,12 @@ window.addEventListener('offline', () => {
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
         <div style="min-width:0;flex:1;">
           <div style="font-size:12.5px;font-weight:800;color:#f8fafc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeXml(r.name)}</div>
-          <div style="font-size:11px;color:#94a3b8;margin-top:2px;">${Number(r.distanceKm || 0).toFixed(1)} km · +${Math.round(r.ascentM || 0)} m · 📷 ${thumbs.length} · ${escapeXml(r.dateStr || '')}</div>
+          <div style="font-size:11px;color:#94a3b8;margin-top:2px;">${Number(r.distanceKm || 0).toFixed(1)} km · +${Math.round(r.ascentM || 0)} m · ${escapeXml(r.dateStr || '')}${thumbs.length ? ` · 📷 ${thumbs.length}` : ''}</div>
           ${descHtml}
         </div>
-        <div style="display:flex;gap:5px;flex:0 0 auto;">
-          <button type="button" class="solid-btn" style="background:#0284c7;color:#fff;padding:5px 9px;font-size:11px;" onclick="loadSavedLocalRouteOntoMap(${idx})">🗺️ Cargar</button>
-          <button type="button" class="solid-btn" style="background:#991b1b;color:#fecaca;border:1px solid #ef4444;padding:5px 8px;font-size:11px;" title="Eliminar ruta guardada" onclick="deleteSavedLocalRoute(${idx})">🗑️</button>
+        <div style="display:flex;gap:5px;flex-shrink:0;">
+          <button type="button" onclick="loadSavedLocalRouteOntoMap(${idx})" style="background:#0284c7;color:#fff;border:none;border-radius:7px;padding:5px 8px;font-size:11px;font-weight:700;cursor:pointer;">Cargar</button>
+          <button type="button" onclick="deleteSavedLocalRoute(${idx})" style="background:#334155;color:#fca5a5;border:none;border-radius:7px;padding:5px 8px;font-size:11px;font-weight:700;cursor:pointer;">🗑️</button>
         </div>
       </div>
       ${photosHtml}
@@ -5087,15 +5477,12 @@ window.addEventListener('offline', () => {
 
   function renderSavedLocalRoutesList() {
     const routes = getSavedLocalRoutes();
-
-    const sec = document.getElementById('savedLocalRoutesSection');
-    const listEl = document.getElementById('savedLocalRoutesList');
-    if (sec && listEl) {
+    const promptContainer = document.getElementById('savedLocalRoutesListContainer');
+    if (promptContainer) {
       if (!routes.length) {
-        sec.style.display = 'none';
+        promptContainer.innerHTML = `<div style="font-size:11.5px;color:#64748b;padding:4px 0;">Aún no tienes rutas guardadas en este dispositivo.</div>`;
       } else {
-        sec.style.display = 'block';
-        listEl.innerHTML = routes.map((r, idx) => buildSavedRouteCardHtml(r, idx, false)).join('');
+        promptContainer.innerHTML = routes.map((r, idx) => buildSavedRouteCardHtml(r, idx, false)).join('');
       }
     }
 
@@ -5103,7 +5490,7 @@ window.addEventListener('offline', () => {
     if (repoContainer) {
       if (!routes.length) {
         repoContainer.innerHTML = `<div style="background:#18141a;border:1px solid #334155;border-radius:10px;padding:14px;text-align:center;color:#94a3b8;font-size:12.5px;">
-          Todavía no tienes rutas guardadas en este dispositivo.<br>Al detener una grabación podrás guardarla con nombre, descripción y fotos.
+          Todavía no tienes rutas guardadas en la carpeta TrailSync/rutas.<br>Al detener una grabación podrás guardarla con nombre, descripción y fotos.
         </div>`;
       } else {
         repoContainer.innerHTML = routes.map((r, idx) => buildSavedRouteCardHtml(r, idx, true)).join('');
@@ -5111,20 +5498,22 @@ window.addEventListener('offline', () => {
     }
   }
 
-  function openLocalRoutesRepoModal() {
+  async function openLocalRoutesRepoModal() {
+    await syncSavedRoutesFromDeviceFolder();
     renderSavedLocalRoutesList();
     openModal('localRoutesRepoModal');
   }
 
-  function deleteSavedLocalRoute(idx) {
+  async function deleteSavedLocalRoute(idx) {
     const routes = getSavedLocalRoutes();
     const target = routes[idx];
     if (!target) return;
-    if (!window.confirm(`¿Eliminar la ruta "${target.name}" de tus rutas guardadas?`)) return;
+    if (!window.confirm(`¿Eliminar la ruta "${target.name}" de tus rutas guardadas y de la carpeta TrailSync/rutas?`)) return;
+    await deleteRouteFilesFromDeviceFolder(target);
     routes.splice(idx, 1);
     setSavedLocalRoutes(routes);
     renderSavedLocalRoutesList();
-    showToast(`🗑️ Ruta "${target.name}" eliminada del repositorio`);
+    showToast(`🗑️ Ruta "${target.name}" eliminada`);
   }
 
   function loadSavedLocalRouteOntoMap(idx) {
@@ -5168,7 +5557,7 @@ window.addEventListener('offline', () => {
     const ptsCount = recordedTrack.length > 1 ? recordedTrack.length : plannedCoords.length;
     const distShown = recordedTrack.length > 1 ? totalDistanceKm : computeTotalDistanceKm(plannedCoords);
     if (metricsEl) {
-      metricsEl.textContent = `Recorrido: ${distShown.toFixed(1)} km · +${Math.round(totalAscentM)} m · ${ptsCount} puntos. ¿Quieres guardar esta ruta con nombre, descripción y fotos?`;
+      metricsEl.textContent = `Recorrido: ${distShown.toFixed(1)} km · +${Math.round(totalAscentM)} m · ${ptsCount} puntos. Se guardará en la carpeta TrailSync/rutas/ del dispositivo.`;
     }
 
     renderSavedLocalRoutesList();
@@ -5198,6 +5587,10 @@ window.addEventListener('offline', () => {
     const routeTitle = rawName || `${groupName} (${new Date().toLocaleDateString()})`;
     const routeDesc = (document.getElementById('saveRouteDescInput')?.value || '').trim();
 
+    const rawTrackToSave = recordedTrack.length > 1
+      ? recordedTrack
+      : plannedCoords.map(c => ({ lat: c[0], lon: c[1], ele: 65 }));
+
     const coordsToSave = recordedTrack.length > 1
       ? recordedTrack.map(p => [p.lat, p.lon])
       : [...plannedCoords];
@@ -5205,8 +5598,14 @@ window.addEventListener('offline', () => {
       ? totalDistanceKm
       : computeTotalDistanceKm(coordsToSave);
 
+    const safeBase = routeTitle
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9_-]+/g, '_')
+      .replace(/^_+|_+$/g, '') || ('ruta_' + Date.now());
+
     const entry = {
       id: 'saved_' + Date.now(),
+      fileBase: safeBase,
       name: routeTitle,
       description: routeDesc,
       distanceKm: Number(distKm.toFixed(2)),
@@ -5220,14 +5619,19 @@ window.addEventListener('offline', () => {
     existing.unshift(entry);
     setSavedLocalRoutes(existing);
 
-    if (downloadFiles) {
+    // Write directly into TrailSync/rutas/ folder on device
+    let rootDir = await ensureTrailSyncFolderReady(false);
+    if (!rootDir && typeof window.showDirectoryPicker === 'function') {
+      rootDir = await pickTrailSyncDeviceFolder(false);
+    }
+    const savedInFolder = await writeRouteFilesToDeviceFolder(entry, rawTrackToSave, pendingRoutePhotos);
+
+    if (downloadFiles && (!savedInFolder || trailSyncUsingPrivateOpfs)) {
       exportRecordedGPX({
         customName: routeTitle,
         customDesc: routeDesc,
         photoNames: pendingRoutePhotos.map(p => p.name)
       });
-      // Also download attached route photos with matching route prefix so nothing is lost
-      const safeBase = routeTitle.replace(/[^a-zA-Z0-9_-]+/g, '_');
       pendingRoutePhotos.forEach((p, idx) => {
         if (!p.file) return;
         const ext = (p.name.split('.').pop() || 'jpg').toLowerCase();
@@ -5240,9 +5644,11 @@ window.addEventListener('offline', () => {
         a.remove();
         setTimeout(() => URL.revokeObjectURL(url), 1000);
       });
-      showToast(`💾 Ruta "${routeTitle}" guardada y descargada (.GPX + ${pendingRoutePhotos.length} fotos)`);
+      showToast(`💾 Ruta "${routeTitle}" guardada y exportada (.GPX + ${pendingRoutePhotos.length} fotos)`);
+    } else if (savedInFolder) {
+      showToast(`📂 Ruta "${routeTitle}" guardada en ${rootDir ? rootDir.name : 'TrailSync'}/rutas/ (.GPX + datos + ${pendingRoutePhotos.length} fotos)`);
     } else {
-      showToast(`📁 Ruta "${routeTitle}" guardada en tu dispositivo`);
+      showToast(`📁 Ruta "${routeTitle}" guardada en el historial del dispositivo`);
     }
 
     await finalizeAfterSavePrompt();
