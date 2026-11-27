@@ -2,7 +2,7 @@
   "id": "./",
   "name": "TrailSync",
   "short_name": "TrailSync",
-  "version": "15.2.2",
+  "version": "15.2.3",
   "description": "App trail con capa DMD2 Trail / Pistas descargable offline, rutas BRouter, telemetría GPX y bloqueo lluvia.",
   "start_url": "./",
   "scope": "./",

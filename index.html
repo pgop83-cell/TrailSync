@@ -10,7 +10,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
   <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
-  <title>TrailSync v15.2.2 — Capas Online/Offline limpias y carpeta local TrailSync en el dispositivo</title>
+  <title>TrailSync v15.2.3 — Capas Online/Offline limpias y carpeta local TrailSync en el dispositivo</title>
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
         onerror="this.onerror=null;this.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';" />
@@ -321,23 +321,24 @@
       cursor: pointer;
     }
 
-    /* LIVE TELEMETRY STRIP (CLEAR IN CENTER BETWEEN 3+3 BOTTOM ICON CLUSTERS) */
+    /* LIVE TELEMETRY STRIP (MATCHES 44PX HEIGHT OF ROUND BOTTOM ICONS WITH LARGER NUMBERS) */
     .telemetry-bar {
       position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%);
       z-index: 940;
+      height: 44px; min-height: 44px;
       background: rgba(15, 23, 42, 0.92);
-      border: 1px solid rgba(148, 163, 184, 0.35);
-      border-radius: 14px;
-      padding: 5px 10px;
-      display: flex; align-items: center; gap: 8px;
-      box-shadow: 0 4px 14px rgba(0,0,0,0.42);
+      border: 1.5px solid rgba(148, 163, 184, 0.42);
+      border-radius: 22px;
+      padding: 0 13px;
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.45);
       pointer-events: auto;
       backdrop-filter: blur(4px);
     }
-    .telem-cell { display: flex; flex-direction: column; align-items: center; min-width: 38px; }
-    .telem-val { font-size: 12.5px; font-weight: 900; color: #f8fafc; line-height: 1.15; }
-    .telem-lbl { font-size: 8.5px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.3px; }
-    .telem-sep { width: 1px; height: 20px; background: rgba(148,163,184,0.25); }
+    .telem-cell { display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 42px; }
+    .telem-val { font-size: 16px; font-weight: 900; color: #f8fafc; line-height: 1.05; letter-spacing: -0.2px; }
+    .telem-lbl { font-size: 8.5px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.3px; margin-top: 1px; }
+    .telem-sep { width: 1px; height: 24px; background: rgba(148,163,184,0.3); }
 
     /* TOP-RIGHT SCALE + GOOGLE MAPS STYLE COMPASS BUTTON */
     .top-right-stack {
@@ -465,13 +466,16 @@
       .top-icon-btn { width: 30px; height: 30px; }
       .telemetry-bar {
         bottom: 10px;
-        left: 52%;
+        left: 50%;
         transform: translateX(-50%);
-        padding: 4px 7px;
-        gap: 5px;
+        height: 36px;
+        min-height: 36px;
+        border-radius: 18px;
+        padding: 0 9px;
+        gap: 6px;
       }
-      .telem-cell { min-width: 28px; }
-      .telem-val { font-size: 11px; }
+      .telem-cell { min-width: 32px; }
+      .telem-val { font-size: 13.5px; }
       .telem-lbl { font-size: 7.5px; }
       .bottom-actions {
         left: 8px;
@@ -1225,7 +1229,7 @@
       </button>
     </div>
     <div style="text-align:center;font-size:11px;color:#64748b;margin-top:8px;">
-      Versión 15.2.2 · Capas Online/Offline + Carpeta local TrailSync en dispositivo
+      Versión 15.2.3 · Capas Online/Offline + Carpeta local TrailSync en dispositivo
     </div>
   </div>
 </div>
@@ -2024,7 +2028,7 @@
     <h2>Ajustes de ruta y App</h2>
     <div style="background:#18141a;padding:10px 12px;border-radius:12px;margin-bottom:12px;border:1px solid #334155;display:flex;align-items:center;justify-content:space-between;gap:8px;">
       <div>
-        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">15.2.2</span></div>
+        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">15.2.3</span></div>
         <div style="font-size:11px;color:#94a3b8;" id="webVerStatusLabel">Comprobando actualizaciones en la web...</div>
       </div>
       <button class="solid-btn" style="flex:0 0 auto;background:#16a34a;color:#fff;padding:8px 12px;font-size:12px;" onclick="manualCheckForUpdates()">🔄 Buscar / Actualizar</button>
@@ -2105,7 +2109,7 @@
     } catch (e) {}
   });
 
-  const APP_VERSION = '15.2.2';
+  const APP_VERSION = '15.2.3';
   let swWaitingWorker = null;
   let remoteVersionFound = null;
 
@@ -2232,10 +2236,15 @@
   function computeLookAheadMeters(speedKmh, zoomLevel) {
     if (!courseUpMode || userExploringMap || isFamilySpectator) return 0;
     const metersPerPixel = (156543.03392 * Math.cos((userPos[0] * Math.PI) / 180)) / Math.pow(2, zoomLevel || 16);
-    const viewH = map ? (map.getSize().y || window.innerHeight || 720) : 720;
-    // Place rider arrow at ~67% from top (17% below center, well above bottom telemetry bar)
-    const speedFactor = Math.min(1, Math.max(0, speedKmh / 100));
-    const targetAheadPx = Math.min(135, Math.max(85, Math.round(viewH * (0.14 + speedFactor * 0.04))));
+    const containerEl = document.getElementById('map-container');
+    const screenH = (containerEl && containerEl.clientHeight) || window.innerHeight || 720;
+    // Center of #map-rotator is at 50% of #map-container height and 50% width.
+    // Bottom telemetry bar is 44px high at bottom: 14px (occupies bottom 58px).
+    // Place arrow centered horizontally (50% X) and ~34px above the telemetry bar (bottom ~92px).
+    const baseOffsetFromCenterPx = Math.max(70, Math.round((screenH / 2) - 92));
+    const speedExtraPx = Math.round(Math.min(1, Math.max(0, speedKmh / 100)) * 18);
+    // Compensate slightly for 3D tilt (34 deg) foreshortening in the lower half of the viewport
+    const targetAheadPx = Math.round((baseOffsetFromCenterPx + speedExtraPx) * 1.12);
     return Math.round(metersPerPixel * targetAheadPx);
   }
 
@@ -5894,7 +5903,7 @@ window.addEventListener('offline', () => {
     }).join('\n');
 
     return `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="TrailSync v15.2.2" xmlns="http://www.topografix.com/GPX/1/1">
+<gpx version="1.1" creator="TrailSync v15.2.3" xmlns="http://www.topografix.com/GPX/1/1">
   <metadata><name>${escapeXml(titleText)}</name>${descTag}</metadata>
   <trk><name>${escapeXml(titleText)}</name>${descTag}<trkseg>
 ${trkpts}
