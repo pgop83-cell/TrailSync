@@ -10,7 +10,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
   <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
-  <title>TrailSync v15.0.9 — Capas Online/Offline limpias y carpeta local TrailSync en el dispositivo</title>
+  <title>TrailSync v15.1.0 — Capas Online/Offline limpias y carpeta local TrailSync en el dispositivo</title>
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
         onerror="this.onerror=null;this.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';" />
@@ -144,21 +144,27 @@
     }
 
     /* MAP AREA WITH SMOOTH HEADING ROTATION SUPPORT */
-    #map-container { position: relative; flex: 1; width: 100%; overflow: hidden; background: #f2efe9; }
+    #map-container {
+      position: relative; flex: 1; width: 100%; overflow: hidden; background: #f2efe9;
+      perspective: 980px;
+      perspective-origin: 50% 68%;
+    }
     #map-rotator {
       position: absolute;
-      width: 142vmax; height: 142vmax;
+      width: 175vmax; height: 175vmax;
       left: 50%; top: 50%;
-      transform: translate(-50%, -50%) rotate(0deg);
-      transform-origin: center center;
-      transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+      transform: translate(-50%, -50%) rotateX(0deg) rotateZ(0deg) scale(1);
+      transform-origin: center 58%;
+      transform-style: preserve-3d;
+      transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
       z-index: 1;
     }
     #map { width: 100%; height: 100%; }
 
     .rider-upright-wrapper {
-      transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
-      transform: rotate(var(--inv-map-rot, 0deg));
+      transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+      transform-origin: 24px 25px;
+      transform: rotateZ(var(--inv-map-rot, 0deg)) rotateX(var(--inv-map-tilt, 0deg)) scale(var(--inv-map-scale, 1));
     }
 
     #map.offline-pista-mode .leaflet-tile-pane {
@@ -1120,19 +1126,20 @@
       pointer-events: auto;
     }
     .rider-puck {
-      width: 48px; height: 48px; border-radius: 50%;
-      background: radial-gradient(circle at 35% 30%, #ffffff 0%, #f1f5f9 78%, #cbd5e1 100%);
+      width: 52px; height: 52px; border-radius: 50%;
+      background: radial-gradient(circle at 38% 28%, rgba(255,255,255,0.96) 0%, rgba(241,245,249,0.92) 64%, rgba(203,213,225,0.85) 100%);
       border: 2.5px solid #ffffff;
-      box-shadow: 0 5px 14px rgba(15, 23, 42, 0.45), 0 0 0 2px rgba(15, 23, 42, 0.14);
+      box-shadow: 0 9px 18px rgba(15, 23, 42, 0.48), 0 2px 4px rgba(15, 23, 42, 0.25);
       display: flex; align-items: center; justify-content: center;
       flex-shrink: 0;
       position: relative;
     }
     .rider-puck-rotator {
-      width: 42px; height: 42px;
+      width: 46px; height: 46px;
       display: flex; align-items: center; justify-content: center;
       transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
       transform-origin: center center;
+      filter: drop-shadow(0 4px 4px rgba(15, 23, 42, 0.36));
     }
     .rider-tag {
       background: rgba(15, 23, 42, 0.92); color: #fff;
@@ -1217,7 +1224,7 @@
       </button>
     </div>
     <div style="text-align:center;font-size:11px;color:#64748b;margin-top:8px;">
-      Versión 15.0.9 · Capas Online/Offline + Carpeta local TrailSync en dispositivo
+      Versión 15.1.0 · Capas Online/Offline + Carpeta local TrailSync en dispositivo
     </div>
   </div>
 </div>
@@ -2022,7 +2029,7 @@
     <h2>Ajustes de ruta y App</h2>
     <div style="background:#18141a;padding:10px 12px;border-radius:12px;margin-bottom:12px;border:1px solid #334155;display:flex;align-items:center;justify-content:space-between;gap:8px;">
       <div>
-        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">15.0.9</span></div>
+        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">15.1.0</span></div>
         <div style="font-size:11px;color:#94a3b8;" id="webVerStatusLabel">Comprobando actualizaciones en la web...</div>
       </div>
       <button class="solid-btn" style="flex:0 0 auto;background:#16a34a;color:#fff;padding:8px 12px;font-size:12px;" onclick="manualCheckForUpdates()">🔄 Buscar / Actualizar</button>
@@ -2103,7 +2110,7 @@
     } catch (e) {}
   });
 
-  const APP_VERSION = '15.0.9';
+  const APP_VERSION = '15.1.0';
   let swWaitingWorker = null;
   let remoteVersionFound = null;
 
@@ -2177,6 +2184,7 @@
   function registerManualMapExplore() {
     userExploringMap = true;
     registerManualZoomOverride();
+    if (courseUpMode) applyMapOrientation();
   }
 
   function getTargetZoomForSpeed(speedKmh) {
@@ -2717,7 +2725,7 @@
 
     const lineColor = routeObj.color || '#ea580c';
     const isPista = getActiveLayerObj().pistaStyle;
-    plannedLine.setLatLngs(plannedCoords);
+    if (plannedLine) plannedLine.setLatLngs(plannedCoords);
     plannedLine.setStyle({
       color: isPista ? '#dc2626' : lineColor,
       weight: isPista ? 8 : 6,
@@ -2737,6 +2745,14 @@
       legalPill.style.display = 'flex';
       legalPill.classList.remove('legal-ok', 'legal-warn', 'legal-danger', 'legal-loading');
       legalPill.title = 'Comprobar ruta legal';
+    }
+    if (!isFamilySpectator && !courseUpMode) {
+      courseUpMode = true;
+      userExploringMap = false;
+      if (currentHeadingDeg === 0 && plannedCoords.length > 1) {
+        currentHeadingDeg = computeBearing(plannedCoords[0][0], plannedCoords[0][1], plannedCoords[1][0], plannedCoords[1][1]);
+      }
+      applyMapOrientation();
     }
 
     if (broadcastToGroup) publishGroupRoute(routeObj);
@@ -3396,7 +3412,7 @@ function keepOriginalRouteAndNavigate() {
     activeSharedRoute = null;
     lastSeenRouteId = null;
     plannedCoords = [];
-    plannedLine.setLatLngs([]);
+    if (plannedLine) plannedLine.setLatLngs([]);
     clearLegalOverlay();
     const legalPill = document.getElementById('floatingLegalCheckPill');
     if (legalPill) legalPill.style.display = 'none';
@@ -3471,7 +3487,7 @@ function keepOriginalRouteAndNavigate() {
       iconSize: [32, 32], iconAnchor: [16, 16]
     });
     if (!destMarker) destMarker = L.marker(pendingDestCoords, { icon: destIcon }).addTo(map);
-    else destMarker.setLatLng(pendingDestCoords);
+    else if (destMarker) destMarker.setLatLng(pendingDestCoords);
 
     if (openSheet) {
       document.getElementById('destCoordsSummary').textContent =
@@ -3629,20 +3645,28 @@ function keepOriginalRouteAndNavigate() {
     const btn = document.getElementById('gmapsCompassBtn');
     const badge = document.getElementById('compassModeBadge');
 
+    const shouldTilt = courseUpMode && !userExploringMap && !isFamilySpectator;
+    const tiltDeg = shouldTilt ? 38 : 0;
+    const mapScale = shouldTilt ? 1.12 : 1;
+
     if (courseUpMode) {
-      rotator.style.transform = `translate(-50%, -50%) rotate(${-currentHeadingDeg}deg)`;
+      rotator.style.transform = `translate(-50%, -50%) rotateX(${tiltDeg}deg) rotateZ(${-currentHeadingDeg}deg) scale(${mapScale})`;
       document.documentElement.style.setProperty('--inv-map-rot', `${currentHeadingDeg}deg`);
+      document.documentElement.style.setProperty('--inv-map-tilt', `${-tiltDeg * 0.68}deg`);
+      document.documentElement.style.setProperty('--inv-map-scale', shouldTilt ? '1.16' : '1');
       needle.style.transform = `rotate(${-currentHeadingDeg}deg)`;
       btn.classList.add('course-up-active');
-      badge.textContent = 'RUMBO';
+      badge.textContent = shouldTilt ? '3D' : 'RUMBO';
     } else {
-      rotator.style.transform = 'translate(-50%, -50%) rotate(0deg)';
+      rotator.style.transform = 'translate(-50%, -50%) rotateX(0deg) rotateZ(0deg) scale(1)';
       document.documentElement.style.setProperty('--inv-map-rot', '0deg');
+      document.documentElement.style.setProperty('--inv-map-tilt', '0deg');
+      document.documentElement.style.setProperty('--inv-map-scale', '1');
       needle.style.transform = 'rotate(0deg)';
       btn.classList.remove('course-up-active');
       badge.textContent = 'NORTE';
     }
-      if (!isFamilySpectator && userMarker) {
+    if (!isFamilySpectator && userMarker) {
       const rotEl = userMarker.getElement()?.querySelector('.rider-puck-rotator');
       if (rotEl) rotEl.style.transform = `rotate(${currentHeadingDeg || 0}deg)`;
     }
@@ -4419,7 +4443,7 @@ window.addEventListener('offline', () => {
       if (!peerMarkers[id]) {
         peerMarkers[id] = L.marker([p.lat, p.lon], { icon }).addTo(map);
       } else {
-        peerMarkers[id].setLatLng([p.lat, p.lon]);
+        if (peerMarkers[id]) peerMarkers[id].setLatLng([p.lat, p.lon]);
         peerMarkers[id].setIcon(icon);
       }
     });
@@ -4526,27 +4550,78 @@ window.addEventListener('offline', () => {
   }
 
   function buildGoogleMapsMotoSvg(suitColor) {
-    return `<svg width="38" height="38" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <ellipse cx="24" cy="27" rx="9" ry="14" fill="rgba(15,23,42,0.16)"/>
-      <rect x="21.6" y="4.5" width="4.8" height="9.5" rx="2.4" fill="#1e293b"/>
-      <path d="M20.5 11.5C20.5 9.6 22 8.4 24 8.4C26 8.4 27.5 9.6 27.5 11.5L26.8 15.2H21.2L20.5 11.5Z" fill="${suitColor}"/>
-      <path d="M12.5 17.5L18.5 16.2H29.5L35.5 17.5" stroke="#334155" stroke-width="2.4" stroke-linecap="round"/>
-      <circle cx="11.5" cy="17.2" r="1.6" fill="#475569"/>
-      <circle cx="36.5" cy="17.2" r="1.6" fill="#475569"/>
-      <path d="M14.2 17.8C15.5 19.5 17.5 21.5 19.2 22.2" stroke="${suitColor}" stroke-width="3.6" stroke-linecap="round"/>
-      <path d="M33.8 17.8C32.5 19.5 30.5 21.5 28.8 22.2" stroke="${suitColor}" stroke-width="3.6" stroke-linecap="round"/>
-      <circle cx="13.8" cy="17.5" r="1.7" fill="#0f172a"/>
-      <circle cx="34.2" cy="17.5" r="1.7" fill="#0f172a"/>
-      <rect x="20.8" y="32.5" width="6.4" height="11" rx="3.2" fill="#0f172a"/>
-      <rect x="22.8" y="33.5" width="2.4" height="9" rx="1.2" fill="#334155"/>
-      <path d="M20.5 30.5H27.5L26.5 35.5H21.5L20.5 30.5Z" fill="${suitColor}"/>
-      <rect x="22.2" y="34.4" width="3.6" height="1.5" rx="0.7" fill="#ef4444"/>
-      <path d="M18.8 25.5L17.8 31.8" stroke="#1e293b" stroke-width="3.4" stroke-linecap="round"/>
-      <path d="M29.2 25.5L30.2 31.8" stroke="#1e293b" stroke-width="3.4" stroke-linecap="round"/>
-      <rect x="17.5" y="19.5" width="13" height="11.5" rx="5.5" fill="${suitColor}" stroke="rgba(255,255,255,0.45)" stroke-width="1"/>
-      <rect x="21.4" y="21.2" width="5.2" height="7.6" rx="2.4" fill="rgba(15,23,42,0.22)"/>
-      <circle cx="24" cy="21.2" r="5.3" fill="${suitColor}" stroke="#ffffff" stroke-width="1.4"/>
-      <path d="M19.8 18.8C21 16.9 27 16.9 28.2 18.8C26.5 18.1 21.5 18.1 19.8 18.8Z" fill="#0f172a"/>
+    const uid = suitColor.replace('#', '');
+    return `<svg width="44" height="44" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <defs>
+        <radialGradient id="g3dShadow_${uid}" cx="50%" cy="55%" r="48%">
+          <stop offset="0%" stop-color="#0f172a" stop-opacity="0.42"/>
+          <stop offset="70%" stop-color="#0f172a" stop-opacity="0.16"/>
+          <stop offset="100%" stop-color="#0f172a" stop-opacity="0"/>
+        </radialGradient>
+        <linearGradient id="g3dSuit_${uid}" x1="16" y1="14" x2="40" y2="38" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#ffffff" stop-opacity="0.42"/>
+          <stop offset="35%" stop-color="${suitColor}" stop-opacity="1"/>
+          <stop offset="100%" stop-color="#090d16" stop-opacity="0.72"/>
+        </linearGradient>
+        <radialGradient id="g3dHelmet_${uid}" cx="36%" cy="28%" r="65%">
+          <stop offset="0%" stop-color="#ffffff"/>
+          <stop offset="28%" stop-color="${suitColor}"/>
+          <stop offset="88%" stop-color="#0f172a"/>
+        </radialGradient>
+        <linearGradient id="g3dTire_${uid}" x1="23" y1="34" x2="33" y2="50" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#475569"/>
+          <stop offset="45%" stop-color="#1e293b"/>
+          <stop offset="100%" stop-color="#020617"/>
+        </linearGradient>
+      </defs>
+
+      <!-- Sombra 3D proyectada en el suelo -->
+      <ellipse cx="28" cy="33" rx="13.5" ry="17.5" fill="url(#g3dShadow_${uid})"/>
+
+      <!-- Rueda delantera 3D y guardabarros alto enduro -->
+      <rect x="25" y="4.5" width="6" height="11" rx="3" fill="#0f172a"/>
+      <path d="M23.5 12.2C23.5 9.8 25.4 8.2 28 8.2C30.6 8.2 32.5 9.8 32.5 12.2L31.4 17H24.6L23.5 12.2Z" fill="${suitColor}"/>
+      <path d="M24.5 11.4C26 9.8 30 9.8 31.5 11.4" stroke="rgba(255,255,255,0.65)" stroke-width="1.3" stroke-linecap="round"/>
+
+      <!-- Manillar con paramanos y retrovisores -->
+      <path d="M13.5 19.2L21 17.5H35L42.5 19.2" stroke="#1e293b" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="12.2" cy="18.6" r="2.1" fill="#334155" stroke="#94a3b8" stroke-width="0.8"/>
+      <circle cx="43.8" cy="18.6" r="2.1" fill="#334155" stroke="#94a3b8" stroke-width="0.8"/>
+      <path d="M14.2 18.8C16 17.4 18.2 17.6 19.6 18.6" stroke="${suitColor}" stroke-width="2.4" stroke-linecap="round"/>
+      <path d="M41.8 18.8C40 17.4 37.8 17.6 36.4 18.6" stroke="${suitColor}" stroke-width="2.4" stroke-linecap="round"/>
+
+      <!-- Brazos del motorista en 3D -->
+      <path d="M15.8 19.5C17.2 22 19.6 24.2 21.8 25" stroke="${suitColor}" stroke-width="4.4" stroke-linecap="round"/>
+      <path d="M40.2 19.5C38.8 22 36.4 24.2 34.2 25" stroke="${suitColor}" stroke-width="4.4" stroke-linecap="round"/>
+      <circle cx="15.2" cy="19.2" r="2.1" fill="#0f172a"/>
+      <circle cx="40.8" cy="19.2" r="2.1" fill="#0f172a"/>
+
+      <!-- Rueda trasera 3D con volumen y taco central -->
+      <rect x="23.4" y="36.5" width="9.2" height="14.5" rx="4.6" fill="url(#g3dTire_${uid})" stroke="#020617" stroke-width="1"/>
+      <rect x="26.5" y="38" width="3" height="11.5" rx="1.5" fill="#475569" opacity="0.65"/>
+      <!-- Escape lateral 3D -->
+      <rect x="32.8" y="33.5" width="3.2" height="9.5" rx="1.6" fill="#64748b" stroke="#1e293b" stroke-width="0.9"/>
+
+      <!-- Colin trasero + piloto trasero LED -->
+      <path d="M23.2 34.2H32.8L31.2 40.5H24.8L23.2 34.2Z" fill="${suitColor}" stroke="rgba(255,255,255,0.4)" stroke-width="0.8"/>
+      <rect x="25.6" y="39" width="4.8" height="2" rx="1" fill="#ef4444"/>
+
+      <!-- Botas y piernas en perspectiva 3D -->
+      <path d="M21.2 29.5L19.6 37.5" stroke="#0f172a" stroke-width="4.2" stroke-linecap="round"/>
+      <path d="M34.8 29.5L36.4 37.5" stroke="#0f172a" stroke-width="4.2" stroke-linecap="round"/>
+      <ellipse cx="19.2" cy="38.4" rx="2.3" ry="1.5" fill="#334155"/>
+      <ellipse cx="36.8" cy="38.4" rx="2.3" ry="1.5" fill="#334155"/>
+
+      <!-- Torso / chaqueta trail 3D con volumen y mochila hidratacion -->
+      <rect x="19.6" y="21.5" width="16.8" height="14.5" rx="7.2" fill="${suitColor}"/>
+      <rect x="19.6" y="21.5" width="16.8" height="14.5" rx="7.2" fill="url(#g3dSuit_${uid})" stroke="rgba(255,255,255,0.55)" stroke-width="1.1"/>
+      <rect x="24.4" y="24.2" width="7.2" height="9.4" rx="3.2" fill="#0f172a" opacity="0.34"/>
+      <path d="M25.5 25.5H30.5" stroke="rgba(255,255,255,0.55)" stroke-width="1.2" stroke-linecap="round"/>
+
+      <!-- Casco 3D con brillo especular y visera frontal -->
+      <circle cx="28" cy="23.4" r="6.8" fill="url(#g3dHelmet_${uid})" stroke="#ffffff" stroke-width="1.6"/>
+      <path d="M22.4 20.4C24.2 17.6 31.8 17.6 33.6 20.4C31.3 19.3 24.7 19.3 22.4 20.4Z" fill="#020617"/>
+      <ellipse cx="25.6" cy="21.6" rx="2.1" ry="1.1" transform="rotate(-24 25.6 21.6)" fill="#ffffff" opacity="0.72"/>
     </svg>`;
   }
 
@@ -5348,8 +5423,8 @@ window.addEventListener('offline', () => {
       lastAltitudeM = ele;
     }
     recordedTrack.push({ lat, lon, ele, time: new Date().toISOString() });
-    recordedLine.setLatLngs(recordedTrack.map(p => [p.lat, p.lon]));
-    if (backtrackOn) backtrackLine.setLatLngs(recordedTrack.map(p => [p.lat, p.lon]));
+    if (recordedLine) recordedLine.setLatLngs(recordedTrack.map(p => [p.lat, p.lon]));
+    if (backtrackOn) if (backtrackLine) backtrackLine.setLatLngs(recordedTrack.map(p => [p.lat, p.lon]));
     updateTelemetryUI();
   }
 
@@ -5402,7 +5477,7 @@ window.addEventListener('offline', () => {
     }).join('\n');
 
     return `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="TrailSync v15.0.9" xmlns="http://www.topografix.com/GPX/1/1">
+<gpx version="1.1" creator="TrailSync v15.1.0" xmlns="http://www.topografix.com/GPX/1/1">
   <metadata><name>${escapeXml(titleText)}</name>${descTag}</metadata>
   <trk><name>${escapeXml(titleText)}</name>${descTag}<trkseg>
 ${trkpts}
@@ -6792,7 +6867,7 @@ ${trkptsXml}
 
   function toggleBacktrack() {
     backtrackOn = !backtrackOn;
-    backtrackLine.setLatLngs(backtrackOn ? recordedTrack.map(p => [p.lat, p.lon]) : []);
+    if (backtrackLine) backtrackLine.setLatLngs(backtrackOn ? recordedTrack.map(p => [p.lat, p.lon]) : []);
     document.getElementById('btnCompass').style.background = backtrackOn ? 'rgba(79,70,229,0.32)' : 'rgba(15, 23, 42, 0.72)';
     showToast(backtrackOn ? '↩️ Rastro de regreso activado' : '🧭 Rastro de regreso oculto');
   }
@@ -6805,9 +6880,10 @@ ${trkptsXml}
       return;
     }
     if (courseUpMode) {
+      applyMapOrientation();
       const targetZ = dynamicSpeedZoomEnabled ? getTargetZoomForSpeed(smoothedSpeedKmh) : Math.max(map.getZoom(), 16);
       map.setView(userPos, targetZ, { animate: true });
-      showToast('🧭 Centrado en rumbo de navegación');
+      showToast('🧭 Navegación 3D centrada en rumbo');
     } else if (Object.keys(peers).length > 0) {
       fitAllGroupMembers();
     } else {
@@ -7244,7 +7320,7 @@ ${trkptsXml}
     userPos = [lat, lon];
     prevUserPos = [lat, lon];
     rideStartedAndPositioned = isRecording;
-    if (userMarker && map) {
+    if (userMarker && map && typeof userMarker.setLatLng === 'function') {
       userMarker.setLatLng(userPos);
       userMarker.setIcon(createRiderIcon(`${userNick} (tú) · ${sourceLabel}`, '#f59e0b', true));
       map.setView(userPos, Math.max(map.getZoom(), 15));
@@ -7347,10 +7423,10 @@ ${trkptsXml}
       if (!isFamilySpectator && map) {
         if (!userMarker) {
           userMarker = L.marker(userPos, { icon: createRiderIcon(`${userNick} (tú)`, '#f59e0b', true) }).addTo(map);
-        } else {
+        } else if (userMarker && typeof userMarker.setLatLng === 'function') {
           if (!map.hasLayer(userMarker)) userMarker.addTo(map);
           userMarker.setLatLng(userPos);
-          if (userMarker) userMarker.setIcon(createRiderIcon(userNick + ' (tú)', '#f59e0b', true));
+          userMarker.setIcon(createRiderIcon(userNick + ' (tú)', '#f59e0b', true));
         }
       }
 
