@@ -10,7 +10,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
   <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
-  <title>TrailSync v15.2.7 — Capas Online/Offline limpias y carpeta local TrailSync en el dispositivo</title>
+  <title>TrailSync v15.2.8 — Capas Online/Offline limpias y carpeta local TrailSync en el dispositivo</title>
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
         onerror="this.onerror=null;this.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';" />
@@ -334,7 +334,7 @@
 
     /* LIVE TELEMETRY STRIP: FULL WIDTH TO THE RIGHT OF BOTTOM-LEFT MENU BUTTON, MATCHING ITS 46PX HEIGHT */
     .telemetry-bar {
-      position: absolute; bottom: 12px; left: 64px; right: 10px;
+      position: absolute; bottom: 12px; left: 68px; right: 10px;
       z-index: 940;
       height: 46px; min-height: 46px;
       background: rgba(15, 23, 42, 0.92);
@@ -453,13 +453,19 @@
 
     @media (max-width: 480px) {
       .telemetry-bar {
-        bottom: 66px;
+        bottom: 12px;
+        left: 68px;
+        right: 10px;
+        height: 46px;
+        min-height: 46px;
       }
       .left-menu-wrapper {
-        bottom: 66px;
+        left: 10px;
+        bottom: 12px;
       }
       .zoom-box {
-        bottom: 66px;
+        right: 10px;
+        bottom: 70px;
       }
       .top-center-members {
         top: 46px;
@@ -477,42 +483,42 @@
       .top-icon-btn { width: 30px; height: 30px; }
       .telemetry-bar {
         bottom: 10px;
-        left: 56px;
-        right: 8px;
-        height: 40px;
-        min-height: 40px;
-        border-radius: 20px;
-        padding: 0 10px;
-        gap: 4px;
+        left: 66px;
+        right: 10px;
+        height: 43px;
+        min-height: 43px;
+        border-radius: 22px;
+        padding: 0 12px;
+        gap: 6px;
       }
       .telem-cell { min-width: 0; }
-      .telem-val { font-size: 14px; }
-      .telem-lbl { font-size: 7.5px; }
+      .telem-val { font-size: 15px; }
+      .telem-lbl { font-size: 8px; }
       .bottom-actions {
-        left: 8px;
-        bottom: 58px;
-        gap: 7px;
+        left: 10px;
+        bottom: 61px;
+        gap: 8px;
       }
-      .bottom-cluster { gap: 7px; }
+      .bottom-cluster { gap: 8px; }
       .circle-action {
-        width: 40px;
-        height: 40px;
-        min-width: 40px;
-        min-height: 40px;
+        width: 42px;
+        height: 42px;
+        min-width: 42px;
+        min-height: 42px;
       }
       .circle-action.act-sos { font-size: 10.5px; }
-      .circle-action svg { width: 19px; height: 19px; }
+      .circle-action svg { width: 20px; height: 20px; }
       .left-menu-wrapper {
-        left: 8px;
+        left: 10px;
         bottom: 10px;
       }
       .btn-single-menu {
-        width: 40px;
-        height: 40px;
+        width: 43px;
+        height: 43px;
       }
       .zoom-box {
-        right: 8px;
-        bottom: 60px;
+        right: 10px;
+        bottom: 62px;
       }
       .zoom-btn {
         width: 38px;
@@ -1248,7 +1254,7 @@
       </button>
     </div>
     <div style="text-align:center;font-size:11px;color:#64748b;margin-top:8px;">
-      Versión 15.2.7 · Capas Online/Offline + Carpeta local TrailSync en dispositivo
+      Versión 15.2.8 · Capas Online/Offline + Carpeta local TrailSync en dispositivo
     </div>
   </div>
 </div>
@@ -2038,7 +2044,7 @@
     <h2>Ajustes de ruta y App</h2>
     <div style="background:#18141a;padding:10px 12px;border-radius:12px;margin-bottom:12px;border:1px solid #334155;display:flex;align-items:center;justify-content:space-between;gap:8px;">
       <div>
-        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">15.2.7</span></div>
+        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">15.2.8</span></div>
         <div style="font-size:11px;color:#94a3b8;" id="webVerStatusLabel">Comprobando actualizaciones en la web...</div>
       </div>
       <button class="solid-btn" style="flex:0 0 auto;background:#16a34a;color:#fff;padding:8px 12px;font-size:12px;" onclick="manualCheckForUpdates()">🔄 Buscar / Actualizar</button>
@@ -2119,7 +2125,7 @@
     } catch (e) {}
   });
 
-  const APP_VERSION = '15.2.7';
+  const APP_VERSION = '15.2.8';
   let swWaitingWorker = null;
   let remoteVersionFound = null;
 
@@ -5955,7 +5961,7 @@ window.addEventListener('offline', () => {
     }).join('\n');
 
     return `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="TrailSync v15.2.7" xmlns="http://www.topografix.com/GPX/1/1">
+<gpx version="1.1" creator="TrailSync v15.2.8" xmlns="http://www.topografix.com/GPX/1/1">
   <metadata><name>${escapeXml(titleText)}</name>${descTag}</metadata>
   <trk><name>${escapeXml(titleText)}</name>${descTag}<trkseg>
 ${trkpts}
