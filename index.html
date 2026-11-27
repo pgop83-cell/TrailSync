@@ -10,7 +10,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
   <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
-  <title>TrailSync v15.2.8 — Capas Online/Offline limpias y carpeta local TrailSync en el dispositivo</title>
+  <title>TrailSync v15.2.9 — Capas Online/Offline limpias y carpeta local TrailSync en el dispositivo</title>
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
         onerror="this.onerror=null;this.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';" />
@@ -785,7 +785,7 @@
     body.family-spectator-mode #btnRecToggle,
     body.family-spectator-mode #headerCodeChip,
     body.family-spectator-mode #btnHeaderBackLobby,
-    body.family-spectator-mode #btnLeaveGroupDoor,
+    body.family-spectator-mode #btnScreenLock,
     body.family-spectator-mode #btnFamilyHeader,
     body.family-spectator-mode #btnSettingsHeader,
     body.family-spectator-mode .telemetry-bar {
@@ -1254,7 +1254,7 @@
       </button>
     </div>
     <div style="text-align:center;font-size:11px;color:#64748b;margin-top:8px;">
-      Versión 15.2.8 · Capas Online/Offline + Carpeta local TrailSync en dispositivo
+      Versión 15.2.9 · Capas Online/Offline + Carpeta local TrailSync en dispositivo
     </div>
   </div>
 </div>
@@ -1266,27 +1266,10 @@
       <button class="top-icon-btn" id="btnHeaderBackLobby" onclick="confirmLeaveGroup()" title="Salir de este grupo">
         <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
       </button>
-      <span class="header-title" id="groupNameHeader">Ruta en vivo</span>
       <span class="code-chip" id="headerCodeChip" onclick="shareGroupInvite()" title="Toca para invitar amigos">#------</span>
     </div>
 
     <div class="header-icons">
-      <button class="top-icon-btn" onclick="toggleLiveRecording()" id="btnRecToggle" title="Parar seguimiento y guardar GPX">
-        <div class="rec-square" id="recIconShape"></div>
-      </button>
-
-      <button class="top-icon-btn" id="btnLeaveGroupDoor" onclick="requestLeaveGroupViaDoor()" title="Salir del grupo y avisar a los compañeros" style="color:#f87171;">
-        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-          <path d="M4 20h12V4L4 2v18z"/>
-          <path d="M16 4h3v16h-3"/>
-          <circle cx="13" cy="12" r="1.1" fill="currentColor"/>
-          <path d="M21 12h-3m0 0l2-2m-2 2l2 2"/>
-        </svg>
-      </button>
-
-      <button class="top-icon-btn" onclick="lockScreen()" title="Bloquear pantalla táctil por lluvia (mantiene mapa visible)">
-        <svg width="20" height="20" fill="#fbbf24" viewBox="0 0 24 24"><path d="M12 2a5 5 0 00-5 5v3H6a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2v-8a2 2 0 00-2-2h-1V7a5 5 0 00-5-5zm-3 5a3 3 0 116 0v3H9V7z"/></svg>
-      </button>
 
       <button class="top-icon-btn" id="btnFamilyHeader" onclick="openModal('familyModal')" title="Compartir con la familia y Google Maps">
         <svg width="21" height="21" fill="none" stroke="#fb7185" stroke-width="2.1" viewBox="0 0 24 24">
@@ -1366,6 +1349,11 @@
       <button class="display-mode-btn" id="displayModeBtn" onclick="cycleDisplayContrastMode()" title="Cambiar contraste: Normal / Sol directo / Noche">
         <div id="displayModeIcon">☀️</div>
         <span id="displayModeLabel">NORMAL</span>
+      </button>
+
+      <button class="display-mode-btn" id="btnScreenLock" onclick="lockScreen()" title="Bloquear pantalla táctil por lluvia (mantiene mapa visible)">
+        <svg width="16" height="16" fill="#fbbf24" viewBox="0 0 24 24"><path d="M12 2a5 5 0 00-5 5v3H6a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2v-8a2 2 0 00-2-2h-1V7a5 5 0 00-5-5zm-3 5a3 3 0 116 0v3H9V7z"/></svg>
+        <span>BLOQ</span>
       </button>
 
       <!-- FLOATING LEGEND -->
@@ -2044,7 +2032,7 @@
     <h2>Ajustes de ruta y App</h2>
     <div style="background:#18141a;padding:10px 12px;border-radius:12px;margin-bottom:12px;border:1px solid #334155;display:flex;align-items:center;justify-content:space-between;gap:8px;">
       <div>
-        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">15.2.8</span></div>
+        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">15.2.9</span></div>
         <div style="font-size:11px;color:#94a3b8;" id="webVerStatusLabel">Comprobando actualizaciones en la web...</div>
       </div>
       <button class="solid-btn" style="flex:0 0 auto;background:#16a34a;color:#fff;padding:8px 12px;font-size:12px;" onclick="manualCheckForUpdates()">🔄 Buscar / Actualizar</button>
@@ -2125,7 +2113,7 @@
     } catch (e) {}
   });
 
-  const APP_VERSION = '15.2.8';
+  const APP_VERSION = '15.2.9';
   let swWaitingWorker = null;
   let remoteVersionFound = null;
 
@@ -4107,7 +4095,7 @@ function keepOriginalRouteAndNavigate() {
     document.body.classList.toggle('family-spectator-mode', isFamilySpectator);
     document.getElementById('lobby-screen').style.display = 'none';
     document.getElementById('app').classList.add('active');
-    document.getElementById('groupNameHeader').textContent = groupName;
+    const gnh1 = document.getElementById('groupNameHeader'); if (gnh1) gnh1.textContent = groupName;
     document.getElementById('headerCodeChip').textContent = '#' + groupCode;
     document.getElementById('floatCodeText').textContent = groupCode;
     document.getElementById('nickInput').value = userNick;
@@ -5331,7 +5319,7 @@ window.addEventListener('offline', () => {
         document.getElementById('lobby').style.display = 'none';
         document.getElementById('app').classList.add('active');
         document.getElementById('spectatorBanner').style.display = 'flex';
-        document.getElementById('groupNameHeader').textContent = 'Modo Espectador Familiar';
+        const gnh2 = document.getElementById('groupNameHeader'); if (gnh2) gnh2.textContent = 'Modo Espectador Familiar';
         document.getElementById('groupCodeHeader').textContent = `Código: ${groupCode}`;
         updateBottomControlsVisibility();
         connectGroupSync();
@@ -5348,7 +5336,7 @@ window.addEventListener('offline', () => {
       groupName = savedActiveName;
       document.getElementById('lobby').style.display = 'none';
       document.getElementById('app').classList.add('active');
-      document.getElementById('groupNameHeader').textContent = groupName;
+      const gnh1 = document.getElementById('groupNameHeader'); if (gnh1) gnh1.textContent = groupName;
       document.getElementById('groupCodeHeader').textContent = `Grupo: ${groupCode}`;
       updateBottomControlsVisibility();
       startRealGpsTracking();
@@ -5961,7 +5949,7 @@ window.addEventListener('offline', () => {
     }).join('\n');
 
     return `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="TrailSync v15.2.8" xmlns="http://www.topografix.com/GPX/1/1">
+<gpx version="1.1" creator="TrailSync v15.2.9" xmlns="http://www.topografix.com/GPX/1/1">
   <metadata><name>${escapeXml(titleText)}</name>${descTag}</metadata>
   <trk><name>${escapeXml(titleText)}</name>${descTag}<trkseg>
 ${trkpts}
