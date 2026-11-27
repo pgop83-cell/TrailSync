@@ -10,7 +10,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
   <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
-  <title>TrailSync v15.2.6 — Capas Online/Offline limpias y carpeta local TrailSync en el dispositivo</title>
+  <title>TrailSync v15.2.7 — Capas Online/Offline limpias y carpeta local TrailSync en el dispositivo</title>
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
         onerror="this.onerror=null;this.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';" />
@@ -332,24 +332,24 @@
       cursor: pointer;
     }
 
-    /* LIVE TELEMETRY STRIP (MATCHES 44PX HEIGHT OF ROUND BOTTOM ICONS WITH LARGER NUMBERS) */
+    /* LIVE TELEMETRY STRIP: FULL WIDTH TO THE RIGHT OF BOTTOM-LEFT MENU BUTTON, MATCHING ITS 46PX HEIGHT */
     .telemetry-bar {
-      position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%);
+      position: absolute; bottom: 12px; left: 64px; right: 10px;
       z-index: 940;
-      height: 44px; min-height: 44px;
+      height: 46px; min-height: 46px;
       background: rgba(15, 23, 42, 0.92);
       border: 1.5px solid rgba(148, 163, 184, 0.42);
-      border-radius: 22px;
-      padding: 0 13px;
-      display: flex; align-items: center; justify-content: center; gap: 10px;
+      border-radius: 23px;
+      padding: 0 14px;
+      display: flex; align-items: center; justify-content: space-around; gap: 6px;
       box-shadow: 0 4px 14px rgba(0,0,0,0.45);
       pointer-events: auto;
       backdrop-filter: blur(4px);
     }
-    .telem-cell { display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 42px; }
+    .telem-cell { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 0; }
     .telem-val { font-size: 16px; font-weight: 900; color: #f8fafc; line-height: 1.05; letter-spacing: -0.2px; }
     .telem-lbl { font-size: 8.5px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.3px; margin-top: 1px; }
-    .telem-sep { width: 1px; height: 24px; background: rgba(148,163,184,0.3); }
+    .telem-sep { width: 1px; height: 24px; background: rgba(148,163,184,0.3); flex-shrink: 0; }
 
     /* TOP-RIGHT SCALE + GOOGLE MAPS STYLE COMPASS BUTTON */
     .top-right-stack {
@@ -477,42 +477,42 @@
       .top-icon-btn { width: 30px; height: 30px; }
       .telemetry-bar {
         bottom: 10px;
-        left: 50%;
-        transform: translateX(-50%);
-        height: 36px;
-        min-height: 36px;
-        border-radius: 18px;
-        padding: 0 9px;
-        gap: 6px;
+        left: 56px;
+        right: 8px;
+        height: 40px;
+        min-height: 40px;
+        border-radius: 20px;
+        padding: 0 10px;
+        gap: 4px;
       }
-      .telem-cell { min-width: 32px; }
-      .telem-val { font-size: 13.5px; }
+      .telem-cell { min-width: 0; }
+      .telem-val { font-size: 14px; }
       .telem-lbl { font-size: 7.5px; }
       .bottom-actions {
         left: 8px;
-        right: 8px;
-        bottom: 10px;
+        bottom: 58px;
+        gap: 7px;
       }
-      .bottom-cluster { gap: 4px; }
+      .bottom-cluster { gap: 7px; }
       .circle-action {
-        width: 36px;
-        height: 36px;
-        min-width: 36px;
-        min-height: 36px;
+        width: 40px;
+        height: 40px;
+        min-width: 40px;
+        min-height: 40px;
       }
       .circle-action.act-sos { font-size: 10.5px; }
-      .circle-action svg { width: 17px; height: 17px; }
+      .circle-action svg { width: 19px; height: 19px; }
       .left-menu-wrapper {
-        left: 10px;
-        bottom: 58px;
+        left: 8px;
+        bottom: 10px;
       }
       .btn-single-menu {
         width: 40px;
         height: 40px;
       }
       .zoom-box {
-        right: 10px;
-        bottom: 58px;
+        right: 8px;
+        bottom: 60px;
       }
       .zoom-btn {
         width: 38px;
@@ -535,18 +535,18 @@
     .legend-row { display: flex; align-items: center; gap: 7px; }
     .legend-swatch { width: 16px; height: 4px; border-radius: 2px; display: inline-block; }
 
-    /* SINGLE FLOATING 3-LINE MENU BUTTON DIRECTLY ABOVE MICROPHONE */
+    /* BOTTOM-LEFT CORNER: 3-LINE MENU BUTTON (MATCHES TELEMETRY BAR HEIGHT) */
     .left-menu-wrapper {
-      position: absolute; left: 10px; bottom: 72px; z-index: 955;
+      position: absolute; left: 10px; bottom: 12px; z-index: 965;
       display: flex; flex-direction: column; align-items: flex-start; gap: 8px;
     }
     .btn-single-menu {
-      background: rgba(22, 27, 38, 0.92);
+      background: rgba(22, 27, 38, 0.94);
       color: #f8fafc;
       border: 2.5px solid #f97316;
       border-radius: 50%;
-      width: 48px;
-      height: 48px;
+      width: 46px;
+      height: 46px;
       padding: 0;
       display: inline-flex;
       align-items: center;
@@ -560,6 +560,9 @@
 
     .menu-popover-card {
       display: none;
+      position: absolute;
+      left: 56px;
+      bottom: 0;
       flex-direction: column;
       gap: 7px;
       background: rgba(22, 27, 38, 0.97);
@@ -567,7 +570,10 @@
       border-radius: 18px;
       padding: 10px;
       width: 248px;
+      max-height: 70vh;
+      overflow-y: auto;
       box-shadow: 0 12px 30px rgba(0,0,0,0.55);
+      z-index: 990;
     }
     .menu-popover-card.open { display: flex; }
 
@@ -594,7 +600,7 @@
 
     /* ZOOM CONTROLS */
     .zoom-box {
-      position: absolute; right: 12px; bottom: 122px; z-index: 900;
+      position: absolute; right: 10px; bottom: 72px; z-index: 900;
       background: rgba(26,32,44,0.92); border-radius: 14px;
       display: flex; flex-direction: column; overflow: hidden;
       box-shadow: 0 4px 14px rgba(0,0,0,0.35);
@@ -606,24 +612,26 @@
     }
     .zoom-btn:first-child { border-bottom: 1px solid rgba(255,255,255,0.12); }
 
-    /* BOTTOM ROW: 3 COMPACT ICONS LEFT + 3 COMPACT ICONS RIGHT (LEAVING CENTER TELEMETRY CLEAR) */
+    /* VERTICAL LEFT STACK ABOVE 3-LINE MENU BUTTON (BOTTOM-TO-TOP: STOP -> CENTER -> MICROPHONE) */
     .bottom-actions {
-      position: absolute; left: 10px; right: 10px; bottom: 14px; z-index: 950;
-      display: flex; align-items: center; justify-content: space-between;
+      position: absolute; left: 10px; bottom: 68px; z-index: 950;
+      display: flex; flex-direction: column-reverse; align-items: center; gap: 10px;
       pointer-events: none;
     }
     .bottom-cluster {
       display: flex;
+      flex-direction: column-reverse;
       align-items: center;
-      gap: 6px;
+      gap: 10px;
       pointer-events: none;
     }
     .circle-action {
       pointer-events: auto;
-      width: 44px; height: 44px; min-width: 44px; min-height: 44px;
-      border-radius: 50%; background: rgba(15, 23, 42, 0.78);
+      width: 46px; height: 46px; min-width: 46px; min-height: 46px;
+      border-radius: 50%; background: rgba(15, 23, 42, 0.86);
       display: flex; align-items: center; justify-content: center;
       cursor: pointer; transition: transform 0.12s ease, background 0.15s ease;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.42);
     }
     .circle-action:active { transform: scale(0.92); }
     .circle-action svg { width: 23px; height: 23px; }
@@ -700,8 +708,8 @@
     #voiceIntercomPopover {
       display: none;
       position: absolute;
-      left: 0;
-      bottom: 54px;
+      left: 56px;
+      top: 0;
       width: 248px;
       background: rgba(15, 23, 42, 0.97);
       border: 1.5px solid #0284c7;
@@ -1240,7 +1248,7 @@
       </button>
     </div>
     <div style="text-align:center;font-size:11px;color:#64748b;margin-top:8px;">
-      Versión 15.2.6 · Capas Online/Offline + Carpeta local TrailSync en dispositivo
+      Versión 15.2.7 · Capas Online/Offline + Carpeta local TrailSync en dispositivo
     </div>
   </div>
 </div>
@@ -1453,9 +1461,23 @@
       </div>
     </div>
 
-    <!-- BOTTOM 6 UNIFORM CIRCULAR TRANSPARENT COLORED ICONS (3 LEFT + 3 RIGHT) -->
+    <!-- VERTICAL LEFT STACK ABOVE 3-LINE MENU (BOTTOM-TO-TOP: STOP -> CENTER -> MICROPHONE) -->
     <div class="bottom-actions">
       <div class="bottom-cluster">
+        <button class="circle-action act-stop" onclick="requestDirectStop()" title="Pedir parada al grupo">
+          <svg viewBox="0 0 24 24" fill="none">
+            <polygon points="7.86,2 16.14,2 22,7.86 22,16.14 16.14,22 7.86,22 2,16.14 2,7.86" fill="#dc2626" stroke="#ffffff" stroke-width="1.6"/>
+            <text x="12" y="13.9" text-anchor="middle" fill="#ffffff" font-size="5.6" font-weight="900" font-family="system-ui,-apple-system,sans-serif" letter-spacing="0.2">STOP</text>
+          </svg>
+        </button>
+
+        <button class="circle-action act-center" onclick="recenterUser()" title="Centrar posición / Ver grupo">
+          <svg fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24">
+            <path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3"/>
+            <circle cx="12" cy="12" r="2" fill="currentColor"/>
+          </svg>
+        </button>
+
         <div class="voice-control-wrap" id="voiceControlWrap">
           <div id="voiceIntercomPopover">
             <div class="voice-pop-title">
@@ -1520,12 +1542,6 @@
           </button>
         </div>
 
-        <button class="circle-action act-stop" onclick="requestDirectStop()" title="Pedir parada al grupo">
-          <svg viewBox="0 0 24 24" fill="none">
-            <polygon points="7.86,2 16.14,2 22,7.86 22,16.14 16.14,22 7.86,22 2,16.14 2,7.86" fill="#dc2626" stroke="#ffffff" stroke-width="1.6"/>
-            <text x="12" y="13.9" text-anchor="middle" fill="#ffffff" font-size="5.6" font-weight="900" font-family="system-ui,-apple-system,sans-serif" letter-spacing="0.2">STOP</text>
-          </svg>
-        </button>
         <button type="button" class="circle-action act-legal" id="floatingLegalCheckPill" onclick="checkActiveRouteLegality(true)" title="Comprobar ruta legal" aria-label="Comprobar ruta legal">
           <svg fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
             <path d="M12 3v18M8 21h8M4 7h16"/>
@@ -1533,24 +1549,7 @@
           </svg>
         </button>
       </div>
-
-      <div class="bottom-cluster">
-        <button class="circle-action act-comp" id="btnCompass" onclick="toggleBacktrack()" title="Volver por rastro (Backtrack)">
-          <svg fill="none" stroke="currentColor" stroke-width="2.3" viewBox="0 0 24 24">
-            <circle cx="12" cy="12" r="9"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" fill="currentColor"/>
-          </svg>
-        </button>
-
-        <button class="circle-action act-center" onclick="recenterUser()" title="Centrar posición / Ver grupo">
-          <svg fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24">
-            <path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3"/>
-            <circle cx="12" cy="12" r="2" fill="currentColor"/>
-          </svg>
-        </button>
-      </div>
-    
-
-</div>
+    </div>
   </div>
 </div>
 
@@ -2039,7 +2038,7 @@
     <h2>Ajustes de ruta y App</h2>
     <div style="background:#18141a;padding:10px 12px;border-radius:12px;margin-bottom:12px;border:1px solid #334155;display:flex;align-items:center;justify-content:space-between;gap:8px;">
       <div>
-        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">15.2.6</span></div>
+        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">15.2.7</span></div>
         <div style="font-size:11px;color:#94a3b8;" id="webVerStatusLabel">Comprobando actualizaciones en la web...</div>
       </div>
       <button class="solid-btn" style="flex:0 0 auto;background:#16a34a;color:#fff;padding:8px 12px;font-size:12px;" onclick="manualCheckForUpdates()">🔄 Buscar / Actualizar</button>
@@ -2120,7 +2119,7 @@
     } catch (e) {}
   });
 
-  const APP_VERSION = '15.2.6';
+  const APP_VERSION = '15.2.7';
   let swWaitingWorker = null;
   let remoteVersionFound = null;
 
@@ -5956,7 +5955,7 @@ window.addEventListener('offline', () => {
     }).join('\n');
 
     return `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="TrailSync v15.2.6" xmlns="http://www.topografix.com/GPX/1/1">
+<gpx version="1.1" creator="TrailSync v15.2.7" xmlns="http://www.topografix.com/GPX/1/1">
   <metadata><name>${escapeXml(titleText)}</name>${descTag}</metadata>
   <trk><name>${escapeXml(titleText)}</name>${descTag}<trkseg>
 ${trkpts}
@@ -7356,7 +7355,7 @@ ${trkptsXml}
   function toggleBacktrack() {
     backtrackOn = !backtrackOn;
     if (backtrackLine) backtrackLine.setLatLngs(backtrackOn ? recordedTrack.map(p => [p.lat, p.lon]) : []);
-    document.getElementById('btnCompass').style.background = backtrackOn ? 'rgba(79,70,229,0.32)' : 'rgba(15, 23, 42, 0.72)';
+    const btnCompEl = document.getElementById('btnCompass'); if (btnCompEl) btnCompEl.style.background = backtrackOn ? 'rgba(79,70,229,0.32)' : 'rgba(15, 23, 42, 0.72)';
     showToast(backtrackOn ? '↩️ Rastro de regreso activado' : '🧭 Rastro de regreso oculto');
   }
 
