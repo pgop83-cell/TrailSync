@@ -10,7 +10,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
   <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
-  <title>TrailSync v15.2.3 — Capas Online/Offline limpias y carpeta local TrailSync en el dispositivo</title>
+  <title>TrailSync v15.2.4 — Capas Online/Offline limpias y carpeta local TrailSync en el dispositivo</title>
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
         onerror="this.onerror=null;this.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';" />
@@ -143,21 +143,24 @@
       50% { transform: scale(1.04); }
     }
 
-    /* MAP AREA WITH SMOOTH HEADING ROTATION SUPPORT */
+    /* MAP AREA WITH EXACT PIVOT ON RIDER ARROW IN COURSE-UP MODE */
     #map-container {
       position: relative; flex: 1; width: 100%; overflow: hidden; background: #f2efe9;
-      perspective: 980px;
-      perspective-origin: 50% 68%;
+      perspective: 1100px;
+      perspective-origin: 50% calc(100% - 106px);
     }
     #map-rotator {
       position: absolute;
-      width: 175vmax; height: 175vmax;
+      width: 220vmax; height: 220vmax;
       left: 50%; top: 50%;
       transform: translate(-50%, -50%) rotateX(0deg) rotateZ(0deg) scale(1);
-      transform-origin: center 58%;
+      transform-origin: 50% 50%;
       transform-style: preserve-3d;
-      transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+      transition: transform 0.38s cubic-bezier(0.22, 1, 0.36, 1), top 0.38s cubic-bezier(0.22, 1, 0.36, 1);
       z-index: 1;
+    }
+    #map-rotator.course-up-pivot {
+      top: calc(100% - 106px);
     }
     #map { width: 100%; height: 100%; }
 
@@ -1229,7 +1232,7 @@
       </button>
     </div>
     <div style="text-align:center;font-size:11px;color:#64748b;margin-top:8px;">
-      Versión 15.2.3 · Capas Online/Offline + Carpeta local TrailSync en dispositivo
+      Versión 15.2.4 · Capas Online/Offline + Carpeta local TrailSync en dispositivo
     </div>
   </div>
 </div>
@@ -2028,7 +2031,7 @@
     <h2>Ajustes de ruta y App</h2>
     <div style="background:#18141a;padding:10px 12px;border-radius:12px;margin-bottom:12px;border:1px solid #334155;display:flex;align-items:center;justify-content:space-between;gap:8px;">
       <div>
-        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">15.2.3</span></div>
+        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">15.2.4</span></div>
         <div style="font-size:11px;color:#94a3b8;" id="webVerStatusLabel">Comprobando actualizaciones en la web...</div>
       </div>
       <button class="solid-btn" style="flex:0 0 auto;background:#16a34a;color:#fff;padding:8px 12px;font-size:12px;" onclick="manualCheckForUpdates()">🔄 Buscar / Actualizar</button>
@@ -2109,7 +2112,7 @@
     } catch (e) {}
   });
 
-  const APP_VERSION = '15.2.3';
+  const APP_VERSION = '15.2.4';
   let swWaitingWorker = null;
   let remoteVersionFound = null;
 
@@ -2234,25 +2237,12 @@
   }
 
   function computeLookAheadMeters(speedKmh, zoomLevel) {
-    if (!courseUpMode || userExploringMap || isFamilySpectator) return 0;
-    const metersPerPixel = (156543.03392 * Math.cos((userPos[0] * Math.PI) / 180)) / Math.pow(2, zoomLevel || 16);
-    const containerEl = document.getElementById('map-container');
-    const screenH = (containerEl && containerEl.clientHeight) || window.innerHeight || 720;
-    // Center of #map-rotator is at 50% of #map-container height and 50% width.
-    // Bottom telemetry bar is 44px high at bottom: 14px (occupies bottom 58px).
-    // Place arrow centered horizontally (50% X) and ~34px above the telemetry bar (bottom ~92px).
-    const baseOffsetFromCenterPx = Math.max(70, Math.round((screenH / 2) - 92));
-    const speedExtraPx = Math.round(Math.min(1, Math.max(0, speedKmh / 100)) * 18);
-    // Compensate slightly for 3D tilt (34 deg) foreshortening in the lower half of the viewport
-    const targetAheadPx = Math.round((baseOffsetFromCenterPx + speedExtraPx) * 1.12);
-    return Math.round(metersPerPixel * targetAheadPx);
+    // Pivot is handled directly by #map-rotator.course-up-pivot at (50%, calc(100% - 106px))
+    return 0;
   }
 
   function getNavigationCameraCenter(zoomLevel = null) {
-    const z = zoomLevel !== null ? zoomLevel : (map ? map.getZoom() : 16.5);
-    if (!courseUpMode || userExploringMap || isFamilySpectator) return userPos;
-    const aheadM = computeLookAheadMeters(smoothedSpeedKmh || currentSpeedKmh || 0, z);
-    return projectLatLngAhead(userPos, currentHeadingDeg || 0, aheadM);
+    return userPos;
   }
 
   function getTargetZoomForSpeed(speedKmh, currentZoom = null) {
@@ -2599,9 +2589,9 @@
   }
 
   const TILE_CACHE_NAME = 'trailsync-peninsula-tiles-v2';
-  const DMD2_TRAIL_TILE_URL  = 'https://a.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png';
+  const DMD2_TRAIL_TILE_URL  = 'https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png';
   const IGN_MTN_TILE_URL     = 'https://www.ign.es/wmts/mapa-raster?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=MTN&STYLE=default&TILEMATRIXSET=GoogleMapsCompatible&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT=image/jpeg';
-  const OPENTOPO_TILE_URL    = 'https://a.tile.opentopomap.org/{z}/{x}/{y}.png';
+  const OPENTOPO_TILE_URL    = 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png';
   const OSM_BASE_TILE_URL    = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
   const SAT_IGN_TILE_URL     = 'https://www.ign.es/wmts/pnoa-ma?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=OI.OrthoimageCoverage&STYLE=default&TILEMATRIXSET=GoogleMapsCompatible&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT=image/jpeg';
   const SAT_ESRI_TILE_URL    = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
@@ -2645,7 +2635,8 @@
       cacheOnly: false,
       pistaStyle: false,
       dmd2Style: false,
-      maxZoom: 17
+      maxNativeZoom: 17,
+      maxZoom: 19
     },
     {
       key: 'osm',
@@ -3835,18 +3826,21 @@ function keepOriginalRouteAndNavigate() {
     // Keep map flat and aligned with screen axes while exploring/dragging so finger movement is always 1:1
     const activeCourseUp = courseUpMode && !userExploringMap && !isUserDraggingMap;
     const shouldTilt = activeCourseUp && !isFamilySpectator;
-    const tiltDeg = shouldTilt ? 34 : 0;
-    const mapScale = shouldTilt ? 1.12 : 1;
+    const tiltDeg = shouldTilt ? 28 : 0;
+    const mapScale = shouldTilt ? 1.08 : 1;
     const rotZDeg = activeCourseUp ? (-continuousHeadingDeg) : 0;
 
     if (rotator) {
-      rotator.style.transition = isUserDraggingMap ? 'none' : 'transform 0.42s cubic-bezier(0.22, 1, 0.36, 1)';
+      rotator.classList.toggle('course-up-pivot', activeCourseUp);
+      rotator.style.transition = isUserDraggingMap
+        ? 'none'
+        : 'transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), top 0.35s cubic-bezier(0.22, 1, 0.36, 1)';
       rotator.style.transform = `translate(-50%, -50%) rotateX(${tiltDeg}deg) rotateZ(${rotZDeg}deg) scale(${mapScale})`;
     }
 
     const invRot = activeCourseUp ? `${continuousHeadingDeg}deg` : '0deg';
-    const invTilt = shouldTilt ? `${-tiltDeg * 0.68}deg` : '0deg';
-    const invScale = shouldTilt ? '1.16' : '1';
+    const invTilt = shouldTilt ? `${-tiltDeg * 0.65}deg` : '0deg';
+    const invScale = shouldTilt ? '1.12' : '1';
     document.documentElement.style.setProperty('--inv-map-rot', invRot);
     document.documentElement.style.setProperty('--inv-map-tilt', invTilt);
     document.documentElement.style.setProperty('--inv-map-scale', invScale);
@@ -3891,19 +3885,28 @@ function keepOriginalRouteAndNavigate() {
   window.addEventListener('deviceorientationabsolute', handleDeviceCompass, true);
   window.addEventListener('deviceorientation', handleDeviceCompass, true);
 
+  let hasAbsoluteCompassSource = false;
+
   function handleDeviceCompass(e) {
-    // Sensor fusion: when riding (>= 5 km/h), GPS course/track vector controls heading so handlebar tilt or engine vibration never twists the map.
-    // Magnetometer compass only assists when stopped or maneuvering very slowly (< 5 km/h).
+    // When riding (>= 6 km/h), GPS movement vector controls heading.
+    // When stopped or turning slowly (< 6 km/h), phone magnetometer rotates the map cleanly around the rider arrow.
     if (!courseUpMode || userExploringMap || isUserDraggingMap) return;
-    if ((currentSpeedKmh || 0) >= 5) return;
+    if ((currentSpeedKmh || 0) >= 6) return;
 
     const now = Date.now();
-    if (now - lastCompassApplyTs < 120) return;
+    if (now - lastCompassApplyTs < 90) return;
 
     let rawHeading = null;
     if (typeof e.webkitCompassHeading === 'number' && !isNaN(e.webkitCompassHeading)) {
+      hasAbsoluteCompassSource = true;
       rawHeading = e.webkitCompassHeading;
-    } else if (e.absolute && typeof e.alpha === 'number' && !isNaN(e.alpha)) {
+    } else if (e.type === 'deviceorientationabsolute' && typeof e.alpha === 'number' && !isNaN(e.alpha)) {
+      hasAbsoluteCompassSource = true;
+      rawHeading = (360 - e.alpha + getScreenOrientationOffsetDeg()) % 360;
+    } else if (e.absolute === true && typeof e.alpha === 'number' && !isNaN(e.alpha)) {
+      hasAbsoluteCompassSource = true;
+      rawHeading = (360 - e.alpha + getScreenOrientationOffsetDeg()) % 360;
+    } else if (!hasAbsoluteCompassSource && typeof e.alpha === 'number' && !isNaN(e.alpha)) {
       rawHeading = (360 - e.alpha + getScreenOrientationOffsetDeg()) % 360;
     }
     if (rawHeading === null || isNaN(rawHeading)) return;
@@ -3913,13 +3916,12 @@ function keepOriginalRouteAndNavigate() {
       navCompassSmoothedDeg = rawHeading;
     } else {
       const diff = shortestAngleDelta(navCompassSmoothedDeg, rawHeading);
-      // Deadband of 4.5 deg to filter handlebar vibration when idling
-      if (Math.abs(diff) < 4.5) return;
-      navCompassSmoothedDeg = ((navCompassSmoothedDeg + diff * 0.22) % 360 + 360) % 360;
+      if (Math.abs(diff) < 3.0) return;
+      navCompassSmoothedDeg = ((navCompassSmoothedDeg + diff * 0.32) % 360 + 360) % 360;
     }
 
     lastCompassApplyTs = now;
-    setSmoothHeading(navCompassSmoothedDeg, 0.35);
+    setSmoothHeading(navCompassSmoothedDeg, 0.45);
     applyMapOrientation();
   }
 
@@ -5110,8 +5112,9 @@ window.addEventListener('offline', () => {
         const tile = document.createElement('img');
         tile.alt = '';
         const url = this.getTileUrl(coords);
+        const sub = ['a', 'b', 'c'][Math.abs((coords.x || 0) + (coords.y || 0)) % 3];
         const fallbackUrl = modeObj.fallbackUrl
-          ? modeObj.fallbackUrl.replace('{z}', coords.z).replace('{x}', coords.x).replace('{y}', coords.y)
+          ? modeObj.fallbackUrl.replace('{s}', sub).replace('{z}', coords.z).replace('{x}', coords.x).replace('{y}', coords.y)
           : null;
 
         const serveOfflineFromFolderOrFallback = () => {
@@ -5162,7 +5165,12 @@ window.addEventListener('offline', () => {
     });
     return new OfflineLayer(modeObj.url, {
       attribution: '&copy; CyclOSM DMD2 / OpenStreetMap / IGN / Google Maps',
-      maxZoom: modeObj.maxZoom || 18
+      subdomains: ['a', 'b', 'c'],
+      maxNativeZoom: modeObj.maxNativeZoom || modeObj.maxZoom || 18,
+      maxZoom: Math.max(19, modeObj.maxZoom || 18),
+      keepBuffer: 6,
+      updateWhenIdle: false,
+      updateWhenZooming: true
     });
   }
 
@@ -5903,7 +5911,7 @@ window.addEventListener('offline', () => {
     }).join('\n');
 
     return `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="TrailSync v15.2.3" xmlns="http://www.topografix.com/GPX/1/1">
+<gpx version="1.1" creator="TrailSync v15.2.4" xmlns="http://www.topografix.com/GPX/1/1">
   <metadata><name>${escapeXml(titleText)}</name>${descTag}</metadata>
   <trk><name>${escapeXml(titleText)}</name>${descTag}<trkseg>
 ${trkpts}
