@@ -10,7 +10,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
   <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
-  <title>TrailSync v15.2.14 — Capas Online/Offline limpias y carpeta local TrailSync en el dispositivo</title>
+  <title>TrailSync v15.2.15 — Capas Online/Offline limpias y carpeta local TrailSync en el dispositivo</title>
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
         onerror="this.onerror=null;this.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';" />
@@ -188,10 +188,10 @@
       filter: contrast(1.42) brightness(1.14) saturate(1.15);
     }
     #map.trail-contrast-mode {
-      background: #141a21;
+      background: #151f2b;
     }
     #map.trail-contrast-mode .leaflet-tile-pane {
-      filter: invert(0.91) hue-rotate(188deg) saturate(1.65) contrast(1.32) brightness(0.84);
+      filter: invert(0.87) hue-rotate(196deg) saturate(1.25) contrast(1.08) brightness(0.76);
     }
     #map.night-ride-mode .leaflet-tile-pane {
       filter: invert(0.9) hue-rotate(180deg) contrast(1.12) brightness(0.88);
@@ -1392,7 +1392,7 @@
       </button>
     </div>
     <div style="text-align:center;font-size:11px;color:#64748b;margin-top:8px;">
-      Versión 15.2.14 · Capas Online/Offline + Carpeta local TrailSync en dispositivo
+      Versión 15.2.15 · Capas Online/Offline + Carpeta local TrailSync en dispositivo
     </div>
   </div>
 </div>
@@ -1413,12 +1413,6 @@
         <svg width="21" height="21" fill="none" stroke="#fb7185" stroke-width="2.1" viewBox="0 0 24 24">
           <circle cx="7" cy="6" r="2.5"/><circle cx="17" cy="6" r="2.5"/><circle cx="12" cy="11" r="2"/>
           <path d="M3 19v-2a4 4 0 014-4h1M21 19v-2a4 4 0 00-4-4h-1M8.5 20v-2.5a3.5 3.5 0 017 0V20"/>
-        </svg>
-      </button>
-
-      <button class="top-icon-btn" onclick="openOfflineModal()" title="Descargar mapas offline de Península">
-        <svg width="20" height="20" fill="none" stroke="#38bdf8" stroke-width="2.1" viewBox="0 0 24 24">
-          <path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/>
         </svg>
       </button>
 
@@ -2181,7 +2175,7 @@
     <h2>Ajustes de ruta y App</h2>
     <div style="background:#18141a;padding:10px 12px;border-radius:12px;margin-bottom:12px;border:1px solid #334155;display:flex;align-items:center;justify-content:space-between;gap:8px;">
       <div>
-        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">15.2.14</span></div>
+        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">15.2.15</span></div>
         <div style="font-size:11px;color:#94a3b8;" id="webVerStatusLabel">Comprobando actualizaciones en la web...</div>
       </div>
       <button class="solid-btn" style="flex:0 0 auto;background:#16a34a;color:#fff;padding:8px 12px;font-size:12px;" onclick="manualCheckForUpdates()">🔄 Buscar / Actualizar</button>
@@ -2262,7 +2256,7 @@
     } catch (e) {}
   });
 
-  const APP_VERSION = '15.2.14';
+  const APP_VERSION = '15.2.15';
   let swWaitingWorker = null;
   let remoteVersionFound = null;
 
@@ -2573,6 +2567,118 @@
     if (pop) pop.classList.remove('open');
   }
 
+
+  // --- OFFROAD HIGH-CONTRAST VECTOR ROADS & UNPAVED TRACKS OVERLAY ---
+  let offroadRoadsLayer = null;
+  let offroadFetchTimer = null;
+  let lastOffroadBboxKey = '';
+  const offroadBboxCache = new Map();
+
+  function classifyOffroadWay(tags) {
+    if (!tags || !tags.highway) return null;
+    const hw = tags.highway;
+    const surf = (tags.surface || '').toLowerCase();
+    const isUnpavedSurface = ['unpaved', 'gravel', 'fine_gravel', 'compacted', 'dirt', 'earth', 'ground', 'mud', 'sand', 'grass', 'rock', 'pebblestone'].includes(surf);
+
+    if (hw === 'track' || (hw === 'service' && isUnpavedSurface)) {
+      return { kind: 'track', color: '#c87324', dashColor: '#f5b041', weight: 6.5, dashArray: '14, 10' };
+    }
+    if (hw === 'path' || hw === 'bridleway') {
+      return { kind: 'path', color: '#d97706', dashColor: '#fbbf24', weight: 4.5, dashArray: '8, 8' };
+    }
+    if (['motorway', 'trunk', 'primary', 'secondary'].includes(hw)) {
+      return isUnpavedSurface
+        ? { kind: 'track', color: '#c87324', dashColor: '#f5b041', weight: 7, dashArray: '14, 10' }
+        : { kind: 'paved_main', color: '#9c8f54', casing: '#0f1722', weight: 7.5 };
+    }
+    if (['tertiary', 'unclassified', 'residential', 'living_street', 'service'].includes(hw)) {
+      return isUnpavedSurface
+        ? { kind: 'track', color: '#c87324', dashColor: '#f5b041', weight: 6.5, dashArray: '14, 10' }
+        : { kind: 'paved_local', color: '#7d7552', casing: '#0f1722', weight: 6 };
+    }
+    return null;
+  }
+
+  function renderOffroadElementsOnMap(elements) {
+    if (!offroadRoadsLayer || !map) return;
+    offroadRoadsLayer.clearLayers();
+    if (activeDisplayStyleKey !== 'contrast' || map.getZoom() < 13) return;
+
+    const nodes = new Map();
+    for (const el of elements) {
+      if (el.type === 'node') nodes.set(el.id, [el.lat, el.lon]);
+    }
+
+    const pavedCasing = [];
+    const pavedFill = [];
+    const trackBase = [];
+    const trackDash = [];
+
+    for (const el of elements) {
+      if (el.type !== 'way' || !Array.isArray(el.nodes) || el.nodes.length < 2) continue;
+      const spec = classifyOffroadWay(el.tags);
+      if (!spec) continue;
+      const latlngs = [];
+      for (const nid of el.nodes) {
+        const pt = nodes.get(nid);
+        if (pt) latlngs.push(pt);
+      }
+      if (latlngs.length < 2) continue;
+
+      if (spec.kind === 'paved_main' || spec.kind === 'paved_local') {
+        pavedCasing.push(L.polyline(latlngs, { color: spec.casing, weight: spec.weight + 2.5, opacity: 0.9, lineCap: 'round', lineJoin: 'round', interactive: false }));
+        pavedFill.push(L.polyline(latlngs, { color: spec.color, weight: spec.weight, opacity: 0.95, lineCap: 'round', lineJoin: 'round', interactive: false }));
+      } else {
+        trackBase.push(L.polyline(latlngs, { color: spec.color, weight: spec.weight, opacity: 0.95, lineCap: 'round', lineJoin: 'round', interactive: false }));
+        trackDash.push(L.polyline(latlngs, { color: spec.dashColor, weight: Math.max(2.5, spec.weight - 2.5), dashArray: spec.dashArray, opacity: 0.98, lineCap: 'butt', lineJoin: 'round', interactive: false }));
+      }
+    }
+
+    pavedCasing.forEach(l => offroadRoadsLayer.addLayer(l));
+    pavedFill.forEach(l => offroadRoadsLayer.addLayer(l));
+    trackBase.forEach(l => offroadRoadsLayer.addLayer(l));
+    trackDash.forEach(l => offroadRoadsLayer.addLayer(l));
+  }
+
+  function scheduleOffroadRoadsRefresh(force = false) {
+    if (!offroadRoadsLayer || !map) return;
+    if (activeDisplayStyleKey !== 'contrast' || map.getZoom() < 13) {
+      offroadRoadsLayer.clearLayers();
+      lastOffroadBboxKey = '';
+      return;
+    }
+    clearTimeout(offroadFetchTimer);
+    offroadFetchTimer = setTimeout(async () => {
+      if (activeDisplayStyleKey !== 'contrast' || !map || map.getZoom() < 13) return;
+      const b = map.getBounds().pad(0.25);
+      const s = b.getSouth().toFixed(3);
+      const w = b.getWest().toFixed(3);
+      const n = b.getNorth().toFixed(3);
+      const e = b.getEast().toFixed(3);
+      const bboxKey = `${s},${w},${n},${e}`;
+      if (!force && bboxKey === lastOffroadBboxKey) return;
+      lastOffroadBboxKey = bboxKey;
+
+      if (offroadBboxCache.has(bboxKey)) {
+        renderOffroadElementsOnMap(offroadBboxCache.get(bboxKey));
+        return;
+      }
+
+      const q = `[out:json][timeout:10];(way["highway"~"^(motorway|trunk|primary|secondary|tertiary|unclassified|residential|living_street|service|track|path|bridleway)$"](${s},${w},${n},${e});>;);out body;`;
+      try {
+        const winner = await fetchFastestCartographyElements(q, 10000);
+        if (winner && Array.isArray(winner.elements)) {
+          if (offroadBboxCache.size > 24) {
+            const firstKey = offroadBboxCache.keys().next().value;
+            offroadBboxCache.delete(firstKey);
+          }
+          offroadBboxCache.set(bboxKey, winner.elements);
+          renderOffroadElementsOnMap(winner.elements);
+        }
+      } catch (err) {}
+    }, force ? 60 : 320);
+  }
+
   function selectDisplayStyle(key, silent = false) {
     const m = DISPLAY_MODES.find(item => item.key === key) || DISPLAY_MODES[0];
     activeDisplayStyleKey = m.key;
@@ -2594,6 +2700,7 @@
     if (lblEl) lblEl.textContent = m.label;
     renderDisplayStyleOptions();
     closeDisplayStyleMenu();
+    scheduleOffroadRoadsRefresh(true);
     if (!silent) showToast(`👁️ Estilo de mapa: ${m.name}`);
   }
 
@@ -5500,6 +5607,7 @@ window.addEventListener('offline', () => {
     map = L.map('map', { zoomControl: false, zoomSnap: 0.5, zoomDelta: 0.5 }).setView(userPos, 16.5);
     map.on('zoomend moveend', () => {
       updateDynamicMapScale();
+      scheduleOffroadRoadsRefresh(false);
     });
     map.on('dragstart', () => {
       isUserDraggingMap = true;
@@ -5513,6 +5621,7 @@ window.addEventListener('offline', () => {
       if (ev && ev.originalEvent) registerManualMapExplore();
     });
     baseTileLayer = buildOfflineTileLayer(startMode).addTo(map);
+    offroadRoadsLayer = L.layerGroup().addTo(map);
     const lp2 = document.getElementById('layerNamePill'); if (lp2) lp2.textContent = `🗺️ Capa: ${startMode.title} ▾`;
     if (startMode.pistaStyle) document.getElementById('map').classList.add('offline-pista-mode');
 
@@ -6158,7 +6267,7 @@ window.addEventListener('offline', () => {
     }).join('\n');
 
     return `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="TrailSync v15.2.14" xmlns="http://www.topografix.com/GPX/1/1">
+<gpx version="1.1" creator="TrailSync v15.2.15" xmlns="http://www.topografix.com/GPX/1/1">
   <metadata><name>${escapeXml(titleText)}</name>${descTag}</metadata>
   <trk><name>${escapeXml(titleText)}</name>${descTag}<trkseg>
 ${trkpts}
