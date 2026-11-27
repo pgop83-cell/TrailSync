@@ -10,7 +10,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
   <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
-  <title>TrailSync v15.2.11 — Capas Online/Offline limpias y carpeta local TrailSync en el dispositivo</title>
+  <title>TrailSync v15.2.12 — Capas Online/Offline limpias y carpeta local TrailSync en el dispositivo</title>
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
         onerror="this.onerror=null;this.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';" />
@@ -182,7 +182,7 @@
       filter: contrast(1.24) brightness(1.05) saturate(0.85);
     }
     #map.dmd2-trail-mode .leaflet-tile-pane {
-      filter: contrast(1.18) saturate(1.28) brightness(0.98);
+      filter: contrast(1.22) saturate(1.34) brightness(0.97);
     }
     #map.sunlight-boost-mode .leaflet-tile-pane {
       filter: contrast(1.42) brightness(1.14) saturate(1.15);
@@ -1308,7 +1308,7 @@
       </button>
     </div>
     <div style="text-align:center;font-size:11px;color:#64748b;margin-top:8px;">
-      Versión 15.2.11 · Capas Online/Offline + Carpeta local TrailSync en dispositivo
+      Versión 15.2.12 · Capas Online/Offline + Carpeta local TrailSync en dispositivo
     </div>
   </div>
 </div>
@@ -2097,7 +2097,7 @@
     <h2>Ajustes de ruta y App</h2>
     <div style="background:#18141a;padding:10px 12px;border-radius:12px;margin-bottom:12px;border:1px solid #334155;display:flex;align-items:center;justify-content:space-between;gap:8px;">
       <div>
-        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">15.2.11</span></div>
+        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">15.2.12</span></div>
         <div style="font-size:11px;color:#94a3b8;" id="webVerStatusLabel">Comprobando actualizaciones en la web...</div>
       </div>
       <button class="solid-btn" style="flex:0 0 auto;background:#16a34a;color:#fff;padding:8px 12px;font-size:12px;" onclick="manualCheckForUpdates()">🔄 Buscar / Actualizar</button>
@@ -2178,7 +2178,7 @@
     } catch (e) {}
   });
 
-  const APP_VERSION = '15.2.11';
+  const APP_VERSION = '15.2.12';
   let swWaitingWorker = null;
   let remoteVersionFound = null;
 
@@ -5270,11 +5270,11 @@ window.addEventListener('offline', () => {
             }
             if (stage === 0 && fallbackUrl) {
               stage = 1;
-              loadTimer = setTimeout(advanceFallback, 3500);
+              loadTimer = setTimeout(advanceFallback, 2200);
               tile.src = fallbackUrl;
             } else if (stage <= 1 && !url.includes('tile.openstreetmap.org')) {
               stage = 2;
-              loadTimer = setTimeout(advanceFallback, 3500);
+              loadTimer = setTimeout(advanceFallback, 2200);
               tile.src = osmEmergencyUrl;
             } else {
               stage = 3;
@@ -5286,18 +5286,39 @@ window.addEventListener('offline', () => {
             done(null, tile);
           };
           tile.onerror = advanceFallback;
-          loadTimer = setTimeout(advanceFallback, 3500);
+          loadTimer = setTimeout(advanceFallback, 2200);
           tile.src = url;
         };
 
-        // Offline layer OR device without network: read exclusively from TrailSync/mapas folder (NO browser cache)
+        // Offline layer OR device without network: read exclusively from TrailSync/mapas folder
         if (modeObj.cacheOnly || !navigator.onLine) {
           serveOfflineFromFolderOrFallback();
           return tile;
         }
 
-        // Online layers load directly from network without writing to browser cache
-        loadFromNetwork();
+        // Prioritize exact local tile from TrailSync/mapas if already downloaded on device, otherwise load from network
+        const preferredFolderKey = modeObj && modeObj.key && modeObj.key !== 'offline'
+          ? (modeObj.key === 'osm' ? 'osm_base' : modeObj.key)
+          : 'dmd2_trail';
+
+        readTileBlobFromDeviceFolder(preferredFolderKey, coords.z, coords.x, coords.y).then(localBlob => {
+          if (localBlob && localBlob.size > 0) {
+            const objUrl = URL.createObjectURL(localBlob);
+            tile.onload = () => {
+              URL.revokeObjectURL(objUrl);
+              done(null, tile);
+            };
+            tile.onerror = () => {
+              URL.revokeObjectURL(objUrl);
+              loadFromNetwork();
+            };
+            tile.src = objUrl;
+          } else {
+            loadFromNetwork();
+          }
+        }).catch(() => {
+          loadFromNetwork();
+        });
         return tile;
       }
     });
@@ -6049,7 +6070,7 @@ window.addEventListener('offline', () => {
     }).join('\n');
 
     return `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="TrailSync v15.2.11" xmlns="http://www.topografix.com/GPX/1/1">
+<gpx version="1.1" creator="TrailSync v15.2.12" xmlns="http://www.topografix.com/GPX/1/1">
   <metadata><name>${escapeXml(titleText)}</name>${descTag}</metadata>
   <trk><name>${escapeXml(titleText)}</name>${descTag}<trkseg>
 ${trkpts}
