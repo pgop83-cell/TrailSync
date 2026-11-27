@@ -10,7 +10,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
   <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
-  <title>TrailSync v15.0.8 — Capas Online/Offline limpias y carpeta local TrailSync en el dispositivo</title>
+  <title>TrailSync v15.0.9 — Capas Online/Offline limpias y carpeta local TrailSync en el dispositivo</title>
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
         onerror="this.onerror=null;this.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';" />
@@ -459,26 +459,28 @@
       .top-icon-btn { width: 30px; height: 30px; }
       .telemetry-bar {
         bottom: 10px;
-        left: 50%;
+        left: 52%;
         transform: translateX(-50%);
-        padding: 4px 9px;
-        gap: 7px;
+        padding: 4px 7px;
+        gap: 5px;
       }
-      .telem-cell { min-width: 34px; }
-      .telem-val { font-size: 11.5px; }
+      .telem-cell { min-width: 28px; }
+      .telem-val { font-size: 11px; }
+      .telem-lbl { font-size: 7.5px; }
       .bottom-actions {
-        left: 10px;
-        right: 10px;
+        left: 8px;
+        right: 8px;
         bottom: 10px;
       }
-      .bottom-cluster { gap: 5px; }
+      .bottom-cluster { gap: 4px; }
       .circle-action {
-        width: 40px;
-        height: 40px;
-        min-width: 40px;
-        min-height: 40px;
+        width: 36px;
+        height: 36px;
+        min-width: 36px;
+        min-height: 36px;
       }
-      .circle-action svg { width: 19px; height: 19px; }
+      .circle-action.act-sos { font-size: 10.5px; }
+      .circle-action svg { width: 17px; height: 17px; }
       .left-menu-wrapper {
         left: 10px;
         bottom: 58px;
@@ -1215,7 +1217,7 @@
       </button>
     </div>
     <div style="text-align:center;font-size:11px;color:#64748b;margin-top:8px;">
-      Versión 15.0.8 · Capas Online/Offline + Carpeta local TrailSync en dispositivo
+      Versión 15.0.9 · Capas Online/Offline + Carpeta local TrailSync en dispositivo
     </div>
   </div>
 </div>
@@ -1502,14 +1504,13 @@
         </button>
 
         <button class="circle-action act-sos" onclick="triggerSOS()" title="Emergencia SOS">SOS</button>
+        <button type="button" class="circle-action act-legal" id="floatingLegalCheckPill" onclick="checkActiveRouteLegality(true)" title="Comprobar ruta legal" aria-label="Comprobar ruta legal">
+          <svg fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+            <path d="M12 3v18M8 21h8M4 7h16"/>
+            <path d="M6 7l-3 6h6l-3-6zM18 7l-3 6h6l-3-6z"/>
+          </svg>
+        </button>
       </div>
-
-      <button type="button" class="circle-action act-legal" id="floatingLegalCheckPill" onclick="checkActiveRouteLegality(true)" title="Comprobar ruta legal" aria-label="Comprobar ruta legal">
-        <svg fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-          <path d="M12 3v18M8 21h8M4 7h16"/>
-          <path d="M6 7l-3 6h6l-3-6zM18 7l-3 6h6l-3-6z"/>
-        </svg>
-      </button>
 
       <div class="bottom-cluster">
         <button class="circle-action act-comp" id="btnCompass" onclick="toggleBacktrack()" title="Volver por rastro (Backtrack)">
@@ -2021,7 +2022,7 @@
     <h2>Ajustes de ruta y App</h2>
     <div style="background:#18141a;padding:10px 12px;border-radius:12px;margin-bottom:12px;border:1px solid #334155;display:flex;align-items:center;justify-content:space-between;gap:8px;">
       <div>
-        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">15.0.8</span></div>
+        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">15.0.9</span></div>
         <div style="font-size:11px;color:#94a3b8;" id="webVerStatusLabel">Comprobando actualizaciones en la web...</div>
       </div>
       <button class="solid-btn" style="flex:0 0 auto;background:#16a34a;color:#fff;padding:8px 12px;font-size:12px;" onclick="manualCheckForUpdates()">🔄 Buscar / Actualizar</button>
@@ -2102,7 +2103,7 @@
     } catch (e) {}
   });
 
-  const APP_VERSION = '15.0.8';
+  const APP_VERSION = '15.0.9';
   let swWaitingWorker = null;
   let remoteVersionFound = null;
 
@@ -5401,7 +5402,7 @@ window.addEventListener('offline', () => {
     }).join('\n');
 
     return `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="TrailSync v15.0.8" xmlns="http://www.topografix.com/GPX/1/1">
+<gpx version="1.1" creator="TrailSync v15.0.9" xmlns="http://www.topografix.com/GPX/1/1">
   <metadata><name>${escapeXml(titleText)}</name>${descTag}</metadata>
   <trk><name>${escapeXml(titleText)}</name>${descTag}<trkseg>
 ${trkpts}
