@@ -10,7 +10,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
   <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
-  <title>TrailSync v14.31 — Notificación al Grupo al Entrar en Zona Prohibida o Restringida</title>
+  <title>TrailSync v14.31.1 — Notificación al Grupo al Entrar en Zona Prohibida o Restringida</title>
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
         onerror="this.onerror=null;this.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';" />
@@ -1820,7 +1820,7 @@
     <h2>Ajustes de ruta y App</h2>
     <div style="background:#18141a;padding:10px 12px;border-radius:12px;margin-bottom:12px;border:1px solid #334155;display:flex;align-items:center;justify-content:space-between;gap:8px;">
       <div>
-        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">14.31.0</span></div>
+        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">14.31.1</span></div>
         <div style="font-size:11px;color:#94a3b8;" id="webVerStatusLabel">Comprobando actualizaciones en la web...</div>
       </div>
       <button class="solid-btn" style="flex:0 0 auto;background:#16a34a;color:#fff;padding:8px 12px;font-size:12px;" onclick="manualCheckForUpdates()">🔄 Buscar / Actualizar</button>
@@ -1852,7 +1852,7 @@
 </div>
 
 <script>
-  const APP_VERSION = '14.31.0';
+  const APP_VERSION = '14.31.1';
   let swWaitingWorker = null;
   let remoteVersionFound = null;
 
@@ -2744,7 +2744,7 @@ function keepOriginalRouteAndNavigate() {
     await checkActiveRouteLegality(true);
   }
 
-  async async function checkActiveRouteLegality(openReportModal = true, forceRefresh = false) {
+  async function checkActiveRouteLegality(openReportModal = true, forceRefresh = false) {
     if (!plannedCoords || plannedCoords.length < 2) {
       return showToast('Primero genera una ruta o carga un archivo GPX');
     }
