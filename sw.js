@@ -1,10 +1,11 @@
-const APP_CACHE = 'trailsync-app-shell-v15-1-2';
+const APP_CACHE = 'trailsync-app-shell-v15-1-4';
 const APP_ASSETS = [
   './',
   './index.html',
   './manifest.json',
   './icon-192.png',
-  './icon-512.png'
+  './icon-512.png',
+  './icono_motorista.glb'
 ];
 
 self.addEventListener('install', event => {
