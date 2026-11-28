@@ -10,7 +10,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
   <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
-  <title>TrailSync v15.2.16 — Capas Online/Offline limpias y carpeta local TrailSync en el dispositivo</title>
+  <title>TrailSync v15.2.18 — Capas Online/Offline limpias y carpeta local TrailSync en el dispositivo</title>
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
         onerror="this.onerror=null;this.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';" />
@@ -1398,7 +1398,7 @@
       </button>
     </div>
     <div style="text-align:center;font-size:11px;color:#64748b;margin-top:8px;">
-      Versión 15.2.16 · Capas Online/Offline + Carpeta local TrailSync en dispositivo
+      Versión 15.2.18 · Capas Online/Offline + Carpeta local TrailSync en dispositivo
     </div>
   </div>
 </div>
@@ -1605,66 +1605,20 @@
         </button>
 
         <div class="voice-control-wrap" id="voiceControlWrap">
-          <div id="voiceIntercomPopover">
-            <div class="voice-pop-title">
-              <span>🎧 Intercomunicador Grupo</span>
-              <span id="voicePeersBadge" style="font-size:10.5px;color:#94a3b8;">0 en voz</span>
-            </div>
-            <div class="voice-pop-sub" id="voiceStatusSub">Pulsa «Canal abierto» para hablar y escuchar en tiempo real con el grupo.</div>
+          <div id="remoteAudioContainer" style="display:none;"></div>
 
-            <button type="button" class="voice-mode-btn" id="btnVoiceModeOpen" onclick="setGroupVoiceMode('open')">
-              <span>🎙️ Canal abierto (Tiempo real)</span>
-              <span id="badgeVoiceOpen"></span>
-            </button>
-
-            <button type="button" class="voice-mode-btn" id="btnVoiceModeMute" onclick="setGroupVoiceMode('muted')">
-              <span>🔇 Silenciar micro (Solo escuchar)</span>
-              <span id="badgeVoiceMute"></span>
-            </button>
-
-            <button type="button" class="voice-mode-btn" id="btnVoiceModeOff" onclick="setGroupVoiceMode('off')">
-              <span>📴 Salir del canal de voz</span>
-              <span id="badgeVoiceOff">✓</span>
-            </button>
-
-            <div style="background:#0f172a;border:1px solid #334155;border-radius:10px;padding:8px 9px;margin-top:2px;">
-              <label style="display:flex;align-items:center;justify-content:space-between;gap:6px;font-size:11.5px;font-weight:800;color:#e2e8f0;cursor:pointer;">
-                <span>🌬️ Filtro viento casco + Puerta voz</span>
-                <input type="checkbox" id="windNoiseGateToggle" onchange="toggleWindNoiseGate(this.checked)" />
-              </label>
-              <div style="display:flex;align-items:center;gap:6px;margin-top:6px;">
-                <span style="font-size:10px;color:#94a3b8;min-width:52px;">Micro TX:</span>
-                <div style="flex:1;height:6px;background:#1e293b;border-radius:999px;overflow:hidden;">
-                  <div id="micLevelMeterFill" style="height:100%;width:0%;background:#10b981;transition:width 0.08s linear;"></div>
-                </div>
-                <span id="vadGateBadge" style="font-size:9.5px;font-weight:800;color:#64748b;">DIRECTO</span>
-              </div>
-              <div style="display:flex;align-items:center;gap:6px;margin-top:5px;">
-                <span style="font-size:10px;color:#94a3b8;min-width:52px;">Casco RX:</span>
-                <div style="flex:1;height:6px;background:#1e293b;border-radius:999px;overflow:hidden;">
-                  <div id="rxLevelMeterFill" style="height:100%;width:0%;background:#38bdf8;transition:width 0.08s linear;"></div>
-                </div>
-                <span id="rxAudioBadge" style="font-size:9.5px;font-weight:800;color:#64748b;">SIN SEÑAL</span>
-              </div>
-              <div id="voiceLinkDiagText" style="font-size:10px;color:#94a3b8;margin-top:6px;line-height:1.3;">
-                Enlace peers: sin conexiones activas
-              </div>
-              <button type="button" onclick="forceUnlockAndReconnectVoice()"
-                      style="margin-top:6px;width:100%;background:#1e293b;color:#38bdf8;border:1px solid #38bdf8;border-radius:7px;padding:5px 8px;font-size:11px;font-weight:800;cursor:pointer;">
-                🔊 Forzar salida audio y reconectar enlace
-              </button>
-            </div>
-
-
-
-            <div id="remoteAudioContainer" style="display:none;"></div>
-          </div>
-
-          <button class="circle-action act-voice" id="btnVoice" onclick="handleVoiceButtonTap(event)" title="Voz en grupo: Canal abierto / Silenciar micro">
+          <button class="circle-action act-voice" id="btnVoice" onclick="handleVoiceButtonTap(event)" title="Activar / Desactivar micrófono y audio del grupo (ON/OFF)">
             <svg id="btnVoiceIconSvg" fill="none" stroke="currentColor" stroke-width="2.3" viewBox="0 0 24 24">
               <rect x="9" y="2" width="6" height="11" rx="3"/><path d="M5 10a7 7 0 0014 0M12 19v3M8 22h8"/>
             </svg>
             <span class="voice-status-dot" id="voiceStatusDot"></span>
+          </button>
+
+          <button type="button" id="btnShareAudioLogWa" onclick="exportAndShareAudioLogViaWhatsApp()"
+                  title="Enviar log de diagnóstico de audio por WhatsApp"
+                  style="display:none;margin-left:8px;height:40px;padding:0 12px;border-radius:999px;background:rgba(22,163,74,0.95);color:#ffffff;border:1.5px solid #86efac;font-size:11.5px;font-weight:900;align-items:center;gap:6px;box-shadow:0 4px 14px rgba(0,0,0,0.45);cursor:pointer;white-space:nowrap;">
+            <span>📲</span>
+            <span>Log Audio WA</span>
           </button>
         </div>
 
@@ -2181,7 +2135,7 @@
     <h2>Ajustes de ruta y App</h2>
     <div style="background:#18141a;padding:10px 12px;border-radius:12px;margin-bottom:12px;border:1px solid #334155;display:flex;align-items:center;justify-content:space-between;gap:8px;">
       <div>
-        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">15.2.16</span></div>
+        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">15.2.18</span></div>
         <div style="font-size:11px;color:#94a3b8;" id="webVerStatusLabel">Comprobando actualizaciones en la web...</div>
       </div>
       <button class="solid-btn" style="flex:0 0 auto;background:#16a34a;color:#fff;padding:8px 12px;font-size:12px;" onclick="manualCheckForUpdates()">🔄 Buscar / Actualizar</button>
@@ -2262,7 +2216,7 @@
     } catch (e) {}
   });
 
-  const APP_VERSION = '15.2.16';
+  const APP_VERSION = '15.2.18';
   let swWaitingWorker = null;
   let remoteVersionFound = null;
 
@@ -2662,11 +2616,11 @@
       if (latlngs.length < 2) continue;
 
       if (spec.kind === 'paved_main' || spec.kind === 'paved_local') {
-        pavedCasing.push(L.polyline(latlngs, { color: spec.casing, weight: spec.weight + 2.5, opacity: 0.9, lineCap: 'round', lineJoin: 'round', interactive: false }));
-        pavedFill.push(L.polyline(latlngs, { color: spec.color, weight: spec.weight, opacity: 0.95, lineCap: 'round', lineJoin: 'round', interactive: false }));
+        pavedCasing.push(L.polyline(latlngs, { pane: 'offroadBasePane', color: spec.casing, weight: spec.weight + 2.5, opacity: 0.9, lineCap: 'round', lineJoin: 'round', interactive: false }));
+        pavedFill.push(L.polyline(latlngs, { pane: 'offroadBasePane', color: spec.color, weight: spec.weight, opacity: 0.95, lineCap: 'round', lineJoin: 'round', interactive: false }));
       } else {
-        trackBase.push(L.polyline(latlngs, { color: spec.color, weight: spec.weight, opacity: 0.95, lineCap: 'round', lineJoin: 'round', interactive: false }));
-        trackDash.push(L.polyline(latlngs, { color: spec.dashColor, weight: Math.max(2.5, spec.weight - 2.5), dashArray: spec.dashArray, opacity: 0.98, lineCap: 'butt', lineJoin: 'round', interactive: false }));
+        trackBase.push(L.polyline(latlngs, { pane: 'offroadBasePane', color: spec.color, weight: spec.weight, opacity: 0.95, lineCap: 'round', lineJoin: 'round', interactive: false }));
+        trackDash.push(L.polyline(latlngs, { pane: 'offroadBasePane', color: spec.dashColor, weight: Math.max(2.5, spec.weight - 2.5), dashArray: spec.dashArray, opacity: 0.98, lineCap: 'butt', lineJoin: 'round', interactive: false }));
       }
     }
 
@@ -2674,6 +2628,109 @@
     pavedFill.forEach(l => offroadRoadsLayer.addLayer(l));
     trackBase.forEach(l => offroadRoadsLayer.addLayer(l));
     trackDash.forEach(l => offroadRoadsLayer.addLayer(l));
+    if (typeof plannedLine !== 'undefined' && plannedLine) plannedLine.bringToFront();
+    if (typeof recordedLine !== 'undefined' && recordedLine) recordedLine.bringToFront();
+  }
+
+
+  // --- LOCAL DISK CACHE FOR OFFROAD VECTOR STYLES (TrailSync/mapas/estilos_vector/) ---
+  function compactOverpassElementsForCache(elements) {
+    if (!Array.isArray(elements)) return [];
+    const usedNodeIds = new Set();
+    const ways = [];
+    for (const el of elements) {
+      if (el && el.type === 'way' && Array.isArray(el.nodes) && el.nodes.length >= 2 && el.tags && el.tags.highway) {
+        const cleanTags = { highway: el.tags.highway };
+        if (el.tags.surface) cleanTags.surface = el.tags.surface;
+        ways.push({ type: 'way', nodes: el.nodes, tags: cleanTags });
+        for (const nid of el.nodes) usedNodeIds.add(nid);
+      }
+    }
+    const nodes = [];
+    for (const el of elements) {
+      if (el && el.type === 'node' && usedNodeIds.has(el.id)) {
+        nodes.push({ type: 'node', id: el.id, lat: Number(el.lat.toFixed(6)), lon: Number(el.lon.toFixed(6)) });
+      }
+    }
+    return nodes.concat(ways);
+  }
+
+  function bboxKeyToSafeFilename(bboxKey) {
+    return 'vec_' + String(bboxKey || '').replace(/[^0-9.-]+/g, '_') + '.json';
+  }
+
+  async function readVectorBboxFromDeviceFolder(bboxKey) {
+    const root = await ensureTrailSyncFolderReady(false);
+    if (!root) return null;
+    try {
+      const mapasDir = await root.getDirectoryHandle('mapas', { create: false });
+      const vecDir = await mapasDir.getDirectoryHandle('estilos_vector', { create: false });
+      const fh = await vecDir.getFileHandle(bboxKeyToSafeFilename(bboxKey), { create: false });
+      const file = await fh.getFile();
+      const txt = await file.text();
+      const parsed = JSON.parse(txt);
+      return Array.isArray(parsed) ? parsed : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  async function writeVectorBboxToDeviceFolder(bboxKey, elements) {
+    const root = await ensureTrailSyncFolderReady(false);
+    if (!root) return false;
+    try {
+      const compact = compactOverpassElementsForCache(elements);
+      if (!compact.length) return false;
+      const mapasDir = await root.getDirectoryHandle('mapas', { create: true });
+      const vecDir = await mapasDir.getDirectoryHandle('estilos_vector', { create: true });
+      const fh = await vecDir.getFileHandle(bboxKeyToSafeFilename(bboxKey), { create: true });
+      const writable = await fh.createWritable();
+      await writable.write(JSON.stringify(compact));
+      await writable.close();
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  async function prefetchVectorStylesForBox(box) {
+    if (!box) return 0;
+    const step = 0.08;
+    const minLat = Math.max(-85, Number(box.south));
+    const maxLat = Math.min(85, Number(box.north));
+    const minLon = Math.max(-180, Number(box.west));
+    const maxLon = Math.min(180, Number(box.east));
+    // Cap grid tiles per batch so large regional boxes stay fast and reliable
+    const latSteps = Math.min(8, Math.max(1, Math.ceil((maxLat - minLat) / step)));
+    const lonSteps = Math.min(8, Math.max(1, Math.ceil((maxLon - minLon) / step)));
+    const dLat = (maxLat - minLat) / latSteps;
+    const dLon = (maxLon - minLon) / lonSteps;
+    let savedChunks = 0;
+
+    for (let i = 0; i < latSteps; i++) {
+      for (let j = 0; j < lonSteps; j++) {
+        if (offlineDownloadAbort) return savedChunks;
+        const s = (minLat + i * dLat).toFixed(3);
+        const n = (minLat + (i + 1) * dLat).toFixed(3);
+        const w = (minLon + j * dLon).toFixed(3);
+        const e = (minLon + (j + 1) * dLon).toFixed(3);
+        const bboxKey = `${s},${w},${n},${e}`;
+        const existing = await readVectorBboxFromDeviceFolder(bboxKey);
+        if (existing && existing.length) {
+          savedChunks++;
+          continue;
+        }
+        const q = `[out:json][timeout:12];(way["highway"~"^(motorway|trunk|primary|secondary|tertiary|unclassified|residential|living_street|service|track|path|bridleway)$"](${s},${w},${n},${e});>;);out body;`;
+        try {
+          const winner = await fetchFastestCartographyElements(q, 12000);
+          if (winner && Array.isArray(winner.elements)) {
+            const ok = await writeVectorBboxToDeviceFolder(bboxKey, winner.elements);
+            if (ok) savedChunks++;
+          }
+        } catch (err) {}
+      }
+    }
+    return savedChunks;
   }
 
   function scheduleOffroadRoadsRefresh(force = false) {
@@ -2687,10 +2744,12 @@
     offroadFetchTimer = setTimeout(async () => {
       if (!isOffroadVectorStyleActive() || !map || map.getZoom() < 13) return;
       const b = map.getBounds().pad(0.25);
-      const s = b.getSouth().toFixed(3);
-      const w = b.getWest().toFixed(3);
-      const n = b.getNorth().toFixed(3);
-      const e = b.getEast().toFixed(3);
+      // Quantize bbox to a 0.04° grid so nearby movements reuse the exact cached local file
+      const grid = 0.04;
+      const s = (Math.floor(b.getSouth() / grid) * grid).toFixed(3);
+      const w = (Math.floor(b.getWest() / grid) * grid).toFixed(3);
+      const n = (Math.ceil(b.getNorth() / grid) * grid).toFixed(3);
+      const e = (Math.ceil(b.getEast() / grid) * grid).toFixed(3);
       const bboxKey = `${s},${w},${n},${e}`;
       if (!force && bboxKey === lastOffroadBboxKey) return;
       lastOffroadBboxKey = bboxKey;
@@ -2700,19 +2759,36 @@
         return;
       }
 
+      // 1. Check TrailSync/mapas/estilos_vector/ local disk cache first
+      const diskElements = await readVectorBboxFromDeviceFolder(bboxKey);
+      if (diskElements && diskElements.length) {
+        if (offroadBboxCache.size > 32) {
+          const firstKey = offroadBboxCache.keys().next().value;
+          offroadBboxCache.delete(firstKey);
+        }
+        offroadBboxCache.set(bboxKey, diskElements);
+        renderOffroadElementsOnMap(diskElements);
+        return;
+      }
+
+      if (!navigator.onLine) return;
+
+      // 2. Fetch from Overpass when online and persist compact JSON to local folder
       const q = `[out:json][timeout:10];(way["highway"~"^(motorway|trunk|primary|secondary|tertiary|unclassified|residential|living_street|service|track|path|bridleway)$"](${s},${w},${n},${e});>;);out body;`;
       try {
         const winner = await fetchFastestCartographyElements(q, 10000);
         if (winner && Array.isArray(winner.elements)) {
-          if (offroadBboxCache.size > 24) {
+          const compact = compactOverpassElementsForCache(winner.elements);
+          if (offroadBboxCache.size > 32) {
             const firstKey = offroadBboxCache.keys().next().value;
             offroadBboxCache.delete(firstKey);
           }
-          offroadBboxCache.set(bboxKey, winner.elements);
-          renderOffroadElementsOnMap(winner.elements);
+          offroadBboxCache.set(bboxKey, compact);
+          renderOffroadElementsOnMap(compact);
+          writeVectorBboxToDeviceFolder(bboxKey, winner.elements);
         }
       } catch (err) {}
-    }, force ? 60 : 320);
+    }, force ? 60 : 280);
   }
 
   function selectDisplayStyle(key, silent = false) {
@@ -2726,9 +2802,11 @@
     }
     if (typeof plannedLine !== 'undefined' && plannedLine) {
       plannedLine.setStyle({ weight: m.routeWeight });
+      plannedLine.bringToFront();
     }
     if (typeof recordedLine !== 'undefined' && recordedLine) {
       recordedLine.setStyle({ weight: m.trackWeight });
+      recordedLine.bringToFront();
     }
     const iconEl = document.getElementById('displayModeIcon');
     const lblEl = document.getElementById('displayModeLabel');
@@ -5657,6 +5735,9 @@ window.addEventListener('offline', () => {
       if (ev && ev.originalEvent) registerManualMapExplore();
     });
     baseTileLayer = buildOfflineTileLayer(startMode).addTo(map);
+    const offroadBasePane = map.createPane('offroadBasePane');
+    offroadBasePane.style.zIndex = '360';
+    offroadBasePane.style.pointerEvents = 'none';
     offroadRoadsLayer = L.layerGroup().addTo(map);
     const lp2 = document.getElementById('layerNamePill'); if (lp2) lp2.textContent = `🗺️ Capa: ${startMode.title} ▾`;
     if (startMode.pistaStyle) document.getElementById('map').classList.add('offline-pista-mode');
@@ -6078,6 +6159,16 @@ window.addEventListener('offline', () => {
       mergedTasks,
       `✅ Península + zona detallada guardadas (${mergedTasks.length} teselas)`
     );
+    if (!offlineDownloadAbort) {
+      const localBox = {
+        south: map.getBounds().pad(0.45).getSouth(),
+        west: map.getBounds().pad(0.45).getWest(),
+        north: map.getBounds().pad(0.45).getNorth(),
+        east: map.getBounds().pad(0.45).getEast()
+      };
+      await prefetchVectorStylesForBox(localBox);
+      await refreshOfflineStats();
+    }
     btn.disabled = false;
     btn.textContent = '⬇️ Descarga COMPLETA España + Portugal en carpeta (Z5–13 + Zona/Ruta Z14–16)';
   }
@@ -6092,6 +6183,13 @@ window.addEventListener('offline', () => {
       : REGION_BOXES[val];
     const tasks = buildTileTasksFromBox(box, 10, 16, sources).slice(0, 22000);
     await batchDownloadTilesToDeviceFolder(tasks, `✅ Zona al detalle guardada (${tasks.length} teselas)`);
+    if (!offlineDownloadAbort) {
+      const lbl = document.getElementById('offlineProgressLabel');
+      if (lbl) lbl.textContent = '🧭 Guardando capas vectoriales Off Día / Off Noche en carpeta...';
+      const vecCount = await prefetchVectorStylesForBox(box);
+      if (lbl) lbl.textContent = `✅ Zona + ${vecCount} bloques de estilo vectorial guardados en TrailSync/mapas/`;
+      await refreshOfflineStats();
+    }
     if (btn) btn.disabled = false;
   }
 
@@ -6303,7 +6401,7 @@ window.addEventListener('offline', () => {
     }).join('\n');
 
     return `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="TrailSync v15.2.16" xmlns="http://www.topografix.com/GPX/1/1">
+<gpx version="1.1" creator="TrailSync v15.2.18" xmlns="http://www.topografix.com/GPX/1/1">
   <metadata><name>${escapeXml(titleText)}</name>${descTag}</metadata>
   <trk><name>${escapeXml(titleText)}</name>${descTag}<trkseg>
 ${trkpts}
@@ -6833,25 +6931,18 @@ ${trkptsXml}
     }
   ];
 
-  function toggleVoicePopover(forceState) {
-    const pop = document.getElementById('voiceIntercomPopover');
-    if (!pop) return;
-    const next = typeof forceState === 'boolean' ? forceState : !pop.classList.contains('open');
-    pop.classList.toggle('open', next);
-    updateGroupVoiceUI();
+  function toggleVoicePopover() {
+    // Popover disabled: microphone button acts as direct ON/OFF toggle
   }
 
   function handleVoiceButtonTap(ev) {
     if (ev) ev.stopPropagation();
-    const pop = document.getElementById('voiceIntercomPopover');
-    if (groupVoiceMode === 'open') {
-      setGroupVoiceMode('muted');
-      if (pop) pop.classList.add('open');
-    } else if (groupVoiceMode === 'muted') {
+    if (groupVoiceMode === 'off') {
+      logAudioDiag('MIC_BTN_ON', 'User tapped mic button -> activating mic + audio');
       setGroupVoiceMode('open');
-      if (pop) pop.classList.add('open');
     } else {
-      toggleVoicePopover();
+      logAudioDiag('MIC_BTN_OFF', 'User tapped mic button -> deactivating mic + audio');
+      setGroupVoiceMode('off');
     }
   }
 
@@ -6875,6 +6966,11 @@ ${trkptsXml}
 
     const activeVoiceCount = Object.values(peerVoiceStates).filter(s => s && s.mode !== 'off').length + (groupVoiceMode !== 'off' ? 1 : 0);
     if (badge) badge.textContent = `${activeVoiceCount} en voz`;
+
+    const waLogBtn = document.getElementById('btnShareAudioLogWa');
+    if (waLogBtn) {
+      waLogBtn.style.display = (groupVoiceMode !== 'off') ? 'inline-flex' : 'none';
+    }
 
     if (btn) {
       btn.classList.remove('voice-open-live', 'voice-muted');
