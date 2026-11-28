@@ -10,7 +10,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
   <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
-  <title>TrailSync v15.2.26 — Capas Online/Offline limpias y carpeta local TrailSync en el dispositivo</title>
+  <title>TrailSync v15.2.28 — Capas Online/Offline limpias y carpeta local TrailSync en el dispositivo</title>
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
         onerror="this.onerror=null;this.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';" />
@@ -739,7 +739,79 @@
     .circle-action:active { transform: scale(0.92); }
     .circle-action svg { width: 23px; height: 23px; }
     .act-voice  { border: 2.5px solid #0284c7; color: #38bdf8; }
-    .act-stop   { border: 2.5px solid #ef4444; color: #f87171; }
+    .act-stop   { border: 2.5px solid #ef4444; color: #f87171; transition: transform 0.2s ease, box-shadow 0.2s ease; }
+    .act-stop.act-stop-active {
+      background: rgba(220, 38, 38, 0.35) !important;
+      border-color: #ffffff !important;
+      box-shadow: 0 0 18px rgba(239, 68, 68, 0.95), 0 0 34px rgba(220, 38, 38, 0.8) !important;
+      animation: stopBtnPulse 1.15s infinite ease-in-out;
+    }
+    @keyframes stopBtnPulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+    }
+
+    /* FULL-SCREEN GLOWING NEON RED BORDER WHEN STOP IS REQUESTED */
+    #stopScreenGlowBorder {
+      position: fixed;
+      inset: 0;
+      z-index: 985;
+      pointer-events: none;
+      display: none;
+      border-radius: 26px;
+      border: 4px solid #ff2a2a;
+      box-shadow:
+        inset 0 0 18px 4px rgba(255, 42, 42, 0.95),
+        inset 0 0 46px 10px rgba(220, 38, 38, 0.72),
+        0 0 22px 4px rgba(255, 42, 42, 0.9);
+      animation: stopEdgeGlowPulse 1.4s infinite ease-in-out;
+    }
+    #stopScreenGlowBorder.active {
+      display: block;
+    }
+    @keyframes stopEdgeGlowPulse {
+      0%, 100% {
+        opacity: 0.92;
+        box-shadow:
+          inset 0 0 18px 4px rgba(255, 42, 42, 0.95),
+          inset 0 0 46px 10px rgba(220, 38, 38, 0.72),
+          0 0 22px 4px rgba(255, 42, 42, 0.9);
+      }
+      50% {
+        opacity: 1;
+        box-shadow:
+          inset 0 0 26px 6px rgba(255, 70, 70, 1),
+          inset 0 0 64px 14px rgba(220, 38, 38, 0.85),
+          0 0 30px 6px rgba(255, 50, 50, 1);
+      }
+    }
+
+    /* PERSISTENT STOP NOTICE PILL (STAYS ON SCREEN UNTIL TAPPED OR STOP ICON PRESSED) */
+    #stopPersistentBanner {
+      position: fixed;
+      top: 66px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 990;
+      display: none;
+      align-items: center;
+      gap: 9px;
+      background: rgba(15, 23, 42, 0.96);
+      color: #ffffff;
+      border: 2px solid #ef4444;
+      border-radius: 999px;
+      padding: 9px 18px;
+      font-size: 14px;
+      font-weight: 900;
+      letter-spacing: 0.2px;
+      box-shadow: 0 8px 26px rgba(220, 38, 38, 0.55), 0 4px 12px rgba(0, 0, 0, 0.65);
+      cursor: pointer;
+      white-space: nowrap;
+      max-width: calc(100vw - 32px);
+    }
+    #stopPersistentBanner.active {
+      display: inline-flex;
+    }
     .act-sos    { border: 2.5px solid #dc2626; color: #f87171; font-weight: 900; font-size: 13px; }
     .act-comp   { border: 2.5px solid #4f46e5; color: #818cf8; }
     .act-group  { border: 2.5px solid #059669; color: #34d399; }
@@ -1405,7 +1477,7 @@
       </button>
     </div>
     <div style="text-align:center;font-size:11px;color:#64748b;margin-top:8px;">
-      Versión 15.2.26 · Capas Online/Offline + Carpeta local TrailSync en dispositivo
+      Versión 15.2.28 · Capas Online/Offline + Carpeta local TrailSync en dispositivo
     </div>
   </div>
 </div>
@@ -1443,6 +1515,12 @@
       </button>
     </div>
   </header>
+
+  <div id="stopScreenGlowBorder" aria-hidden="true"></div>
+  <div id="stopPersistentBanner" role="alert" onclick="dismissStopBannerOnly()" title="Toca para cerrar este aviso (pulsa STOP para quitar el borde rojo)">
+    <span style="width:12px;height:12px;border-radius:50%;background:#ef4444;box-shadow:0 0 8px #ef4444;flex:0 0 auto;"></span>
+    <span id="stopPersistentBannerText">Giggo ha pedido parar</span>
+  </div>
 
   <!-- MAP -->
   <div id="map-container" onclick="closeQuickMenuIfOutside(event)">
@@ -1608,7 +1686,7 @@
     <!-- VERTICAL LEFT STACK ABOVE 3-LINE MENU (BOTTOM-TO-TOP: STOP -> CENTER -> MICROPHONE) -->
     <div class="bottom-actions">
       <div class="bottom-cluster">
-        <button class="circle-action act-stop" onclick="requestDirectStop()" title="Pedir parada al grupo">
+        <button id="btnStopAction" class="circle-action act-stop" onclick="requestDirectStop()" title="Pedir parada al grupo / Quitar aviso de parada">
           <svg viewBox="0 0 24 24" fill="none">
             <polygon points="7.86,2 16.14,2 22,7.86 22,16.14 16.14,22 7.86,22 2,16.14 2,7.86" fill="#dc2626" stroke="#ffffff" stroke-width="1.6"/>
             <text x="12" y="13.9" text-anchor="middle" fill="#ffffff" font-size="5.6" font-weight="900" font-family="system-ui,-apple-system,sans-serif" letter-spacing="0.2">STOP</text>
@@ -2219,7 +2297,7 @@
     <h2>Ajustes de ruta y App</h2>
     <div style="background:#18141a;padding:10px 12px;border-radius:12px;margin-bottom:12px;border:1px solid #334155;display:flex;align-items:center;justify-content:space-between;gap:8px;">
       <div>
-        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">15.2.26</span></div>
+        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">15.2.28</span></div>
         <div style="font-size:11px;color:#94a3b8;" id="webVerStatusLabel">Comprobando actualizaciones en la web...</div>
       </div>
       <button class="solid-btn" style="flex:0 0 auto;background:#16a34a;color:#fff;padding:8px 12px;font-size:12px;" onclick="manualCheckForUpdates()">🔄 Buscar / Actualizar</button>
@@ -2300,7 +2378,7 @@
     } catch (e) {}
   });
 
-  const APP_VERSION = '15.2.26';
+  const APP_VERSION = '15.2.28';
   let swWaitingWorker = null;
   let remoteVersionFound = null;
 
@@ -5435,11 +5513,11 @@ function keepOriginalRouteAndNavigate() {
       showToast(`🆘 ¡ALERTA S.O.S. DE ${peers[msg.peerId].nick.toUpperCase()}!`);
       speakAlert(`Atención, alerta SOS de ${peers[msg.peerId].nick}`);
     } else if (msg.kind === 'STOP') {
-      const stopVoiceText = msg.directStop
-        ? `El usuario ${peers[msg.peerId].nick} ha pedido parar`
-        : (msg.reason ? `${peers[msg.peerId].nick} pide parada: ${msg.reason}` : `El usuario ${peers[msg.peerId].nick} ha pedido parar`);
-      showToast(`🛑 ${stopVoiceText}`);
+      const senderName = (peers[msg.peerId]?.nick || msg.requester || 'Un compañero').trim();
+      const stopVoiceText = showStopAlertState(senderName, msg.directStop ? '' : (msg.reason || ''));
       speakAlert(stopVoiceText);
+    } else if (msg.kind === 'STOP_CLEAR') {
+      clearStopAlertState(false);
     } else if (msg.kind === 'ZONE_ALERT') {
       const zReason = msg.zoneReason || 'zona restringida';
       showToast(`🚫 ${peers[msg.peerId].nick} ha entrado en zona restringida: ${zReason}`);
@@ -5686,18 +5764,24 @@ function keepOriginalRouteAndNavigate() {
   ];
 
   function createOverscaledFromParentBitmap(bitmap, dz, dx, dy, isPista) {
+    const imgW = bitmap.naturalWidth || bitmap.width || 256;
+    const imgH = bitmap.naturalHeight || bitmap.height || 256;
+    const outSize = imgW >= 512 ? 512 : 256;
     const canvas = document.createElement('canvas');
-    canvas.width = 256;
-    canvas.height = 256;
+    canvas.width = outSize;
+    canvas.height = outSize;
     const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
     ctx.fillStyle = isPista ? '#faf8f5' : '#f2efe9';
-    ctx.fillRect(0, 0, 256, 256);
+    ctx.fillRect(0, 0, outSize, outSize);
 
     const scale = Math.pow(2, dz);
-    const srcSize = 256 / scale;
-    const srcX = dx * srcSize;
-    const srcY = dy * srcSize;
-    ctx.drawImage(bitmap, srcX, srcY, srcSize, srcSize, 0, 0, 256, 256);
+    const srcW = imgW / scale;
+    const srcH = imgH / scale;
+    const srcX = dx * srcW;
+    const srcY = dy * srcH;
+    ctx.drawImage(bitmap, srcX, srcY, srcW, srcH, 0, 0, outSize, outSize);
     return canvas.toDataURL('image/png');
   }
 
@@ -5945,75 +6029,92 @@ function keepOriginalRouteAndNavigate() {
     return detectedOfflineDownloadedFolders[0];
   }
 
-  async function readTileBlobFromDeviceFolder(preferredLayerKey, z, x, y) {
+  async function readSingleLayerTileFromDeviceFolder(layerKey, z, x, y) {
+    if (!layerKey) return null;
     const root = await ensureTrailSyncFolderReady(false);
     if (!root) return null;
+    try {
+      const mapasDir = await root.getDirectoryHandle('mapas', { create: false });
+      const layerDir = await mapasDir.getDirectoryHandle(layerKey, { create: false });
+      const zDir = await layerDir.getDirectoryHandle(String(z), { create: false });
+      const xDir = await zDir.getDirectoryHandle(String(x), { create: false });
+      const fileHandle = await xDir.getFileHandle(`${y}.png`, { create: false });
+      const file = await fileHandle.getFile();
+      if (file && file.size > 0) return file;
+    } catch (e) {}
+    return null;
+  }
+
+  async function readTileBlobFromDeviceFolder(preferredLayerKey, z, x, y) {
     const candidateLayers = [
       preferredLayerKey,
       ...detectedOfflineDownloadedFolders,
       'mapbox_outdoors', 'mapbox_sat_streets', 'mapbox_nav_day', 'mapbox_nav_night', 'mapbox_streets',
       'opentopo', 'ign_mtn', 'osm_base', 'satelite', 'google_maps'
     ].filter((v, idx, arr) => v && arr.indexOf(v) === idx);
-    try {
-      const mapasDir = await root.getDirectoryHandle('mapas', { create: false });
-      for (const lKey of candidateLayers) {
-        try {
-          const layerDir = await mapasDir.getDirectoryHandle(lKey, { create: false });
-          const zDir = await layerDir.getDirectoryHandle(String(z), { create: false });
-          const xDir = await zDir.getDirectoryHandle(String(x), { create: false });
-          const fileHandle = await xDir.getFileHandle(`${y}.png`, { create: false });
-          const file = await fileHandle.getFile();
-          if (file && file.size > 0) return file;
-        } catch (e1) {}
-      }
-    } catch (e) {}
+    for (const lKey of candidateLayers) {
+      const file = await readSingleLayerTileFromDeviceFolder(lKey, z, x, y);
+      if (file) return file;
+    }
     return null;
   }
 
   async function resolveOfflineTileDataUrl(coords, modeObj) {
-    const preferredLayer = modeObj && modeObj.folderKey
-      ? modeObj.folderKey
-      : (modeObj && modeObj.key && modeObj.key !== 'offline'
-        ? (modeObj.key === 'osm' ? 'osm_base' : modeObj.key)
-        : (isMapboxLayerActiveOrOffline() ? ('mapbox_' + getActiveMapboxStyleObj().id) : 'opentopo'));
+    const primaryLayer = (modeObj && modeObj.key === 'offline' && getPreferredDetectedOfflineFolder())
+      ? getPreferredDetectedOfflineFolder()
+      : (modeObj && modeObj.folderKey
+          ? modeObj.folderKey
+          : (modeObj && modeObj.key && modeObj.key !== 'offline'
+            ? (modeObj.key === 'osm' ? 'osm_base' : modeObj.key)
+            : (getPreferredDetectedOfflineFolder() || (isMapboxLayerActiveOrOffline() ? ('mapbox_' + getActiveMapboxStyleObj().id) : 'opentopo'))));
 
-    const exactBlob = await readTileBlobFromDeviceFolder(preferredLayer, coords.z, coords.x, coords.y);
-    if (exactBlob) {
-      return URL.createObjectURL(exactBlob);
-    }
+    const candidateLayers = [
+      primaryLayer,
+      ...detectedOfflineDownloadedFolders,
+      'mapbox_outdoors', 'mapbox_sat_streets', 'mapbox_nav_day', 'mapbox_nav_night', 'mapbox_streets',
+      'opentopo', 'ign_mtn', 'osm_base', 'satelite', 'google_maps'
+    ].filter((v, idx, arr) => v && arr.indexOf(v) === idx);
 
-    // Look up to 5 parent zoom levels up inside TrailSync/mapas so high-zoom tiles still render crisp offline
-    for (let dz = 1; dz <= 5 && coords.z - dz >= 3; dz++) {
-      const pz = coords.z - dz;
-      const factor = Math.pow(2, dz);
-      const px = Math.floor(coords.x / factor);
-      const py = Math.floor(coords.y / factor);
-      const dx = coords.x - px * factor;
-      const dy = coords.y - py * factor;
+    // Search each downloaded map folder cohesively (exact zoom first, then parent zooms 1..6)
+    // so adjacent tiles ALWAYS come from the exact same map style and never mix Mapbox with OpenTopoMap!
+    for (const layerKey of candidateLayers) {
+      const exactBlob = await readSingleLayerTileFromDeviceFolder(layerKey, coords.z, coords.x, coords.y);
+      if (exactBlob) {
+        return URL.createObjectURL(exactBlob);
+      }
 
-      const parentBlob = await readTileBlobFromDeviceFolder(preferredLayer, pz, px, py);
-      if (parentBlob && parentBlob.size > 0) {
-        try {
-          const bitmap = await createImageBitmap(parentBlob);
-          const dataUrl = createOverscaledFromParentBitmap(bitmap, dz, dx, dy, modeObj.pistaStyle);
-          if (bitmap.close) bitmap.close();
-          return dataUrl;
-        } catch (e) {
-          const pUrl = URL.createObjectURL(parentBlob);
-          const dataUrl = await new Promise(resolve => {
-            const tmpImg = new Image();
-            tmpImg.onload = () => {
-              const out = createOverscaledFromParentBitmap(tmpImg, dz, dx, dy, modeObj.pistaStyle);
-              URL.revokeObjectURL(pUrl);
-              resolve(out);
-            };
-            tmpImg.onerror = () => {
-              URL.revokeObjectURL(pUrl);
-              resolve(null);
-            };
-            tmpImg.src = pUrl;
-          });
-          if (dataUrl) return dataUrl;
+      for (let dz = 1; dz <= 6 && coords.z - dz >= 3; dz++) {
+        const pz = coords.z - dz;
+        const factor = Math.pow(2, dz);
+        const px = Math.floor(coords.x / factor);
+        const py = Math.floor(coords.y / factor);
+        const dx = coords.x - px * factor;
+        const dy = coords.y - py * factor;
+
+        const parentBlob = await readSingleLayerTileFromDeviceFolder(layerKey, pz, px, py);
+        if (parentBlob && parentBlob.size > 0) {
+          try {
+            const bitmap = await createImageBitmap(parentBlob);
+            const dataUrl = createOverscaledFromParentBitmap(bitmap, dz, dx, dy, modeObj.pistaStyle);
+            if (bitmap.close) bitmap.close();
+            return dataUrl;
+          } catch (e) {
+            const pUrl = URL.createObjectURL(parentBlob);
+            const dataUrl = await new Promise(resolve => {
+              const tmpImg = new Image();
+              tmpImg.onload = () => {
+                const out = createOverscaledFromParentBitmap(tmpImg, dz, dx, dy, modeObj.pistaStyle);
+                URL.revokeObjectURL(pUrl);
+                resolve(out);
+              };
+              tmpImg.onerror = () => {
+                URL.revokeObjectURL(pUrl);
+                resolve(null);
+              };
+              tmpImg.src = pUrl;
+            });
+            if (dataUrl) return dataUrl;
+          }
         }
       }
     }
@@ -6132,10 +6233,11 @@ function keepOriginalRouteAndNavigate() {
       }
     });
     return new OfflineLayer(modeObj.url, {
+      tileSize: 256,
       attribution: '&copy; OpenTopoMap / OpenStreetMap / IGN / Google Maps',
       subdomains: ['a', 'b', 'c'],
       maxNativeZoom: modeObj.maxNativeZoom || modeObj.maxZoom || 18,
-      maxZoom: Math.max(19, modeObj.maxZoom || 18),
+      maxZoom: Math.max(20, modeObj.maxZoom || 18),
       keepBuffer: 8,
       updateWhenIdle: false,
       updateWhenZooming: true
@@ -6932,7 +7034,7 @@ function keepOriginalRouteAndNavigate() {
     }).join('\n');
 
     return `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="TrailSync v15.2.26" xmlns="http://www.topografix.com/GPX/1/1">
+<gpx version="1.1" creator="TrailSync v15.2.28" xmlns="http://www.topografix.com/GPX/1/1">
   <metadata><name>${escapeXml(titleText)}</name>${descTag}</metadata>
   <trk><name>${escapeXml(titleText)}</name>${descTag}<trkseg>
 ${trkpts}
@@ -7420,21 +7522,68 @@ ${trkptsXml}
     recordIncident('SOS_OK', 'Confirmado «Estoy bien»');
   }
 
+  let stopAlertActive = false;
+
+  function showStopAlertState(requesterName, customReason = '') {
+    const cleanName = (requesterName || 'Un compañero').trim();
+    const shortMsg = customReason && !customReason.includes('ha pedido parar')
+      ? `${cleanName} ha pedido parar (${customReason})`
+      : `${cleanName} ha pedido parar`;
+
+    stopAlertActive = true;
+    const borderEl = document.getElementById('stopScreenGlowBorder');
+    const bannerEl = document.getElementById('stopPersistentBanner');
+    const bannerTextEl = document.getElementById('stopPersistentBannerText');
+    const stopBtnEl = document.getElementById('btnStopAction');
+
+    if (borderEl) borderEl.classList.add('active');
+    if (bannerTextEl) bannerTextEl.textContent = shortMsg;
+    if (bannerEl) bannerEl.classList.add('active');
+    if (stopBtnEl) stopBtnEl.classList.add('act-stop-active');
+
+    return shortMsg;
+  }
+
+  function dismissStopBannerOnly() {
+    const bannerEl = document.getElementById('stopPersistentBanner');
+    if (bannerEl) bannerEl.classList.remove('active');
+  }
+
+  function clearStopAlertState(broadcastClear = false) {
+    stopAlertActive = false;
+    const borderEl = document.getElementById('stopScreenGlowBorder');
+    const bannerEl = document.getElementById('stopPersistentBanner');
+    const stopBtnEl = document.getElementById('btnStopAction');
+
+    if (borderEl) borderEl.classList.remove('active');
+    if (bannerEl) bannerEl.classList.remove('active');
+    if (stopBtnEl) stopBtnEl.classList.remove('act-stop-active');
+
+    if (broadcastClear) {
+      broadcastState('STOP_CLEAR', {});
+      showToast('✅ Aviso de parada desactivado');
+    }
+  }
+
   function requestDirectStop() {
+    if (stopAlertActive) {
+      clearStopAlertState(true);
+      return;
+    }
     const sender = (userNick || 'Un compañero').trim();
-    const stopMsg = `El usuario ${sender} ha pedido parar`;
-    recordIncident('STOP_REQUEST', '🛑 Parada solicitada');
-    broadcastState('STOP', { reason: stopMsg, directStop: true });
-    showToast(`🛑 Aviso enviado: "${stopMsg}"`);
-    speakAlert(stopMsg);
+    const shortMsg = showStopAlertState(sender);
+    recordIncident('STOP_REQUEST', `🛑 ${shortMsg}`);
+    broadcastState('STOP', { reason: shortMsg, requester: sender, directStop: true });
+    speakAlert(shortMsg);
   }
 
   function registerStop(reason) {
-    recordIncident('STOP_REQUEST', reason);
-    broadcastState('STOP', { reason });
+    const sender = (userNick || 'Un compañero').trim();
+    const shortMsg = showStopAlertState(sender, reason);
+    recordIncident('STOP_REQUEST', `🛑 ${shortMsg}`);
+    broadcastState('STOP', { reason: shortMsg, requester: sender, directStop: true });
     closeModal('stopModal');
-    showToast(`📢 ${reason}`);
-    speakAlert(`Parada solicitada: ${reason}`);
+    speakAlert(shortMsg);
   }
 
 // --- REAL-TIME GROUP VOICE INTERCOM (WEBRTC MESH + OPEN CHANNEL + MUTE MIC) ---
