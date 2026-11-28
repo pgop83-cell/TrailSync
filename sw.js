@@ -1,4 +1,4 @@
-const APP_CACHE = 'trailsync-app-shell-v15-2-18';
+const APP_CACHE = 'trailsync-app-shell-v15-2-22';
 const APP_ASSETS = [
   './',
   './index.html',
@@ -29,6 +29,26 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('fetch', event => {
+  const reqUrl = new URL(event.request.url);
+  if (event.request.method === 'POST' && reqUrl.searchParams.has('share_gpx')) {
+    event.respondWith((async () => {
+      try {
+        const formData = await event.request.formData();
+        const sharedFile = formData.get('gpx_file');
+        if (sharedFile && typeof sharedFile.text === 'function') {
+          const gpxText = await sharedFile.text();
+          const gpxName = sharedFile.name || 'ruta-compartida.gpx';
+          const cache = await caches.open('trailsync-shared-gpx-v1');
+          await cache.put('/_shared_gpx_payload', new Response(JSON.stringify({ name: gpxName, text: gpxText, ts: Date.now() }), {
+            headers: { 'Content-Type': 'application/json' }
+          }));
+        }
+      } catch (e) {}
+      return Response.redirect('./?load_shared_gpx=1', 303);
+    })());
+    return;
+  }
+
   const url = event.request.url;
 
   if (url.includes('manifest.json')) {

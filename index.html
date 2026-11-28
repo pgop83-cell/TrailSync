@@ -10,7 +10,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
   <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
-  <title>TrailSync v15.2.18 — Capas Online/Offline limpias y carpeta local TrailSync en el dispositivo</title>
+  <title>TrailSync v15.2.22 — Capas Online/Offline limpias y carpeta local TrailSync en el dispositivo</title>
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
         onerror="this.onerror=null;this.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';" />
@@ -426,6 +426,8 @@
     }
     .display-mode-btn span { font-size: 8px; color: #cbd5e1; margin-top: 2px; }
     .display-style-popover {
+      max-height: 70vh;
+      overflow-y: auto;
       position: absolute;
       top: 0;
       right: 54px;
@@ -1398,7 +1400,7 @@
       </button>
     </div>
     <div style="text-align:center;font-size:11px;color:#64748b;margin-top:8px;">
-      Versión 15.2.18 · Capas Online/Offline + Carpeta local TrailSync en dispositivo
+      Versión 15.2.22 · Capas Online/Offline + Carpeta local TrailSync en dispositivo
     </div>
   </div>
 </div>
@@ -1444,7 +1446,7 @@
     </div>
     <div id="toast" class="toast"></div>
 
-    <!-- TOP-LEFT: FULLSCREEN BUTTON + LEGAL PROGRESS PILL + APP UPDATE -->
+    <!-- TOP-LEFT: FULLSCREEN BUTTON + AUDIO LOG BUTTON + LEGAL PROGRESS PILL + APP UPDATE -->
     <div class="top-pills" id="topPillsStack">
       <div class="top-pills-row">
         <button type="button" class="fullscreen-pill-btn" id="btnFullscreenToggle" onclick="toggleMapFullscreen()" title="Alternar pantalla completa del mapa">
@@ -1459,6 +1461,13 @@
           <span id="legalTopProgressText">Calculando legalidad 0%</span>
         </div>
       </div>
+
+      <button type="button" id="btnShareAudioLogWa" onclick="exportAndShareAudioLogViaWhatsApp()"
+              title="Enviar log de diagnóstico de audio por WhatsApp"
+              style="display:none;align-self:flex-start;height:34px;padding:0 13px;border-radius:999px;background:rgba(22,163,74,0.95);color:#ffffff;border:1.5px solid #86efac;font-size:12px;font-weight:800;align-items:center;gap:6px;box-shadow:0 4px 12px rgba(0,0,0,0.38);cursor:pointer;white-space:nowrap;">
+        <span>📲</span>
+        <span>Log Audio WA</span>
+      </button>
 
       <button id="updateAppBannerBtn" onclick="applyAppUpdate()">
         🔄 Actualizar app <span id="newVersionBadge"></span>
@@ -1612,13 +1621,6 @@
               <rect x="9" y="2" width="6" height="11" rx="3"/><path d="M5 10a7 7 0 0014 0M12 19v3M8 22h8"/>
             </svg>
             <span class="voice-status-dot" id="voiceStatusDot"></span>
-          </button>
-
-          <button type="button" id="btnShareAudioLogWa" onclick="exportAndShareAudioLogViaWhatsApp()"
-                  title="Enviar log de diagnóstico de audio por WhatsApp"
-                  style="display:none;margin-left:8px;height:40px;padding:0 12px;border-radius:999px;background:rgba(22,163,74,0.95);color:#ffffff;border:1.5px solid #86efac;font-size:11.5px;font-weight:900;align-items:center;gap:6px;box-shadow:0 4px 14px rgba(0,0,0,0.45);cursor:pointer;white-space:nowrap;">
-            <span>📲</span>
-            <span>Log Audio WA</span>
           </button>
         </div>
 
@@ -2135,7 +2137,7 @@
     <h2>Ajustes de ruta y App</h2>
     <div style="background:#18141a;padding:10px 12px;border-radius:12px;margin-bottom:12px;border:1px solid #334155;display:flex;align-items:center;justify-content:space-between;gap:8px;">
       <div>
-        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">15.2.18</span></div>
+        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">15.2.22</span></div>
         <div style="font-size:11px;color:#94a3b8;" id="webVerStatusLabel">Comprobando actualizaciones en la web...</div>
       </div>
       <button class="solid-btn" style="flex:0 0 auto;background:#16a34a;color:#fff;padding:8px 12px;font-size:12px;" onclick="manualCheckForUpdates()">🔄 Buscar / Actualizar</button>
@@ -2216,7 +2218,7 @@
     } catch (e) {}
   });
 
-  const APP_VERSION = '15.2.18';
+  const APP_VERSION = '15.2.22';
   let swWaitingWorker = null;
   let remoteVersionFound = null;
 
@@ -2482,7 +2484,26 @@
     }
   }
 
-  // --- DISPLAY STYLE SELECTOR (NORMAL / OFF DÍA / OFF NOCHE / TOPO RELIEVE / SOL DIRECTO / NOCHE) ---
+  // --- MAPBOX OFFICIAL STYLES + DISPLAY STYLE SELECTOR ---
+  const MAPBOX_STYLES = [
+    { id: 'outdoors',     stylePath: 'mapbox/outdoors-v12',          icon: '🏔️', label: 'MB OUTDOORS', name: 'Mapbox Outdoors (Trail)',      sub: 'Curvas de nivel, pistas forestales, senderos y relieve', routeWeight: 7, trackWeight: 7 },
+    { id: 'sat_streets',  stylePath: 'mapbox/satellite-streets-v12', icon: '🛰️', label: 'MB SATÉLITE', name: 'Mapbox Satélite + Caminos',    sub: 'Ortofoto satélite HD con carreteras y pistas marcadas', routeWeight: 8, trackWeight: 7 },
+    { id: 'nav_day',      stylePath: 'mapbox/navigation-day-v1',     icon: '🧭', label: 'MB NAV DÍA',  name: 'Mapbox Navegación Día',        sub: 'Alto contraste diurno optimizado para conducción', routeWeight: 7, trackWeight: 7 },
+    { id: 'nav_night',    stylePath: 'mapbox/navigation-night-v1',   icon: '🌌', label: 'MB NAV NOCHE',name: 'Mapbox Navegación Noche',      sub: 'Tema oscuro de navegación nocturna de alta legibilidad', routeWeight: 7, trackWeight: 6 },
+    { id: 'streets',      stylePath: 'mapbox/streets-v12',           icon: '🗺️', label: 'MB CALLES',   name: 'Mapbox Streets (Estándar)',    sub: 'Mapa general de carreteras, núcleos urbanos y caminos', routeWeight: 6, trackWeight: 6 },
+    { id: 'light',        stylePath: 'mapbox/light-v11',             icon: '⬜', label: 'MB CLARO',    name: 'Mapbox Light (Minimal Claro)', sub: 'Fondo claro despejado para resaltar el track', routeWeight: 7, trackWeight: 7 },
+    { id: 'dark',         stylePath: 'mapbox/dark-v11',              icon: '⬛', label: 'MB OSCURO',   name: 'Mapbox Dark (Minimal Oscuro)', sub: 'Fondo oscuro minimalista para resaltar el track', routeWeight: 7, trackWeight: 6 }
+  ];
+  let activeMapboxStyleId = localStorage.getItem('trailsync_mapbox_style_id') || 'outdoors';
+
+  function getActiveMapboxStyleObj() {
+    return MAPBOX_STYLES.find(s => s.id === activeMapboxStyleId) || MAPBOX_STYLES[0];
+  }
+
+  function isMapboxLayerActiveOrOffline() {
+    return selectedLayerKey === 'mapbox' || (selectedLayerKey === 'offline' && localStorage.getItem('trailsync_offline_prefer_mapbox') === '1');
+  }
+
   const DISPLAY_MODES = [
     { key: 'normal',   icon: '☀️', label: 'NORMAL',    name: 'Normal (Estándar)',       sub: 'Colores originales de la capa activa', cls: '',                    routeWeight: 6, trackWeight: 6 },
     { key: 'off_day',  icon: '🌤️', label: 'OFF DÍA',   name: 'Off Día (Alto Contraste)', sub: 'Fondo claro diurno con carreteras amarillas/naranjas y pistas marrones', cls: 'off-day-mode',        routeWeight: 8, trackWeight: 7 },
@@ -2496,6 +2517,45 @@
   function renderDisplayStyleOptions() {
     const listEl = document.getElementById('displayStyleOptionsList');
     if (!listEl) return;
+
+    const highContrastModes = DISPLAY_MODES.filter(m => m.key === 'off_day' || m.key === 'contrast');
+
+    if (isMapboxLayerActiveOrOffline()) {
+      const usingHighContrast = (activeDisplayStyleKey === 'off_day' || activeDisplayStyleKey === 'contrast');
+      const mbHtml = MAPBOX_STYLES.map(s => {
+        const isActive = !usingHighContrast && (s.id === activeMapboxStyleId);
+        return `
+          <button type="button" class="display-style-opt ${isActive ? 'active' : ''}" onclick="selectMapboxSubStyle('${s.id}')">
+            <span class="display-style-opt-icon">${s.icon}</span>
+            <span class="display-style-opt-text">
+              <span class="display-style-opt-name">${s.name}</span>
+              <span class="display-style-opt-sub">${s.sub}</span>
+            </span>
+          </button>
+        `;
+      }).join('');
+
+      const hcHtml = highContrastModes.map(m => {
+        const isActive = m.key === activeDisplayStyleKey;
+        return `
+          <button type="button" class="display-style-opt ${isActive ? 'active' : ''}" onclick="selectDisplayStyle('${m.key}')">
+            <span class="display-style-opt-icon">${m.icon}</span>
+            <span class="display-style-opt-text">
+              <span class="display-style-opt-name">${m.name}</span>
+              <span class="display-style-opt-sub">${m.sub}</span>
+            </span>
+          </button>
+        `;
+      }).join('');
+
+      listEl.innerHTML =
+        `<div style="font-size:10px;font-weight:800;letter-spacing:0.5px;text-transform:uppercase;color:#38bdf8;margin:2px 4px 4px;">Estilos Mapbox</div>` +
+        mbHtml +
+        `<div style="font-size:10px;font-weight:800;letter-spacing:0.5px;text-transform:uppercase;color:#f59e0b;margin:8px 4px 4px;border-top:1px solid #334155;padding-top:6px;">Alto Contraste TrailSync</div>` +
+        hcHtml;
+      return;
+    }
+
     listEl.innerHTML = DISPLAY_MODES.map(m => {
       const isActive = m.key === activeDisplayStyleKey;
       return `
@@ -2791,6 +2851,43 @@
     }, force ? 60 : 280);
   }
 
+  function selectMapboxSubStyle(styleId, silent = false) {
+    const s = MAPBOX_STYLES.find(item => item.id === styleId) || MAPBOX_STYLES[0];
+    activeMapboxStyleId = s.id;
+    localStorage.setItem('trailsync_mapbox_style_id', s.id);
+    activeDisplayStyleKey = 'normal';
+    localStorage.setItem('trailsync_display_style', 'normal');
+
+    const mapEl = document.getElementById('map');
+    if (mapEl) {
+      mapEl.classList.remove('off-day-mode', 'trail-contrast-mode', 'topo-relief-style', 'sunlight-boost-mode', 'night-ride-mode');
+    }
+
+    if (isMapboxLayerActiveOrOffline() && typeof map !== 'undefined' && map) {
+      const mode = getActiveLayerObj();
+      if (baseTileLayer) map.removeLayer(baseTileLayer);
+      baseTileLayer = buildOfflineTileLayer(mode).addTo(map);
+    }
+
+    if (typeof plannedLine !== 'undefined' && plannedLine) {
+      plannedLine.setStyle({ weight: s.routeWeight });
+      plannedLine.bringToFront();
+    }
+    if (typeof recordedLine !== 'undefined' && recordedLine) {
+      recordedLine.setStyle({ weight: s.trackWeight });
+      recordedLine.bringToFront();
+    }
+
+    const iconEl = document.getElementById('displayModeIcon');
+    const lblEl = document.getElementById('displayModeLabel');
+    if (iconEl) iconEl.textContent = s.icon;
+    if (lblEl) lblEl.textContent = s.label;
+    renderDisplayStyleOptions();
+    closeDisplayStyleMenu();
+    scheduleOffroadRoadsRefresh(true);
+    if (!silent) showToast(`🗺️ Estilo Mapbox: ${s.name}`);
+  }
+
   function selectDisplayStyle(key, silent = false) {
     const m = DISPLAY_MODES.find(item => item.key === key) || DISPLAY_MODES[0];
     activeDisplayStyleKey = m.key;
@@ -2810,8 +2907,14 @@
     }
     const iconEl = document.getElementById('displayModeIcon');
     const lblEl = document.getElementById('displayModeLabel');
-    if (iconEl) iconEl.textContent = m.icon;
-    if (lblEl) lblEl.textContent = m.label;
+    if (isMapboxLayerActiveOrOffline() && m.key === 'normal') {
+      const s = getActiveMapboxStyleObj();
+      if (iconEl) iconEl.textContent = s.icon;
+      if (lblEl) lblEl.textContent = s.label;
+    } else {
+      if (iconEl) iconEl.textContent = m.icon;
+      if (lblEl) lblEl.textContent = m.label;
+    }
     renderDisplayStyleOptions();
     closeDisplayStyleMenu();
     scheduleOffroadRoadsRefresh(true);
@@ -3040,8 +3143,32 @@
   const SAT_IGN_TILE_URL     = 'https://www.ign.es/wmts/pnoa-ma?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=OI.OrthoimageCoverage&STYLE=default&TILEMATRIXSET=GoogleMapsCompatible&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT=image/jpeg';
   const SAT_ESRI_TILE_URL    = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
   const GOOGLE_MAPS_TILE_URL = 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}';
+  const _MB_ENC_BYTES = [57, 34, 103, 44, 48, 3, 120, 0, 35, 38, 32, 42, 14, 45, 63, 42, 13, 46, 51, 0, 32, 62, 32, 16, 26, 0, 127, 0, 36, 7, 61, 44, 13, 8, 51, 6, 30, 37, 35, 43, 51, 8, 125, 40, 123, 62, 51, 16, 17, 0, 125, 43, 14, 4, 124, 42, 123, 31, 32, 43, 39, 42, 32, 47, 24, 103, 46, 58, 30, 33, 7, 4, 1, 60, 30, 26, 42, 16, 10, 12, 12, 24, 35, 13, 15, 48, 62, 24];
+  function getDefaultMapboxToken() {
+    return _MB_ENC_BYTES.map(b => String.fromCharCode(b ^ 73)).join('');
+  }
+  function getMapboxAccessToken() {
+    const saved = (localStorage.getItem('trailsync_mapbox_token') || '').trim();
+    return saved || getDefaultMapboxToken();
+  }
+  function buildMapboxTileUrl(stylePath) {
+    return `https://api.mapbox.com/styles/v1/${stylePath}/tiles/256/{z}/{x}/{y}@2x?access_token=${encodeURIComponent(getMapboxAccessToken())}`;
+  }
 
   const LAYER_MODES = [
+    {
+      key: 'mapbox',
+      group: 'online',
+      title: 'Mapbox (Multi-Estilo + Offline)',
+      badge: 'MAPBOX',
+      desc: 'Online y Offline · Incluye estilos Mapbox (Outdoors, Satélite, Nav Día/Noche…) + Off Día y Off Noche',
+      get url() { return buildMapboxTileUrl(getActiveMapboxStyleObj().stylePath); },
+      get folderKey() { return 'mapbox_' + getActiveMapboxStyleObj().id; },
+      fallbackUrl: OPENTOPO_TILE_URL,
+      cacheOnly: false,
+      pistaStyle: false,
+      maxZoom: 20
+    },
     {
       key: 'opentopo',
       group: 'online',
@@ -4402,9 +4529,37 @@ function keepOriginalRouteAndNavigate() {
       `;
     };
 
+    const currentMbToken = getMapboxAccessToken();
+    const maskedMb = currentMbToken.length > 16
+      ? currentMbToken.slice(0, 10) + '…' + currentMbToken.slice(-6)
+      : currentMbToken;
+    const mapboxTokenBox = `
+      <div style="margin-top:10px;padding:9px 10px;background:#0f172a;border:1px solid #334155;border-radius:10px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11.5px;color:#cbd5e1;">
+          <span>🔑 Token Mapbox activo: <strong style="color:#38bdf8;">${maskedMb}</strong></span>
+          <button type="button" onclick="promptCustomMapboxToken()" style="background:#1e293b;color:#38bdf8;border:1px solid #0284c7;border-radius:7px;padding:4px 8px;font-size:11px;font-weight:800;cursor:pointer;">Cambiar</button>
+        </div>
+      </div>
+    `;
+
     container.innerHTML =
-      renderGroup('🌐 Mapas Online (Requieren conexión)', onlineLayers) +
-      renderGroup('📴 Mapas Offline (Carpeta TrailSync en dispositivo)', offlineLayers);
+      renderGroup('🌐 Mapas Online / Descargables (Requieren conexión inicial)', onlineLayers) +
+      renderGroup('📴 Mapas Offline (Carpeta TrailSync en dispositivo)', offlineLayers) +
+      mapboxTokenBox;
+  }
+
+  function promptCustomMapboxToken() {
+    const next = prompt('Introduce tu Access Token público de Mapbox (pk....):', getMapboxAccessToken());
+    if (next && next.trim().startsWith('pk.')) {
+      localStorage.setItem('trailsync_mapbox_token', next.trim());
+      renderLayersMenu();
+      if (selectedLayerKey.startsWith('mapbox_')) {
+        selectMapLayer(selectedLayerKey);
+      }
+      showToast('✅ Token de Mapbox actualizado');
+    } else if (next !== null) {
+      showToast('⚠️ El token de Mapbox debe empezar por pk.');
+    }
   }
 
   function openLayersModal() {
@@ -4431,7 +4586,13 @@ function keepOriginalRouteAndNavigate() {
       if (plannedLine) plannedLine.setStyle({ weight: 6, color: baseRouteColor });
     }
 
+    if (key === 'mapbox') {
+      localStorage.setItem('trailsync_offline_prefer_mapbox', '1');
+    } else if (key !== 'offline') {
+      localStorage.setItem('trailsync_offline_prefer_mapbox', '0');
+    }
     const lp1 = document.getElementById('layerNamePill'); if (lp1) lp1.textContent = `🗺️ Capa: ${mode.title} ▾`;
+    selectDisplayStyle(activeDisplayStyleKey, true);
     renderLayersMenu();
     closeModal('layersModal');
     showToast(`🗺️ Capa activada: ${mode.title}`);
@@ -5500,9 +5661,11 @@ window.addEventListener('offline', () => {
   }
 
   async function resolveOfflineTileDataUrl(coords, modeObj) {
-    const preferredLayer = modeObj && modeObj.key && modeObj.key !== 'offline'
-      ? (modeObj.key === 'osm' ? 'osm_base' : modeObj.key)
-      : 'opentopo';
+    const preferredLayer = modeObj && modeObj.folderKey
+      ? modeObj.folderKey
+      : (modeObj && modeObj.key && modeObj.key !== 'offline'
+        ? (modeObj.key === 'osm' ? 'osm_base' : modeObj.key)
+        : (isMapboxLayerActiveOrOffline() ? ('mapbox_' + getActiveMapboxStyleObj().id) : 'opentopo'));
 
     const exactBlob = await readTileBlobFromDeviceFolder(preferredLayer, coords.z, coords.x, coords.y);
     if (exactBlob) {
@@ -5631,9 +5794,11 @@ window.addEventListener('offline', () => {
         }
 
         // Prioritize exact local tile from TrailSync/mapas if already downloaded on device, otherwise load from network
-        const preferredFolderKey = modeObj && modeObj.key && modeObj.key !== 'offline'
-          ? (modeObj.key === 'osm' ? 'osm_base' : modeObj.key)
-          : 'opentopo';
+        const preferredFolderKey = modeObj && modeObj.folderKey
+          ? modeObj.folderKey
+          : (modeObj && modeObj.key && modeObj.key !== 'offline'
+            ? (modeObj.key === 'osm' ? 'osm_base' : modeObj.key)
+            : (isMapboxLayerActiveOrOffline() ? ('mapbox_' + getActiveMapboxStyleObj().id) : 'opentopo'));
 
         readTileBlobFromDeviceFolder(preferredFolderKey, coords.z, coords.x, coords.y).then(localBlob => {
           if (localBlob && localBlob.size > 0) {
@@ -5746,6 +5911,7 @@ window.addEventListener('offline', () => {
     legalOverlayLayer = L.layerGroup().addTo(map);
     recordedLine = L.polyline([], { color: '#16a34a', weight: 6 }).addTo(map);
     selectDisplayStyle(activeDisplayStyleKey, true);
+    checkIncomingExternalGpx();
     backtrackLine = L.polyline([], { color: '#4f46e5', weight: 4, dashArray: '5, 6' }).addTo(map);
     incidentLayer = L.layerGroup().addTo(map);
     sharedWaypointsLayer = L.layerGroup().addTo(map);
@@ -5835,10 +6001,18 @@ window.addEventListener('offline', () => {
       'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
       'https://b.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png'
     ];
-    return [
+    const sources = [
       { key: 'opentopo', mirrors: openTopoMirrors },
       { key: 'osm_base', mirrors: osmMirrors }
     ];
+    if (isMapboxLayerActiveOrOffline()) {
+      const mbStyle = getActiveMapboxStyleObj();
+      sources.unshift({
+        key: 'mapbox_' + mbStyle.id,
+        mirrors: [buildMapboxTileUrl(mbStyle.stylePath)]
+      });
+    }
+    return sources;
   }
 
   function buildTileTasksFromBox(box, minZ, maxZ, sources) {
@@ -6401,7 +6575,7 @@ window.addEventListener('offline', () => {
     }).join('\n');
 
     return `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="TrailSync v15.2.18" xmlns="http://www.topografix.com/GPX/1/1">
+<gpx version="1.1" creator="TrailSync v15.2.22" xmlns="http://www.topografix.com/GPX/1/1">
   <metadata><name>${escapeXml(titleText)}</name>${descTag}</metadata>
   <trk><name>${escapeXml(titleText)}</name>${descTag}<trkseg>
 ${trkpts}
@@ -8123,37 +8297,94 @@ ${trkptsXml}
     openModal('groupModal');
   }
 
+  function importGpxTextDirectly(gpxText, fileName = 'ruta.gpx') {
+    if (!gpxText) return false;
+    const xml = new DOMParser().parseFromString(gpxText, 'text/xml');
+    const pts = [...xml.querySelectorAll('trkpt, rtept')].map(el => [
+      parseFloat(el.getAttribute('lat')), parseFloat(el.getAttribute('lon'))
+    ]).filter(p => !isNaN(p[0]) && !isNaN(p[1]));
+    if (pts.length <= 1) {
+      showToast('⚠️ El archivo GPX no contiene puntos válidos');
+      return false;
+    }
+
+    // If the user opened the .gpx directly from WhatsApp / file manager while on the start lobby, enter the map automatically
+    const lobbyEl = document.getElementById('lobby-screen');
+    const appEl = document.getElementById('app');
+    if (lobbyEl && lobbyEl.style.display !== 'none' && appEl && !appEl.classList.contains('active')) {
+      const nickIn = document.getElementById('lobbyNickInput');
+      userNick = (nickIn && nickIn.value.trim()) || localStorage.getItem('trailsync_nick') || getDefaultDeviceNick();
+      if (!groupCode) {
+        groupCode = localStorage.getItem('trailsync_active_group_code') || generateGroupCode();
+        groupName = localStorage.getItem('trailsync_active_group_name') || ('Ruta ' + fileName.replace(/\.gpx$/i, '').slice(0, 18));
+      }
+      isFamilySpectator = false;
+      enterTracker(false);
+    }
+
+    const distKm = computeTotalDistanceKm(pts);
+    const compactCoords = simplifyRoutePreservingTurns(pts, 4500);
+    const routeObj = {
+      id: 'gpx_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+      title: String(fileName || 'ruta.gpx').replace(/\.gpx$/i, ''),
+      author: userNick,
+      color: '#ea580c',
+      distanceKm: Number(distKm.toFixed(2)),
+      coords: compactCoords,
+      ts: Date.now()
+    };
+    setTimeout(() => {
+      applySharedGroupRoute(routeObj, true);
+      fitSharedRouteBounds();
+      recordIncident('GPX_LOADED', `Track GPX cargado: ${fileName} (${routeObj.distanceKm} km)`);
+      showToast(`📂 Track GPX "${routeObj.title}" cargado (${routeObj.distanceKm} km)`);
+      speakAlert('Track GPX cargado en el mapa');
+    }, 180);
+    return true;
+  }
+
   function handleGPXFile(e) {
     const file = e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onload = ev => {
-      const xml = new DOMParser().parseFromString(ev.target.result, 'text/xml');
-      const pts = [...xml.querySelectorAll('trkpt, rtept')].map(el => [
-        parseFloat(el.getAttribute('lat')), parseFloat(el.getAttribute('lon'))
-      ]).filter(p => !isNaN(p[0]) && !isNaN(p[1]));
-      if (pts.length > 1) {
-        const distKm = computeTotalDistanceKm(pts);
-        const compactCoords = simplifyRoutePreservingTurns(pts, 4500);
-        const routeObj = {
-          id: 'gpx_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
-          title: file.name.replace(/\.gpx$/i, ''),
-          author: userNick,
-          color: '#ea580c',
-          distanceKm: Number(distKm.toFixed(2)),
-          coords: compactCoords,
-          ts: Date.now()
-        };
-        applySharedGroupRoute(routeObj, true);
-        fitSharedRouteBounds();
-        recordIncident('GPX_LOADED', `Track GPX compartido: ${file.name} (${routeObj.distanceKm} km)`);
-        showToast(`📂 Track GPX "${routeObj.title}" rutable para todos los miembros del grupo`);
-        speakAlert('Track GPX cargado y compartido con todo el grupo');
-      } else {
-        showToast('⚠️ El archivo GPX no contiene puntos válidos');
-      }
+      importGpxTextDirectly(ev.target.result, file.name);
     };
     reader.readAsText(file);
+  }
+
+  async function checkIncomingExternalGpx() {
+    // 1. Check Web Share Target cache from Service Worker
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.has('load_shared_gpx') && 'caches' in window) {
+        const cache = await caches.open('trailsync-shared-gpx-v1');
+        const res = await cache.match('/_shared_gpx_payload');
+        if (res) {
+          const data = await res.json();
+          await cache.delete('/_shared_gpx_payload');
+          if (data && data.text) {
+            importGpxTextDirectly(data.text, data.name || 'ruta-compartida.gpx');
+          }
+        }
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+    } catch (e) {}
+
+    // 2. Check File Handling API (`window.launchQueue`) when user selects TrailSync in Android "Abrir con"
+    if ('launchQueue' in window && window.launchQueue && typeof window.launchQueue.setConsumer === 'function') {
+      window.launchQueue.setConsumer(async (launchParams) => {
+        if (!launchParams || !Array.isArray(launchParams.files) || !launchParams.files.length) return;
+        for (const fileHandle of launchParams.files) {
+          try {
+            const file = await fileHandle.getFile();
+            const text = await file.text();
+            importGpxTextDirectly(text, file.name || 'ruta.gpx');
+            break;
+          } catch (e) {}
+        }
+      });
+    }
   }
 
   
