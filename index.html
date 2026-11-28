@@ -10,7 +10,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
   <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
-  <title>TrailSync v15.2.28 — Capas Online/Offline limpias y carpeta local TrailSync en el dispositivo</title>
+  <title>TrailSync v15.2.29 — Capas Online/Offline limpias y carpeta local TrailSync en el dispositivo</title>
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
         onerror="this.onerror=null;this.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';" />
@@ -1477,7 +1477,7 @@
       </button>
     </div>
     <div style="text-align:center;font-size:11px;color:#64748b;margin-top:8px;">
-      Versión 15.2.28 · Capas Online/Offline + Carpeta local TrailSync en dispositivo
+      Versión 15.2.29 · Capas Online/Offline + Carpeta local TrailSync en dispositivo
     </div>
   </div>
 </div>
@@ -2297,7 +2297,7 @@
     <h2>Ajustes de ruta y App</h2>
     <div style="background:#18141a;padding:10px 12px;border-radius:12px;margin-bottom:12px;border:1px solid #334155;display:flex;align-items:center;justify-content:space-between;gap:8px;">
       <div>
-        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">15.2.28</span></div>
+        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">15.2.29</span></div>
         <div style="font-size:11px;color:#94a3b8;" id="webVerStatusLabel">Comprobando actualizaciones en la web...</div>
       </div>
       <button class="solid-btn" style="flex:0 0 auto;background:#16a34a;color:#fff;padding:8px 12px;font-size:12px;" onclick="manualCheckForUpdates()">🔄 Buscar / Actualizar</button>
@@ -2378,7 +2378,7 @@
     } catch (e) {}
   });
 
-  const APP_VERSION = '15.2.28';
+  const APP_VERSION = '15.2.29';
   let swWaitingWorker = null;
   let remoteVersionFound = null;
 
@@ -3395,7 +3395,8 @@
       fallbackUrl: OSM_BASE_TILE_URL,
       cacheOnly: true,
       pistaStyle: false,
-      maxZoom: 18
+      maxNativeZoom: 16,
+      maxZoom: 20
     }
   ];
 
@@ -6059,7 +6060,34 @@ function keepOriginalRouteAndNavigate() {
     return null;
   }
 
+  const offlineResolvedTileCache = new Map();
+  const OFFLINE_MEM_CACHE_MAX = 320;
+
+  function putOfflineMemCache(cacheKey, dataUrl) {
+    if (!dataUrl || !dataUrl.startsWith('data:')) return;
+    if (offlineResolvedTileCache.has(cacheKey)) {
+      offlineResolvedTileCache.delete(cacheKey);
+    } else if (offlineResolvedTileCache.size >= OFFLINE_MEM_CACHE_MAX) {
+      const oldestKey = offlineResolvedTileCache.keys().next().value;
+      offlineResolvedTileCache.delete(oldestKey);
+    }
+    offlineResolvedTileCache.set(cacheKey, dataUrl);
+  }
+
+  function blobToDataUrl(blob) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  }
+
   async function resolveOfflineTileDataUrl(coords, modeObj) {
+    const tz = Math.round(coords.z);
+    const tx = Math.round(coords.x);
+    const ty = Math.round(coords.y);
+
     const primaryLayer = (modeObj && modeObj.key === 'offline' && getPreferredDetectedOfflineFolder())
       ? getPreferredDetectedOfflineFolder()
       : (modeObj && modeObj.folderKey
@@ -6068,6 +6096,11 @@ function keepOriginalRouteAndNavigate() {
             ? (modeObj.key === 'osm' ? 'osm_base' : modeObj.key)
             : (getPreferredDetectedOfflineFolder() || (isMapboxLayerActiveOrOffline() ? ('mapbox_' + getActiveMapboxStyleObj().id) : 'opentopo'))));
 
+    const memKey = `${primaryLayer}/${tz}/${tx}/${ty}`;
+    if (offlineResolvedTileCache.has(memKey)) {
+      return offlineResolvedTileCache.get(memKey);
+    }
+
     const candidateLayers = [
       primaryLayer,
       ...detectedOfflineDownloadedFolders,
@@ -6075,21 +6108,25 @@ function keepOriginalRouteAndNavigate() {
       'opentopo', 'ign_mtn', 'osm_base', 'satelite', 'google_maps'
     ].filter((v, idx, arr) => v && arr.indexOf(v) === idx);
 
-    // Search each downloaded map folder cohesively (exact zoom first, then parent zooms 1..6)
-    // so adjacent tiles ALWAYS come from the exact same map style and never mix Mapbox with OpenTopoMap!
     for (const layerKey of candidateLayers) {
-      const exactBlob = await readSingleLayerTileFromDeviceFolder(layerKey, coords.z, coords.x, coords.y);
+      const exactBlob = await readSingleLayerTileFromDeviceFolder(layerKey, tz, tx, ty);
       if (exactBlob) {
-        return URL.createObjectURL(exactBlob);
+        try {
+          const dUrl = await blobToDataUrl(exactBlob);
+          putOfflineMemCache(memKey, dUrl);
+          return dUrl;
+        } catch (e) {
+          return URL.createObjectURL(exactBlob);
+        }
       }
 
-      for (let dz = 1; dz <= 6 && coords.z - dz >= 3; dz++) {
-        const pz = coords.z - dz;
+      for (let dz = 1; dz <= 6 && tz - dz >= 3; dz++) {
+        const pz = tz - dz;
         const factor = Math.pow(2, dz);
-        const px = Math.floor(coords.x / factor);
-        const py = Math.floor(coords.y / factor);
-        const dx = coords.x - px * factor;
-        const dy = coords.y - py * factor;
+        const px = Math.floor(tx / factor);
+        const py = Math.floor(ty / factor);
+        const dx = tx - px * factor;
+        const dy = ty - py * factor;
 
         const parentBlob = await readSingleLayerTileFromDeviceFolder(layerKey, pz, px, py);
         if (parentBlob && parentBlob.size > 0) {
@@ -6097,6 +6134,7 @@ function keepOriginalRouteAndNavigate() {
             const bitmap = await createImageBitmap(parentBlob);
             const dataUrl = createOverscaledFromParentBitmap(bitmap, dz, dx, dy, modeObj.pistaStyle);
             if (bitmap.close) bitmap.close();
+            putOfflineMemCache(memKey, dataUrl);
             return dataUrl;
           } catch (e) {
             const pUrl = URL.createObjectURL(parentBlob);
@@ -6113,20 +6151,32 @@ function keepOriginalRouteAndNavigate() {
               };
               tmpImg.src = pUrl;
             });
-            if (dataUrl) return dataUrl;
+            if (dataUrl) {
+              putOfflineMemCache(memKey, dataUrl);
+              return dataUrl;
+            }
           }
         }
       }
     }
 
-    return createFallbackTopoCanvas(coords, modeObj.pistaStyle);
+    return createFallbackTopoCanvas({ z: tz, x: tx, y: ty }, modeObj.pistaStyle);
   }
 
   function buildOfflineTileLayer(modeObj) {
     const OfflineLayer = L.TileLayer.extend({
-      createTile: function(coords, done) {
+      createTile: function(rawCoords, done) {
+        const coords = {
+          z: Math.round(rawCoords.z),
+          x: Math.round(rawCoords.x),
+          y: Math.round(rawCoords.y)
+        };
         const tile = document.createElement('img');
         tile.alt = '';
+        tile.width = 256;
+        tile.height = 256;
+        tile.style.width = '256px';
+        tile.style.height = '256px';
         const url = this.getTileUrl(coords);
         const sub = ['a', 'b', 'c'][Math.abs((coords.x || 0) + (coords.y || 0)) % 3];
         const safeFallbackZ = (modeObj.fallbackUrl && modeObj.fallbackUrl.includes('opentopomap'))
@@ -6811,6 +6861,7 @@ function keepOriginalRouteAndNavigate() {
   }
 
   async function clearOfflineMapCache() {
+    offlineResolvedTileCache.clear();
     if ('caches' in window) {
       await caches.delete(TILE_CACHE_NAME).catch(() => {});
     }
@@ -7034,7 +7085,7 @@ function keepOriginalRouteAndNavigate() {
     }).join('\n');
 
     return `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="TrailSync v15.2.28" xmlns="http://www.topografix.com/GPX/1/1">
+<gpx version="1.1" creator="TrailSync v15.2.29" xmlns="http://www.topografix.com/GPX/1/1">
   <metadata><name>${escapeXml(titleText)}</name>${descTag}</metadata>
   <trk><name>${escapeXml(titleText)}</name>${descTag}<trkseg>
 ${trkpts}
