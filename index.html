@@ -10,7 +10,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
   <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
-  <title>TrailSync v15.2.24 — Capas Online/Offline limpias y carpeta local TrailSync en el dispositivo</title>
+  <title>TrailSync v15.2.25 — Capas Online/Offline limpias y carpeta local TrailSync en el dispositivo</title>
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
         onerror="this.onerror=null;this.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';" />
@@ -1400,7 +1400,7 @@
       </button>
     </div>
     <div style="text-align:center;font-size:11px;color:#64748b;margin-top:8px;">
-      Versión 15.2.24 · Capas Online/Offline + Carpeta local TrailSync en dispositivo
+      Versión 15.2.25 · Capas Online/Offline + Carpeta local TrailSync en dispositivo
     </div>
   </div>
 </div>
@@ -1474,8 +1474,12 @@
       </button>
     </div>
 
-    <!-- TOP-CENTER: GROUP MEMBER BUBBLES -->
+    <!-- TOP-CENTER: NO COVERAGE BANNER + GROUP MEMBER BUBBLES -->
     <div class="top-center-members">
+      <div id="noCoverageBanner" role="status" aria-live="polite" style="display:none;background:rgba(185,28,28,0.95);color:#ffffff;border:1.5px solid #fca5a5;border-radius:999px;padding:5px 13px;font-size:11.5px;font-weight:900;align-items:center;gap:6px;box-shadow:0 4px 14px rgba(0,0,0,0.45);white-space:nowrap;">
+        <span>📵</span>
+        <span id="noCoverageBannerText">Zona sin cobertura</span>
+      </div>
       <div id="groupMembersBubbles" aria-label="Miembros del grupo"></div>
     </div>
 
@@ -1813,9 +1817,15 @@
     </div>
 
     <div style="margin-bottom:10px;">
-      <label class="field-label">Cartografía combinada a descargar en TrailSync/mapas/:</label>
-      <select id="offlineLayerChoice" style="width:100%;background:#161b26;color:#fff;border:1px solid #475569;border-radius:10px;padding:9px;font-size:13px;">
-        <option value="osm_relieve" selected>⛰️ OpenStreetMap + Curvas de relieve (Pistas, caminos y topografía)</option>
+      <label class="field-label">Mapa a descargar en TrailSync/mapas/:</label>
+      <select id="offlineLayerChoice" onchange="localStorage.setItem('trailsync_offline_dl_choice', this.value)" style="width:100%;background:#161b26;color:#fff;border:1px solid #475569;border-radius:10px;padding:9px;font-size:13px;">
+        <option value="mapbox_outdoors">🏔️ Mapbox Outdoors (Trail, pistas y curvas de nivel)</option>
+        <option value="mapbox_sat_streets">🛰️ Mapbox Satélite + Caminos HD</option>
+        <option value="mapbox_nav_day">🧭 Mapbox Navegación Día</option>
+        <option value="mapbox_nav_night">🌌 Mapbox Navegación Noche</option>
+        <option value="mapbox_streets">🗺️ Mapbox Streets (Estándar)</option>
+        <option value="osm_relieve">⛰️ OpenStreetMap + Curvas de relieve (Pistas y topografía)</option>
+        <option value="mapbox_plus_osm">📦 Combinado: Mapbox Outdoors + OpenTopoMap/OSM</option>
       </select>
     </div>
 
@@ -2204,7 +2214,7 @@
     <h2>Ajustes de ruta y App</h2>
     <div style="background:#18141a;padding:10px 12px;border-radius:12px;margin-bottom:12px;border:1px solid #334155;display:flex;align-items:center;justify-content:space-between;gap:8px;">
       <div>
-        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">15.2.24</span></div>
+        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">15.2.25</span></div>
         <div style="font-size:11px;color:#94a3b8;" id="webVerStatusLabel">Comprobando actualizaciones en la web...</div>
       </div>
       <button class="solid-btn" style="flex:0 0 auto;background:#16a34a;color:#fff;padding:8px 12px;font-size:12px;" onclick="manualCheckForUpdates()">🔄 Buscar / Actualizar</button>
@@ -2285,7 +2295,7 @@
     } catch (e) {}
   });
 
-  const APP_VERSION = '15.2.24';
+  const APP_VERSION = '15.2.25';
   let swWaitingWorker = null;
   let remoteVersionFound = null;
 
@@ -4575,17 +4585,24 @@ function keepOriginalRouteAndNavigate() {
     const container = document.getElementById('layersListContainer');
     const onlineLayers = LAYER_MODES.filter(l => l.group === 'online');
     const offlineLayers = LAYER_MODES.filter(l => l.group === 'offline');
+    const detectedNames = detectedOfflineDownloadedFolders.map(k => OFFLINE_FOLDER_LABELS[k] || k);
+    const detectedSummary = detectedNames.length
+      ? `Detectados en carpeta: ${detectedNames.join(', ')}`
+      : 'Ningún mapa descargado detectado aún en TrailSync/mapas/';
 
     const renderGroup = (headerTitle, items) => {
       const rows = items.map(layer => {
         const isSelected = layer.key === selectedLayerKey;
         const badgeHtml = layer.badge ? `<span class="layer-badge-tag">${layer.badge}</span>` : '';
+        const descText = layer.key === 'offline'
+          ? `${layer.desc} · <strong style="color:${detectedNames.length ? '#4ade80' : '#fbbf24'};">${detectedSummary}</strong>`
+          : layer.desc;
         return `
           <div class="layer-option-row ${isSelected ? 'selected' : ''}" onclick="selectMapLayer('${layer.key}')">
             <div class="custom-radio"><div class="custom-radio-dot"></div></div>
             <div>
               <div class="layer-opt-title">${layer.title} ${badgeHtml}</div>
-              <div class="layer-opt-desc">${layer.desc}</div>
+              <div class="layer-opt-desc">${descText}</div>
             </div>
           </div>
         `;
@@ -4611,7 +4628,7 @@ function keepOriginalRouteAndNavigate() {
 
     container.innerHTML =
       renderGroup('🌐 Mapas Online / Descargables (Requieren conexión inicial)', onlineLayers) +
-      renderGroup('📴 Mapas Offline (Carpeta TrailSync en dispositivo)', offlineLayers) +
+      renderGroup('📴 Mapas Offline (Detección automática en TrailSync)', offlineLayers) +
       mapboxTokenBox;
   }
 
@@ -4620,7 +4637,7 @@ function keepOriginalRouteAndNavigate() {
     if (next && next.trim().startsWith('pk.')) {
       localStorage.setItem('trailsync_mapbox_token', next.trim());
       renderLayersMenu();
-      if (selectedLayerKey.startsWith('mapbox_')) {
+      if (selectedLayerKey.startsWith('mapbox')) {
         selectMapLayer(selectedLayerKey);
       }
       showToast('✅ Token de Mapbox actualizado');
@@ -4629,16 +4646,44 @@ function keepOriginalRouteAndNavigate() {
     }
   }
 
-  function openLayersModal() {
+  async function openLayersModal() {
+    await scanDownloadedMapFolders();
     renderLayersMenu();
     openModal('layersModal');
   }
 
-  function selectMapLayer(key) {
+  async function selectMapLayer(key, options = {}) {
+    const { isAutoOfflineSwitch = false, silent = false } = options;
     selectedLayerKey = key;
-    localStorage.setItem('trailsync_selected_layer', key);
-    const mode = getActiveLayerObj();
+    if (!isAutoOfflineSwitch) {
+      localStorage.setItem('trailsync_selected_layer', key);
+      localStorage.setItem('trailsync_user_preferred_online_layer', key);
+    }
 
+    let detectedLabel = '';
+    if (key === 'offline') {
+      await scanDownloadedMapFolders();
+      const detectedKey = getPreferredDetectedOfflineFolder();
+      if (detectedKey) {
+        detectedLabel = OFFLINE_FOLDER_LABELS[detectedKey] || detectedKey;
+        if (detectedKey.startsWith('mapbox_')) {
+          const mbId = detectedKey.replace('mapbox_', '');
+          if (MAPBOX_STYLES.some(s => s.id === mbId)) {
+            activeMapboxStyleId = mbId;
+            localStorage.setItem('trailsync_mapbox_style_id', mbId);
+          }
+          localStorage.setItem('trailsync_offline_prefer_mapbox', '1');
+        } else {
+          localStorage.setItem('trailsync_offline_prefer_mapbox', '0');
+        }
+      }
+    } else if (key === 'mapbox') {
+      localStorage.setItem('trailsync_offline_prefer_mapbox', '1');
+    } else {
+      localStorage.setItem('trailsync_offline_prefer_mapbox', '0');
+    }
+
+    const mode = getActiveLayerObj();
     if (baseTileLayer) map.removeLayer(baseTileLayer);
     baseTileLayer = buildOfflineTileLayer(mode).addTo(map);
 
@@ -4653,16 +4698,24 @@ function keepOriginalRouteAndNavigate() {
       if (plannedLine) plannedLine.setStyle({ weight: 6, color: baseRouteColor });
     }
 
-    if (key === 'mapbox') {
-      localStorage.setItem('trailsync_offline_prefer_mapbox', '1');
-    } else if (key !== 'offline') {
-      localStorage.setItem('trailsync_offline_prefer_mapbox', '0');
+    const lp1 = document.getElementById('layerNamePill');
+    if (lp1) {
+      lp1.textContent = detectedLabel
+        ? `🗺️ Offline: ${detectedLabel} ▾`
+        : `🗺️ Capa: ${mode.title} ▾`;
     }
-    const lp1 = document.getElementById('layerNamePill'); if (lp1) lp1.textContent = `🗺️ Capa: ${mode.title} ▾`;
     selectDisplayStyle(activeDisplayStyleKey, true);
     renderLayersMenu();
-    closeModal('layersModal');
-    showToast(`🗺️ Capa activada: ${mode.title}`);
+    if (!isAutoOfflineSwitch) closeModal('layersModal');
+    if (!silent) {
+      if (key === 'offline' && detectedLabel) {
+        showToast(`📴 Capa Offline cargada: ${detectedLabel}`);
+      } else if (key === 'offline') {
+        showToast('⚠️ Capa Offline activa (no se detectó ningún mapa descargado aún)');
+      } else {
+        showToast(`🗺️ Capa activada: ${mode.title}`);
+      }
+    }
   }
 
   function toggleMapLegend(show) {
@@ -5056,20 +5109,74 @@ function keepOriginalRouteAndNavigate() {
     showToast(`📡 ${pending.length} mensajes guardados sin cobertura sincronizados con el grupo`);
   }
 
-window.addEventListener('offline', () => {
-    showToast('📴 Sin conexión a datos ni Wi-Fi: usando mapa offline en caché');
-    if (map && baseTileLayer) {
+  let preOfflineSavedLayerKey = null;
+  let lastKnownOnlineState = navigator.onLine;
+
+  async function handleConnectionLostAutoOffline() {
+    const banner = document.getElementById('noCoverageBanner');
+    const bannerText = document.getElementById('noCoverageBannerText');
+    await scanDownloadedMapFolders();
+    const detectedKey = getPreferredDetectedOfflineFolder();
+    const detectedName = detectedKey ? (OFFLINE_FOLDER_LABELS[detectedKey] || detectedKey) : '';
+
+    if (banner) {
+      banner.style.display = 'inline-flex';
+      if (bannerText) {
+        bannerText.textContent = detectedName
+          ? `Zona sin cobertura · Offline (${detectedName})`
+          : 'Zona sin cobertura';
+      }
+    }
+
+    if (selectedLayerKey !== 'offline') {
+      preOfflineSavedLayerKey = selectedLayerKey;
+    }
+
+    if (detectedKey) {
+      await selectMapLayer('offline', { isAutoOfflineSwitch: true, silent: true });
+      showToast(`📵 Zona sin cobertura: cargando mapa descargado (${detectedName})`);
+    } else if (map && baseTileLayer) {
+      map.removeLayer(baseTileLayer);
+      baseTileLayer = buildOfflineTileLayer(getActiveLayerObj()).addTo(map);
+      showToast('📵 Zona sin cobertura (sin mapa descargado en carpeta)');
+    }
+  }
+
+  async function handleConnectionRestoredAutoOnline() {
+    const banner = document.getElementById('noCoverageBanner');
+    if (banner) banner.style.display = 'none';
+    flushOfflineQueue();
+
+    const restoreKey = preOfflineSavedLayerKey || localStorage.getItem('trailsync_user_preferred_online_layer');
+    preOfflineSavedLayerKey = null;
+
+    if (restoreKey && restoreKey !== 'offline' && selectedLayerKey !== restoreKey) {
+      await selectMapLayer(restoreKey, { isAutoOfflineSwitch: true, silent: true });
+      const restoredMode = getActiveLayerObj();
+      showToast(`📶 Cobertura recuperada: volviendo a ${restoredMode.title}`);
+    } else if (map && baseTileLayer) {
       map.removeLayer(baseTileLayer);
       baseTileLayer = buildOfflineTileLayer(getActiveLayerObj()).addTo(map);
     }
+  }
+
+  window.addEventListener('offline', () => {
+    lastKnownOnlineState = false;
+    handleConnectionLostAutoOffline();
   });
   window.addEventListener('online', () => {
-    flushOfflineQueue();
-    if (map && baseTileLayer) {
-      map.removeLayer(baseTileLayer);
-      baseTileLayer = buildOfflineTileLayer(getActiveLayerObj()).addTo(map);
-    }
+    lastKnownOnlineState = true;
+    handleConnectionRestoredAutoOnline();
   });
+
+  setInterval(() => {
+    const nowOnline = navigator.onLine;
+    if (nowOnline !== lastKnownOnlineState) {
+      lastKnownOnlineState = nowOnline;
+      if (!nowOnline) handleConnectionLostAutoOffline();
+      else handleConnectionRestoredAutoOnline();
+    }
+  }, 3000);
 
   function connectGroupSync() {
     const baseTopic = `trailsync/e2e/v7/${groupCode}`;
@@ -5706,11 +5813,71 @@ window.addEventListener('offline', () => {
     }
   }
 
+  const OFFLINE_FOLDER_LABELS = {
+    mapbox_outdoors: 'Mapbox Outdoors (Trail)',
+    mapbox_sat_streets: 'Mapbox Satélite + Caminos',
+    mapbox_nav_day: 'Mapbox Navegación Día',
+    mapbox_nav_night: 'Mapbox Navegación Noche',
+    mapbox_streets: 'Mapbox Streets',
+    mapbox_light: 'Mapbox Light',
+    mapbox_dark: 'Mapbox Dark',
+    opentopo: 'OpenStreetMap + Relieve (Topo)',
+    osm_base: 'OpenStreetMap Base',
+    ign_mtn: 'IGN Topográfico MTN25/50',
+    satelite: 'Satélite IGN / Esri',
+    google_maps: 'Google Maps'
+  };
+
+  let detectedOfflineDownloadedFolders = [];
+
+  async function scanDownloadedMapFolders() {
+    const root = await ensureTrailSyncFolderReady(false);
+    if (!root) {
+      detectedOfflineDownloadedFolders = [];
+      return [];
+    }
+    const found = [];
+    try {
+      const mapasDir = await root.getDirectoryHandle('mapas', { create: false });
+      for await (const [dirName, entry] of mapasDir.entries()) {
+        if (entry.kind === 'directory') {
+          let hasTiles = false;
+          try {
+            for await (const [, zEntry] of entry.entries()) {
+              if (zEntry.kind === 'directory') { hasTiles = true; break; }
+            }
+          } catch (e2) {}
+          if (hasTiles) found.push(dirName);
+        }
+      }
+    } catch (e) {}
+    found.sort((a, b) => {
+      const aMb = a.startsWith('mapbox_') ? 0 : 1;
+      const bMb = b.startsWith('mapbox_') ? 0 : 1;
+      return aMb - bMb;
+    });
+    detectedOfflineDownloadedFolders = found;
+    return found;
+  }
+
+  function getPreferredDetectedOfflineFolder() {
+    if (!detectedOfflineDownloadedFolders.length) return null;
+    const activeMbKey = 'mapbox_' + getActiveMapboxStyleObj().id;
+    if (detectedOfflineDownloadedFolders.includes(activeMbKey)) return activeMbKey;
+    const anyMb = detectedOfflineDownloadedFolders.find(k => k.startsWith('mapbox_'));
+    if (anyMb) return anyMb;
+    return detectedOfflineDownloadedFolders[0];
+  }
+
   async function readTileBlobFromDeviceFolder(preferredLayerKey, z, x, y) {
     const root = await ensureTrailSyncFolderReady(false);
     if (!root) return null;
-    const candidateLayers = [preferredLayerKey, 'opentopo', 'ign_mtn', 'opentopo', 'osm_base', 'satelite', 'google_maps']
-      .filter((v, idx, arr) => v && arr.indexOf(v) === idx);
+    const candidateLayers = [
+      preferredLayerKey,
+      ...detectedOfflineDownloadedFolders,
+      'mapbox_outdoors', 'mapbox_sat_streets', 'mapbox_nav_day', 'mapbox_nav_night', 'mapbox_streets',
+      'opentopo', 'ign_mtn', 'osm_base', 'satelite', 'google_maps'
+    ].filter((v, idx, arr) => v && arr.indexOf(v) === idx);
     try {
       const mapasDir = await root.getDirectoryHandle('mapas', { create: false });
       for (const lKey of candidateLayers) {
@@ -5979,6 +6146,14 @@ window.addEventListener('offline', () => {
     recordedLine = L.polyline([], { color: '#16a34a', weight: 6 }).addTo(map);
     selectDisplayStyle(activeDisplayStyleKey, true);
     checkIncomingExternalGpx();
+    scanDownloadedMapFolders().then(() => {
+      if (!navigator.onLine) {
+        lastKnownOnlineState = false;
+        handleConnectionLostAutoOffline();
+      } else if (selectedLayerKey === 'offline') {
+        selectMapLayer('offline', { isAutoOfflineSwitch: true, silent: true });
+      }
+    });
     backtrackLine = L.polyline([], { color: '#4f46e5', weight: 4, dashArray: '5, 6' }).addTo(map);
     incidentLayer = L.layerGroup().addTo(map);
     sharedWaypointsLayer = L.layerGroup().addTo(map);
@@ -6068,18 +6243,32 @@ window.addEventListener('offline', () => {
       'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
       'https://b.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png'
     ];
-    const sources = [
+    const choiceEl = document.getElementById('offlineLayerChoice');
+    const choice = (choiceEl && choiceEl.value) || localStorage.getItem('trailsync_offline_dl_choice') || 'mapbox_outdoors';
+
+    if (choice.startsWith('mapbox_') && choice !== 'mapbox_plus_osm') {
+      const styleId = choice.replace('mapbox_', '');
+      const styleObj = MAPBOX_STYLES.find(s => s.id === styleId) || MAPBOX_STYLES[0];
+      localStorage.setItem('trailsync_mapbox_style_id', styleObj.id);
+      activeMapboxStyleId = styleObj.id;
+      return [
+        { key: 'mapbox_' + styleObj.id, mirrors: [buildMapboxTileUrl(styleObj.stylePath)] }
+      ];
+    }
+
+    if (choice === 'mapbox_plus_osm') {
+      const mbStyle = getActiveMapboxStyleObj();
+      return [
+        { key: 'mapbox_' + mbStyle.id, mirrors: [buildMapboxTileUrl(mbStyle.stylePath)] },
+        { key: 'opentopo', mirrors: openTopoMirrors },
+        { key: 'osm_base', mirrors: osmMirrors }
+      ];
+    }
+
+    return [
       { key: 'opentopo', mirrors: openTopoMirrors },
       { key: 'osm_base', mirrors: osmMirrors }
     ];
-    if (isMapboxLayerActiveOrOffline()) {
-      const mbStyle = getActiveMapboxStyleObj();
-      sources.unshift({
-        key: 'mapbox_' + mbStyle.id,
-        mirrors: [buildMapboxTileUrl(mbStyle.stylePath)]
-      });
-    }
-    return sources;
   }
 
   function buildTileTasksFromBox(box, minZ, maxZ, sources) {
@@ -6501,9 +6690,24 @@ window.addEventListener('offline', () => {
       : `~${(tileCount * 0.024).toFixed(1)} MB`;
 
     if (pb) pb.textContent = ready ? `Carpeta (${tileCount} teselas)` : `${tileCount} teselas`;
+    await scanDownloadedMapFolders();
+    const choiceEl = document.getElementById('offlineLayerChoice');
+    if (choiceEl) {
+      const savedChoice = localStorage.getItem('trailsync_offline_dl_choice');
+      if (savedChoice && [...choiceEl.options].some(o => o.value === savedChoice)) {
+        choiceEl.value = savedChoice;
+      } else if (selectedLayerKey === 'mapbox') {
+        const mbVal = 'mapbox_' + getActiveMapboxStyleObj().id;
+        if ([...choiceEl.options].some(o => o.value === mbVal)) choiceEl.value = mbVal;
+      }
+    }
+
+    const detectedNames = detectedOfflineDownloadedFolders.map(k => OFFLINE_FOLDER_LABELS[k] || k);
     if (qEl) {
       qEl.textContent = root
-        ? `Destino: ${root.name}/mapas/ · Sin caché del navegador`
+        ? (detectedNames.length
+            ? `Descargados: ${detectedNames.join(' + ')}`
+            : `Destino: ${root.name}/mapas/ · Sin mapas descargados aún`)
         : 'Vincula la carpeta TrailSync para guardar mapas en el dispositivo';
     }
     if (el) {
@@ -6643,7 +6847,7 @@ window.addEventListener('offline', () => {
     }).join('\n');
 
     return `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="TrailSync v15.2.24" xmlns="http://www.topografix.com/GPX/1/1">
+<gpx version="1.1" creator="TrailSync v15.2.25" xmlns="http://www.topografix.com/GPX/1/1">
   <metadata><name>${escapeXml(titleText)}</name>${descTag}</metadata>
   <trk><name>${escapeXml(titleText)}</name>${descTag}<trkseg>
 ${trkpts}
