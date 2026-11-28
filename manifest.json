@@ -2,7 +2,7 @@
   "id": "./",
   "name": "TrailSync",
   "short_name": "TrailSync",
-  "version": "15.2.22",
+  "version": "15.2.24",
   "description": "App trail con capa topo Trail / Pistas descargable offline, rutas BRouter, telemetría GPX y bloqueo lluvia.",
   "start_url": "./",
   "scope": "./",
@@ -39,6 +39,9 @@
         ],
         "application/octet-stream": [
           ".gpx"
+        ],
+        "*/*": [
+          ".gpx"
         ]
       },
       "icons": [
@@ -63,11 +66,11 @@
         {
           "name": "gpx_file",
           "accept": [
+            "*/*",
             ".gpx",
             "application/gpx+xml",
             "application/xml",
-            "text/xml",
-            "*/*"
+            "text/xml"
           ]
         }
       ]

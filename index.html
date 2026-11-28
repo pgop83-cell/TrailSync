@@ -10,7 +10,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
   <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
-  <title>TrailSync v15.2.22 — Capas Online/Offline limpias y carpeta local TrailSync en el dispositivo</title>
+  <title>TrailSync v15.2.24 — Capas Online/Offline limpias y carpeta local TrailSync en el dispositivo</title>
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
         onerror="this.onerror=null;this.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';" />
@@ -1400,7 +1400,7 @@
       </button>
     </div>
     <div style="text-align:center;font-size:11px;color:#64748b;margin-top:8px;">
-      Versión 15.2.22 · Capas Online/Offline + Carpeta local TrailSync en dispositivo
+      Versión 15.2.24 · Capas Online/Offline + Carpeta local TrailSync en dispositivo
     </div>
   </div>
 </div>
@@ -1574,7 +1574,7 @@
 
 
     <!-- LIVE TELEMETRY BAR -->
-    <div class="telemetry-bar" onclick="openGroupModal()" title="Telemetría en vivo de la salida">
+    <div class="telemetry-bar" onclick="openTelemetryModal()" title="Ver telemetría completa y perfil de altitud">
       <div class="telem-cell">
         <span class="telem-val" id="telemSpeed">0</span>
         <span class="telem-lbl">km/h</span>
@@ -1916,6 +1916,73 @@
   </div>
 </div>
 
+<!-- MODAL: RIDE TELEMETRY & ELEVATION PROFILE -->
+<div class="modal-backdrop" id="telemetryModal">
+  <div class="modal-card" style="max-width:480px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;">
+      <h2 style="margin:0;">📊 Telemetría del trayecto</h2>
+      <span id="telemSourceBadge" style="font-size:10.5px;font-weight:800;padding:3px 8px;border-radius:999px;background:#1e293b;color:#38bdf8;border:1px solid #0284c7;">TRACK EN VIVO</span>
+    </div>
+    <p id="telemSubtitle" style="margin-bottom:10px;">Resumen completo de distancia, tiempos, velocidades, altitud y pendientes</p>
+
+    <!-- ELEVATION PROFILE SVG CANVAS -->
+    <div style="background:#0f172a;border:1px solid #334155;border-radius:12px;padding:10px 10px 6px;margin-bottom:10px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-size:11px;color:#94a3b8;">
+        <span style="font-weight:800;color:#e2e8f0;">⛰️ Perfil de altitud</span>
+        <span id="telemElevRangeLabel" style="font-weight:700;color:#38bdf8;">Mín -- m · Máx -- m</span>
+      </div>
+      <div id="telemProfileContainer" style="width:100%;height:126px;position:relative;"></div>
+    </div>
+
+    <!-- METRICS GRID -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:10px;" id="telemStatsGrid">
+      <div style="background:#18141a;border:1px solid #334155;border-radius:10px;padding:8px;">
+        <div style="font-size:10px;color:#94a3b8;text-transform:uppercase;font-weight:700;">Kilometraje</div>
+        <div id="tmDist" style="font-size:16px;font-weight:900;color:#f8fafc;margin-top:2px;">0.00 km</div>
+      </div>
+      <div style="background:#18141a;border:1px solid #334155;border-radius:10px;padding:8px;">
+        <div style="font-size:10px;color:#94a3b8;text-transform:uppercase;font-weight:700;">Tiempo total</div>
+        <div id="tmTotalTime" style="font-size:16px;font-weight:900;color:#f8fafc;margin-top:2px;">00:00</div>
+      </div>
+      <div style="background:#18141a;border:1px solid #334155;border-radius:10px;padding:8px;">
+        <div style="font-size:10px;color:#94a3b8;text-transform:uppercase;font-weight:700;">En movimiento</div>
+        <div id="tmMovingTime" style="font-size:16px;font-weight:900;color:#22c55e;margin-top:2px;">00:00</div>
+      </div>
+
+      <div style="background:#18141a;border:1px solid #334155;border-radius:10px;padding:8px;">
+        <div style="font-size:10px;color:#94a3b8;text-transform:uppercase;font-weight:700;">Vel. Máxima</div>
+        <div id="tmMaxSpeed" style="font-size:16px;font-weight:900;color:#f97316;margin-top:2px;">0 km/h</div>
+      </div>
+      <div style="background:#18141a;border:1px solid #334155;border-radius:10px;padding:8px;">
+        <div style="font-size:10px;color:#94a3b8;text-transform:uppercase;font-weight:700;">Vel. Media</div>
+        <div id="tmAvgSpeed" style="font-size:16px;font-weight:900;color:#38bdf8;margin-top:2px;">0.0 km/h</div>
+      </div>
+      <div style="background:#18141a;border:1px solid #334155;border-radius:10px;padding:8px;">
+        <div style="font-size:10px;color:#94a3b8;text-transform:uppercase;font-weight:700;">Alt. Máx / Mín</div>
+        <div id="tmAltMinMax" style="font-size:13.5px;font-weight:900;color:#e2e8f0;margin-top:3px;">-- / -- m</div>
+      </div>
+
+      <div style="background:#18141a;border:1px solid #334155;border-radius:10px;padding:8px;">
+        <div style="font-size:10px;color:#94a3b8;text-transform:uppercase;font-weight:700;">Desnivel + / −</div>
+        <div id="tmAscDesc" style="font-size:13.5px;font-weight:900;color:#4ade80;margin-top:3px;">+0m / -0m</div>
+      </div>
+      <div style="background:#18141a;border:1px solid #334155;border-radius:10px;padding:8px;">
+        <div style="font-size:10px;color:#94a3b8;text-transform:uppercase;font-weight:700;">Inclinación Máx</div>
+        <div id="tmMaxSlope" style="font-size:16px;font-weight:900;color:#ef4444;margin-top:2px;">+0.0%</div>
+      </div>
+      <div style="background:#18141a;border:1px solid #334155;border-radius:10px;padding:8px;">
+        <div style="font-size:10px;color:#94a3b8;text-transform:uppercase;font-weight:700;">Inclinación Mín</div>
+        <div id="tmMinSlope" style="font-size:16px;font-weight:900;color:#60a5fa;margin-top:2px;">0.0%</div>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="solid-btn" style="background:#ea580c;color:#fff;" onclick="downloadGPX()">💾 Descargar GPX</button>
+      <button class="solid-btn" style="background:#334155;color:#fff;" onclick="closeModal('telemetryModal')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: GROUP & FRIENDS LIVE -->
 <div class="modal-backdrop" id="groupModal">
   <div class="modal-card">
@@ -2137,7 +2204,7 @@
     <h2>Ajustes de ruta y App</h2>
     <div style="background:#18141a;padding:10px 12px;border-radius:12px;margin-bottom:12px;border:1px solid #334155;display:flex;align-items:center;justify-content:space-between;gap:8px;">
       <div>
-        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">15.2.22</span></div>
+        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">15.2.24</span></div>
         <div style="font-size:11px;color:#94a3b8;" id="webVerStatusLabel">Comprobando actualizaciones en la web...</div>
       </div>
       <button class="solid-btn" style="flex:0 0 auto;background:#16a34a;color:#fff;padding:8px 12px;font-size:12px;" onclick="manualCheckForUpdates()">🔄 Buscar / Actualizar</button>
@@ -2218,7 +2285,7 @@
     } catch (e) {}
   });
 
-  const APP_VERSION = '15.2.22';
+  const APP_VERSION = '15.2.24';
   let swWaitingWorker = null;
   let remoteVersionFound = null;
 
@@ -6519,7 +6586,8 @@ window.addEventListener('offline', () => {
       }
       lastAltitudeM = ele;
     }
-    recordedTrack.push({ lat, lon, ele, time: new Date().toISOString() });
+    const spdVal = (typeof currentSpeedKmh === 'number' && !isNaN(currentSpeedKmh) && currentSpeedKmh >= 0) ? Number(currentSpeedKmh.toFixed(1)) : 0;
+    recordedTrack.push({ lat, lon, ele, spd: spdVal, time: new Date().toISOString() });
     if (recordedLine) recordedLine.setLatLngs(recordedTrack.map(p => [p.lat, p.lon]));
     if (backtrackOn) if (backtrackLine) backtrackLine.setLatLngs(recordedTrack.map(p => [p.lat, p.lon]));
     updateTelemetryUI();
@@ -6575,7 +6643,7 @@ window.addEventListener('offline', () => {
     }).join('\n');
 
     return `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="TrailSync v15.2.22" xmlns="http://www.topografix.com/GPX/1/1">
+<gpx version="1.1" creator="TrailSync v15.2.24" xmlns="http://www.topografix.com/GPX/1/1">
   <metadata><name>${escapeXml(titleText)}</name>${descTag}</metadata>
   <trk><name>${escapeXml(titleText)}</name>${descTag}<trkseg>
 ${trkpts}
@@ -8265,6 +8333,231 @@ ${trkptsXml}
     window.open(`https://wa.me/?text=${encodeURIComponent(`Únete a mi grupo "${groupName}" en TrailSync para vernos todos en el mapa y compartir el track rutable (Código: ${groupCode}): ${inviteUrl}`)}`, '_blank');
   }
 
+  function formatDurationCompact(ms) {
+    const totalSec = Math.max(0, Math.floor(ms / 1000));
+    const hrs = Math.floor(totalSec / 3600);
+    const mins = Math.floor((totalSec % 3600) / 60);
+    const secs = totalSec % 60;
+    if (hrs > 0) {
+      return `${hrs}h ${String(mins).padStart(2, '0')}m`;
+    }
+    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  }
+
+  async function enrichMissingElevationsForProfile(points) {
+    if (!Array.isArray(points) || points.length < 2) return points;
+    const validEles = points.filter(p => typeof p.ele === 'number' && !isNaN(p.ele) && p.ele !== 65);
+    if (validEles.length >= Math.max(2, Math.floor(points.length * 0.4))) return points;
+    if (!navigator.onLine) return points;
+
+    try {
+      const step = Math.max(1, Math.floor(points.length / 45));
+      const sampled = [];
+      for (let i = 0; i < points.length; i += step) sampled.push(points[i]);
+      if (sampled[sampled.length - 1] !== points[points.length - 1]) sampled.push(points[points.length - 1]);
+
+      const lats = sampled.map(p => p.lat.toFixed(5)).join(',');
+      const lons = sampled.map(p => p.lon.toFixed(5)).join(',');
+      const res = await fetch(`https://api.open-meteo.com/v1/elevation?latitude=${lats}&longitude=${lons}`);
+      if (!res.ok) return points;
+      const data = await res.json();
+      if (data && Array.isArray(data.elevation) && data.elevation.length === sampled.length) {
+        return sampled.map((p, idx) => ({
+          ...p,
+          ele: typeof data.elevation[idx] === 'number' ? data.elevation[idx] : p.ele
+        }));
+      }
+    } catch (e) {}
+    return points;
+  }
+
+  function renderTelemetryProfileSvg(samples) {
+    const box = document.getElementById('telemProfileContainer');
+    if (!box) return;
+    if (!samples || samples.length < 2) {
+      box.innerHTML = `<div style="height:100%;display:flex;align-items:center;justify-content:center;color:#64748b;font-size:12px;text-align:center;padding:0 12px;">Inicia el movimiento con GPS activo para dibujar el perfil de altitud del trayecto</div>`;
+      return;
+    }
+
+    const w = 420;
+    const h = 120;
+    const padL = 34;
+    const padR = 10;
+    const padT = 10;
+    const padB = 20;
+    const plotW = w - padL - padR;
+    const plotH = h - padT - padB;
+
+    const maxDist = Math.max(0.01, samples[samples.length - 1].cumDistKm);
+    const eles = samples.map(s => s.ele);
+    let minEle = Math.min(...eles);
+    let maxEle = Math.max(...eles);
+    if (maxEle - minEle < 10) {
+      minEle = Math.max(0, minEle - 5);
+      maxEle = maxEle + 5;
+    }
+    const eleSpan = Math.max(1, maxEle - minEle);
+
+    const coords = samples.map(s => {
+      const x = padL + (s.cumDistKm / maxDist) * plotW;
+      const y = padT + plotH - ((s.ele - minEle) / eleSpan) * plotH;
+      return [Number(x.toFixed(1)), Number(y.toFixed(1))];
+    });
+
+    const linePts = coords.map(c => `${c[0]},${c[1]}`).join(' ');
+    const areaPts = `${padL},${padT + plotH} ${linePts} ${coords[coords.length - 1][0]},${padT + plotH}`;
+    const midEle = Math.round((minEle + maxEle) / 2);
+
+    box.innerHTML = `
+      <svg viewBox="0 0 ${w} ${h}" width="100%" height="100%" preserveAspectRatio="none" style="display:block;overflow:visible;">
+        <defs>
+          <linearGradient id="telemEleGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#f97316" stop-opacity="0.52"/>
+            <stop offset="100%" stop-color="#f97316" stop-opacity="0.04"/>
+          </linearGradient>
+        </defs>
+        <line x1="${padL}" y1="${padT}" x2="${w - padR}" y2="${padT}" stroke="#1e293b" stroke-width="1"/>
+        <line x1="${padL}" y1="${padT + plotH / 2}" x2="${w - padR}" y2="${padT + plotH / 2}" stroke="#1e293b" stroke-dasharray="3,3" stroke-width="1"/>
+        <line x1="${padL}" y1="${padT + plotH}" x2="${w - padR}" y2="${padT + plotH}" stroke="#334155" stroke-width="1"/>
+        <text x="${padL - 4}" y="${padT + 4}" fill="#94a3b8" font-size="9" text-anchor="end">${Math.round(maxEle)}m</text>
+        <text x="${padL - 4}" y="${padT + plotH / 2 + 3}" fill="#64748b" font-size="9" text-anchor="end">${midEle}m</text>
+        <text x="${padL - 4}" y="${padT + plotH}" fill="#94a3b8" font-size="9" text-anchor="end">${Math.round(minEle)}m</text>
+        <text x="${padL}" y="${h - 4}" fill="#94a3b8" font-size="9" text-anchor="start">0 km</text>
+        <text x="${padL + plotW / 2}" y="${h - 4}" fill="#64748b" font-size="9" text-anchor="middle">${(maxDist / 2).toFixed(1)} km</text>
+        <text x="${w - padR}" y="${h - 4}" fill="#94a3b8" font-size="9" text-anchor="end">${maxDist.toFixed(2)} km</text>
+        <polygon points="${areaPts}" fill="url(#telemEleGrad)"/>
+        <polyline points="${linePts}" fill="none" stroke="#f97316" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>
+      </svg>
+    `;
+  }
+
+  async function openTelemetryModal() {
+    openModal('telemetryModal');
+
+    let sourcePoints = [];
+    let isPlannedPreview = false;
+
+    if (Array.isArray(recordedTrack) && recordedTrack.length >= 2) {
+      sourcePoints = recordedTrack.map(p => ({ ...p }));
+    } else if (activeSharedRoute && Array.isArray(activeSharedRoute.coords) && activeSharedRoute.coords.length >= 2) {
+      isPlannedPreview = true;
+      sourcePoints = activeSharedRoute.coords.map(c => ({
+        lat: Array.isArray(c) ? c[0] : c.lat,
+        lon: Array.isArray(c) ? c[1] : c.lon,
+        ele: (Array.isArray(c) && typeof c[2] === 'number') ? c[2] : (typeof c?.ele === 'number' ? c.ele : 65),
+        spd: 0,
+        time: null
+      }));
+    }
+
+    const badgeEl = document.getElementById('telemSourceBadge');
+    const subEl = document.getElementById('telemSubtitle');
+    if (badgeEl) {
+      badgeEl.textContent = isPlannedPreview ? 'RUTA ACTIVA (SIN RECORRER)' : `TRACK GRABADO (${sourcePoints.length} PTS)`;
+      badgeEl.style.color = isPlannedPreview ? '#fbbf24' : '#38bdf8';
+      badgeEl.style.borderColor = isPlannedPreview ? '#d97706' : '#0284c7';
+    }
+    if (subEl) {
+      subEl.textContent = isPlannedPreview
+        ? 'Aún no has recorrido distancia; mostrando perfil previsto de la ruta cargada'
+        : 'Telemetría real calculada a partir del trayecto recorrido en esta salida';
+    }
+
+    sourcePoints = await enrichMissingElevationsForProfile(sourcePoints);
+
+    if (sourcePoints.length < 2) {
+      document.getElementById('tmDist').textContent = '0.00 km';
+      document.getElementById('tmTotalTime').textContent = formatDurationCompact(Date.now() - rideStartTime);
+      document.getElementById('tmMovingTime').textContent = '00:00';
+      document.getElementById('tmMaxSpeed').textContent = `${Math.round(currentSpeedKmh || 0)} km/h`;
+      document.getElementById('tmAvgSpeed').textContent = '0.0 km/h';
+      document.getElementById('tmAltMinMax').textContent = lastAltitudeM ? `${Math.round(lastAltitudeM)} / ${Math.round(lastAltitudeM)} m` : '-- / -- m';
+      document.getElementById('tmAscDesc').textContent = '+0m / -0m';
+      document.getElementById('tmMaxSlope').textContent = '+0.0%';
+      document.getElementById('tmMinSlope').textContent = '0.0%';
+      document.getElementById('telemElevRangeLabel').textContent = 'Sin datos suficientes';
+      renderTelemetryProfileSvg([]);
+      return;
+    }
+
+    let cumDistKm = 0;
+    let ascentM = 0;
+    let descentM = 0;
+    let minEle = Infinity;
+    let maxEle = -Infinity;
+    let maxSpeedKmh = 0;
+    let maxSlopePct = 0;
+    let minSlopePct = 0;
+    let movingMs = 0;
+
+    const samples = [];
+    for (let i = 0; i < sourcePoints.length; i++) {
+      const p = sourcePoints[i];
+      const ele = (typeof p.ele === 'number' && !isNaN(p.ele)) ? p.ele : 0;
+      if (ele < minEle) minEle = ele;
+      if (ele > maxEle) maxEle = ele;
+      if (typeof p.spd === 'number' && p.spd > maxSpeedKmh && p.spd < 260) {
+        maxSpeedKmh = p.spd;
+      }
+
+      if (i > 0) {
+        const prev = sourcePoints[i - 1];
+        const prevEle = (typeof prev.ele === 'number' && !isNaN(prev.ele)) ? prev.ele : ele;
+        const segKm = haversineKm(prev.lat, prev.lon, p.lat, p.lon);
+        const segM = segKm * 1000;
+        cumDistKm += segKm;
+
+        const dEle = ele - prevEle;
+        if (Math.abs(dEle) < 90) {
+          if (dEle > 0.6) ascentM += dEle;
+          else if (dEle < -0.6) descentM += Math.abs(dEle);
+        }
+
+        // Slope (%) computed on segments >= 12 m to avoid GPS vertical jitter spikes
+        if (segM >= 12 && Math.abs(dEle) < 60) {
+          const slopePct = Math.max(-45, Math.min(45, (dEle / segM) * 100));
+          if (slopePct > maxSlopePct) maxSlopePct = slopePct;
+          if (slopePct < minSlopePct) minSlopePct = slopePct;
+        }
+
+        if (p.time && prev.time) {
+          const dt = new Date(p.time).getTime() - new Date(prev.time).getTime();
+          if (dt > 0 && dt < 300000) {
+            const segSpd = (segKm / (dt / 3600000));
+            if (segSpd > maxSpeedKmh && segSpd < 220) maxSpeedKmh = segSpd;
+            if ((p.spd && p.spd > 2.5) || segSpd > 2.5) {
+              movingMs += dt;
+            }
+          }
+        }
+      }
+      samples.push({ cumDistKm, ele });
+    }
+
+    const totalElapsedMs = isPlannedPreview ? 0 : Math.max(0, Date.now() - rideStartTime);
+    if (!isPlannedPreview && movingMs === 0 && cumDistKm > 0.02) {
+      movingMs = totalElapsedMs;
+    }
+    const effectiveDistKm = isPlannedPreview ? cumDistKm : Math.max(totalDistanceKm, cumDistKm);
+    const effectiveAscentM = isPlannedPreview ? Math.round(ascentM) : Math.max(Math.round(totalAscentM), Math.round(ascentM));
+    const avgSpeedKmh = (!isPlannedPreview && movingMs > 5000)
+      ? (effectiveDistKm / (movingMs / 3600000))
+      : 0;
+
+    document.getElementById('tmDist').textContent = `${effectiveDistKm.toFixed(2)} km`;
+    document.getElementById('tmTotalTime').textContent = isPlannedPreview ? '--:--' : formatDurationCompact(totalElapsedMs);
+    document.getElementById('tmMovingTime').textContent = isPlannedPreview ? '--:--' : formatDurationCompact(movingMs);
+    document.getElementById('tmMaxSpeed').textContent = isPlannedPreview ? '-- km/h' : `${Math.round(Math.max(maxSpeedKmh, currentSpeedKmh || 0))} km/h`;
+    document.getElementById('tmAvgSpeed').textContent = isPlannedPreview ? '-- km/h' : `${avgSpeedKmh.toFixed(1)} km/h`;
+    document.getElementById('tmAltMinMax').textContent = `${Math.round(maxEle)}m / ${Math.round(minEle)}m`;
+    document.getElementById('tmAscDesc').textContent = `+${effectiveAscentM}m / -${Math.round(descentM)}m`;
+    document.getElementById('tmMaxSlope').textContent = `+${maxSlopePct.toFixed(1)}%`;
+    document.getElementById('tmMinSlope').textContent = `${minSlopePct.toFixed(1)}%`;
+    document.getElementById('telemElevRangeLabel').textContent = `Mín ${Math.round(minEle)} m · Máx ${Math.round(maxEle)} m`;
+
+    renderTelemetryProfileSvg(samples);
+  }
+
   function openGroupModal() {
     document.getElementById('groupModalTitle').textContent = `${groupName} (#${groupCode})`;
     document.getElementById('directInviteUrlInput').value = buildInviteUrl();
@@ -8379,8 +8672,10 @@ ${trkptsXml}
           try {
             const file = await fileHandle.getFile();
             const text = await file.text();
-            importGpxTextDirectly(text, file.name || 'ruta.gpx');
-            break;
+            if (text && (text.includes('<gpx') || text.includes('<trkpt') || text.includes('<rtept') || /\.gpx$/i.test(file.name || ''))) {
+              importGpxTextDirectly(text, file.name || 'ruta.gpx');
+              break;
+            }
           } catch (e) {}
         }
       });
