@@ -10,7 +10,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
   <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
-  <title>TrailSync v15.2.25 — Capas Online/Offline limpias y carpeta local TrailSync en el dispositivo</title>
+  <title>TrailSync v15.2.26 — Capas Online/Offline limpias y carpeta local TrailSync en el dispositivo</title>
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
         onerror="this.onerror=null;this.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';" />
@@ -153,11 +153,16 @@
       position: absolute;
       width: 220vmax; height: 220vmax;
       left: 50%; top: 50%;
-      transform: translate(-50%, -50%) rotateX(0deg) rotateZ(0deg) scale(1);
+      transform: translate3d(-50%, -50%, 0) rotateX(0deg) rotateZ(0deg) scale(1);
       transform-origin: 50% 50%;
-      transform-style: preserve-3d;
-      transition: transform 0.38s cubic-bezier(0.22, 1, 0.36, 1), top 0.38s cubic-bezier(0.22, 1, 0.36, 1);
+      will-change: transform;
+      backface-visibility: hidden;
+      transition: transform 0.25s linear, top 0.35s cubic-bezier(0.22, 1, 0.36, 1);
       z-index: 1;
+    }
+    .leaflet-tile-container, .leaflet-marker-icon, .leaflet-zoom-animated {
+      will-change: transform;
+      backface-visibility: hidden;
     }
     #map-rotator.course-up-pivot {
       top: calc(100% - 106px);
@@ -1400,7 +1405,7 @@
       </button>
     </div>
     <div style="text-align:center;font-size:11px;color:#64748b;margin-top:8px;">
-      Versión 15.2.25 · Capas Online/Offline + Carpeta local TrailSync en dispositivo
+      Versión 15.2.26 · Capas Online/Offline + Carpeta local TrailSync en dispositivo
     </div>
   </div>
 </div>
@@ -2214,7 +2219,7 @@
     <h2>Ajustes de ruta y App</h2>
     <div style="background:#18141a;padding:10px 12px;border-radius:12px;margin-bottom:12px;border:1px solid #334155;display:flex;align-items:center;justify-content:space-between;gap:8px;">
       <div>
-        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">15.2.25</span></div>
+        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">15.2.26</span></div>
         <div style="font-size:11px;color:#94a3b8;" id="webVerStatusLabel">Comprobando actualizaciones en la web...</div>
       </div>
       <button class="solid-btn" style="flex:0 0 auto;background:#16a34a;color:#fff;padding:8px 12px;font-size:12px;" onclick="manualCheckForUpdates()">🔄 Buscar / Actualizar</button>
@@ -2295,7 +2300,7 @@
     } catch (e) {}
   });
 
-  const APP_VERSION = '15.2.25';
+  const APP_VERSION = '15.2.26';
   let swWaitingWorker = null;
   let remoteVersionFound = null;
 
@@ -2484,12 +2489,10 @@
     const now = Date.now();
     const camCenter = getNavigationCameraCenter(targetZoom);
 
-    if (forceImmediate || (Math.abs(targetZoom - currentZoom) >= 0.5 && (now - lastDynamicZoomTimestamp) > 3500)) {
+    if (forceImmediate || (Math.abs(targetZoom - currentZoom) >= 0.45 && (now - lastDynamicZoomTimestamp) > 3500)) {
       lastDynamicZoomApplied = targetZoom;
       lastDynamicZoomTimestamp = now;
-      map.setView(camCenter, targetZoom, { animate: true, duration: 0.75 });
-    } else {
-      map.panTo(camCenter, { animate: true, duration: 0.45 });
+      map.setZoom(targetZoom, { animate: true });
     }
   }
 
@@ -4460,6 +4463,74 @@ function keepOriginalRouteAndNavigate() {
     currentHeadingDeg = ((Math.round(continuousHeadingDeg) % 360) + 360) % 360;
   }
 
+  // --- 60 FPS GOOGLE-MAPS-STYLE SMOOTH CAMERA & DEAD-RECKONING ENGINE ---
+  let navAnchorLat = userPos[0];
+  let navAnchorLon = userPos[1];
+  let navAnchorTs = performance.now();
+  let navSpeedMps = 0;
+  let navHeadingRad = 0;
+  let navIsMoving = false;
+  let renderCameraLat = userPos[0];
+  let renderCameraLon = userPos[1];
+  let smoothNavRafStarted = false;
+  let lastAppliedRotZ = null;
+  let lastAppliedTilt = null;
+
+  function updateSmoothNavTarget(lat, lon, speedKmh, headingDeg, isMoving, snapImmediate = false) {
+    navAnchorLat = lat;
+    navAnchorLon = lon;
+    navAnchorTs = performance.now();
+    navSpeedMps = isMoving ? Math.min(42, Math.max(0, (speedKmh || 0) / 3.6)) : 0;
+    navHeadingRad = ((headingDeg || 0) * Math.PI) / 180;
+    navIsMoving = Boolean(isMoving);
+
+    if (snapImmediate || !isMoving) {
+      renderCameraLat = lat;
+      renderCameraLon = lon;
+    }
+    startSmoothNavLoopIfNeeded();
+  }
+
+  function startSmoothNavLoopIfNeeded() {
+    if (smoothNavRafStarted) return;
+    smoothNavRafStarted = true;
+    let lastFrameTs = performance.now();
+
+    function stepSmoothNavFrame(nowTs) {
+      const dtSec = Math.min(0.1, Math.max(0.004, (nowTs - lastFrameTs) / 1000));
+      lastFrameTs = nowTs;
+
+      if (map && !isFamilySpectator && !userExploringMap && !isUserDraggingMap && navIsMoving) {
+        // Predict smooth forward motion for up to 1.15s between 1Hz GPS updates
+        const elapsedSinceGpsSec = Math.min(1.15, Math.max(0, (nowTs - navAnchorTs) / 1000));
+        const predDistM = navSpeedMps * elapsedSinceGpsSec;
+        const metersPerDegLat = 111320;
+        const metersPerDegLon = Math.max(15000, 111320 * Math.cos((navAnchorLat * Math.PI) / 180));
+
+        const targetLat = navAnchorLat + (Math.cos(navHeadingRad) * predDistM) / metersPerDegLat;
+        const targetLon = navAnchorLon + (Math.sin(navHeadingRad) * predDistM) / metersPerDegLon;
+
+        // Frame-rate independent exponential smoothing (silky 60fps glide)
+        const lerpAlpha = 1 - Math.exp(-9.5 * dtSec);
+        renderCameraLat += (targetLat - renderCameraLat) * lerpAlpha;
+        renderCameraLon += (targetLon - renderCameraLon) * lerpAlpha;
+
+        if (userMarker && typeof userMarker.setLatLng === 'function') {
+          userMarker.setLatLng([renderCameraLat, renderCameraLon]);
+        }
+
+        // Only move the map view when not mid-zoom animation to avoid Leaflet zoom/pan jitter
+        if (!map._animatingZoom) {
+          map.setView([renderCameraLat, renderCameraLon], map.getZoom(), { animate: false, reset: false });
+        }
+      }
+
+      requestAnimationFrame(stepSmoothNavFrame);
+    }
+
+    requestAnimationFrame(stepSmoothNavFrame);
+  }
+
   function applyMapOrientation() {
     const rotator = document.getElementById('map-rotator');
     const needle = document.getElementById('gmapsCompassNeedle');
@@ -4475,10 +4546,15 @@ function keepOriginalRouteAndNavigate() {
 
     if (rotator) {
       rotator.classList.toggle('course-up-pivot', activeCourseUp);
+      const tiltChanged = lastAppliedTilt !== tiltDeg;
+      lastAppliedTilt = tiltDeg;
+      lastAppliedRotZ = rotZDeg;
       rotator.style.transition = isUserDraggingMap
         ? 'none'
-        : 'transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), top 0.35s cubic-bezier(0.22, 1, 0.36, 1)';
-      rotator.style.transform = `translate(-50%, -50%) rotateX(${tiltDeg}deg) rotateZ(${rotZDeg}deg) scale(${mapScale})`;
+        : (tiltChanged
+            ? 'transform 0.32s cubic-bezier(0.22, 1, 0.36, 1), top 0.32s cubic-bezier(0.22, 1, 0.36, 1)'
+            : 'transform 0.14s linear');
+      rotator.style.transform = `translate3d(-50%, -50%, 0) rotateX(${tiltDeg}deg) rotateZ(${rotZDeg}deg) scale(${mapScale})`;
     }
 
     const invRot = activeCourseUp ? `${continuousHeadingDeg}deg` : '0deg';
@@ -6060,7 +6136,7 @@ function keepOriginalRouteAndNavigate() {
       subdomains: ['a', 'b', 'c'],
       maxNativeZoom: modeObj.maxNativeZoom || modeObj.maxZoom || 18,
       maxZoom: Math.max(19, modeObj.maxZoom || 18),
-      keepBuffer: 6,
+      keepBuffer: 8,
       updateWhenIdle: false,
       updateWhenZooming: true
     });
@@ -6117,7 +6193,16 @@ function keepOriginalRouteAndNavigate() {
     const wgCb = document.getElementById('windNoiseGateToggle');
     if (wgCb) wgCb.checked = windNoiseGateEnabled;
 
-    map = L.map('map', { zoomControl: false, zoomSnap: 0.5, zoomDelta: 0.5 }).setView(userPos, 16.5);
+    map = L.map('map', {
+      zoomControl: false,
+      zoomSnap: 0.25,
+      zoomDelta: 0.5,
+      wheelPxPerZoomLevel: 90,
+      inertia: true,
+      inertiaDeceleration: 3200,
+      fadeAnimation: true,
+      markerZoomAnimation: true
+    }).setView(userPos, 16.5);
     map.on('zoomend moveend', () => {
       updateDynamicMapScale();
       scheduleOffroadRoadsRefresh(false);
@@ -6847,7 +6932,7 @@ function keepOriginalRouteAndNavigate() {
     }).join('\n');
 
     return `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="TrailSync v15.2.25" xmlns="http://www.topografix.com/GPX/1/1">
+<gpx version="1.1" creator="TrailSync v15.2.26" xmlns="http://www.topografix.com/GPX/1/1">
   <metadata><name>${escapeXml(titleText)}</name>${descTag}</metadata>
   <trk><name>${escapeXml(titleText)}</name>${descTag}<trkseg>
 ${trkpts}
@@ -9072,30 +9157,35 @@ ${trkptsXml}
       }
 
       const accuracyOk = !gpsLastAccuracyM || gpsLastAccuracyM <= 35;
-      const isMoving = currentSpeedKmh >= 4.5 && movedMeters >= 3.5 && accuracyOk;
+      const isMoving = currentSpeedKmh >= 3.5 && movedMeters >= 2.2 && accuracyOk;
       if (isMoving) {
-        // Once riding again (> 4.5 km/h), automatically resume auto-follow & course-up (unless user locked North)
+        // Once riding again (> 3.5 km/h), automatically resume auto-follow & course-up (unless user locked North)
         userExploringMap = false;
-        if (!manualNorthLockByUser && !courseUpMode && !isFamilySpectator && currentSpeedKmh >= 6.5) {
+        if (!manualNorthLockByUser && !courseUpMode && !isFamilySpectator && currentSpeedKmh >= 6.0) {
           courseUpMode = true;
         }
       }
 
-      if (typeof pos.coords.heading === 'number' && !isNaN(pos.coords.heading) && (pos.coords.speed || 0) >= 1.4 && accuracyOk) {
-        setSmoothHeading(pos.coords.heading, 0.55);
-      } else if (prevUserPos && movedMeters >= 4 && accuracyOk) {
+      if (typeof pos.coords.heading === 'number' && !isNaN(pos.coords.heading) && (pos.coords.speed || 0) >= 1.2 && accuracyOk) {
+        setSmoothHeading(pos.coords.heading, 0.45);
+      } else if (prevUserPos && movedMeters >= 2.5 && accuracyOk) {
         const trackBearing = computeBearing(prevUserPos[0], prevUserPos[1], newPos[0], newPos[1]);
-        setSmoothHeading(trackBearing, 0.5);
+        setSmoothHeading(trackBearing, 0.42);
       }
       prevUserPos = newPos;
       userPos = newPos;
+
+      // Feed the 60fps smooth navigation camera & dead-reckoning interpolator
+      updateSmoothNavTarget(newPos[0], newPos[1], currentSpeedKmh, continuousHeadingDeg, isMoving, firstFix);
 
       if (!isFamilySpectator && map) {
         if (!userMarker) {
           userMarker = L.marker(userPos, { icon: createRiderIcon(`${userNick} (tú)`, '#f59e0b', true, false, continuousHeadingDeg) }).addTo(map);
         } else if (userMarker && typeof userMarker.setLatLng === 'function') {
           if (!map.hasLayer(userMarker)) userMarker.addTo(map);
-          userMarker.setLatLng(userPos);
+          if (firstFix || !isMoving) {
+            userMarker.setLatLng(userPos);
+          }
           const rotEl = userMarker.getElement()?.querySelector('.rider-puck-rotator');
           if (rotEl) {
             rotEl.style.transform = `rotate(${continuousHeadingDeg || 0}deg)`;
@@ -9108,13 +9198,10 @@ ${trkptsXml}
       if (firstFix) {
         const initZ = dynamicSpeedZoomEnabled ? getTargetZoomForSpeed(currentSpeedKmh) : Math.max(map.getZoom(), 16.5);
         const initCenter = getNavigationCameraCenter(initZ);
-        map.setView(initCenter, initZ);
+        map.setView(initCenter, initZ, { animate: false });
       } else if (isMoving && !userExploringMap) {
         if (dynamicSpeedZoomEnabled && Date.now() >= manualZoomOverrideUntil) {
           applyDynamicSpeedZoom(currentSpeedKmh, false);
-        } else {
-          const camCenter = getNavigationCameraCenter(map.getZoom());
-          map.panTo(camCenter, { animate: true, duration: 0.45 });
         }
       }
       if (courseUpMode) applyMapOrientation();
@@ -9125,7 +9212,7 @@ ${trkptsXml}
     }, err => {
       if (!silent) showToast('GPS físico sin señal o permiso: usando alternativa');
       requestFallbackLocationIfNoGpsFix();
-    }, { enableHighAccuracy: true, maximumAge: 1500, timeout: 8000 });
+    }, { enableHighAccuracy: true, maximumAge: 0, timeout: 8000 });
     if (!silent) {
       closeModal('settingsModal');
       showToast('📡 GPS real activado');
