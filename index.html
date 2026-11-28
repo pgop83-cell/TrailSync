@@ -10,7 +10,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
   <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
-  <title>TrailSync v15.2.15 — Capas Online/Offline limpias y carpeta local TrailSync en el dispositivo</title>
+  <title>TrailSync v15.2.16 — Capas Online/Offline limpias y carpeta local TrailSync en el dispositivo</title>
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
         onerror="this.onerror=null;this.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';" />
@@ -186,6 +186,12 @@
     }
     #map.sunlight-boost-mode .leaflet-tile-pane {
       filter: contrast(1.42) brightness(1.14) saturate(1.15);
+    }
+    #map.off-day-mode {
+      background: #e5ece2;
+    }
+    #map.off-day-mode .leaflet-tile-pane {
+      filter: contrast(1.16) saturate(1.18) brightness(1.03);
     }
     #map.trail-contrast-mode {
       background: #151f2b;
@@ -1392,7 +1398,7 @@
       </button>
     </div>
     <div style="text-align:center;font-size:11px;color:#64748b;margin-top:8px;">
-      Versión 15.2.15 · Capas Online/Offline + Carpeta local TrailSync en dispositivo
+      Versión 15.2.16 · Capas Online/Offline + Carpeta local TrailSync en dispositivo
     </div>
   </div>
 </div>
@@ -2175,7 +2181,7 @@
     <h2>Ajustes de ruta y App</h2>
     <div style="background:#18141a;padding:10px 12px;border-radius:12px;margin-bottom:12px;border:1px solid #334155;display:flex;align-items:center;justify-content:space-between;gap:8px;">
       <div>
-        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">15.2.15</span></div>
+        <div style="font-size:12px;font-weight:800;color:#f8fafc;">Versión instalada: <span id="installedVerLabel">15.2.16</span></div>
         <div style="font-size:11px;color:#94a3b8;" id="webVerStatusLabel">Comprobando actualizaciones en la web...</div>
       </div>
       <button class="solid-btn" style="flex:0 0 auto;background:#16a34a;color:#fff;padding:8px 12px;font-size:12px;" onclick="manualCheckForUpdates()">🔄 Buscar / Actualizar</button>
@@ -2256,7 +2262,7 @@
     } catch (e) {}
   });
 
-  const APP_VERSION = '15.2.15';
+  const APP_VERSION = '15.2.16';
   let swWaitingWorker = null;
   let remoteVersionFound = null;
 
@@ -2522,13 +2528,14 @@
     }
   }
 
-  // --- DISPLAY STYLE SELECTOR (NORMAL / OFFROAD ALTO CONTRASTE / TOPO RELIEVE / SOL DIRECTO / NOCHE) ---
+  // --- DISPLAY STYLE SELECTOR (NORMAL / OFF DÍA / OFF NOCHE / TOPO RELIEVE / SOL DIRECTO / NOCHE) ---
   const DISPLAY_MODES = [
-    { key: 'normal',   icon: '☀️', label: 'NORMAL',  name: 'Normal (Estándar)',       sub: 'Colores originales de la capa activa', cls: '',                    routeWeight: 6, trackWeight: 6 },
-    { key: 'contrast', icon: '🌓', label: 'OFFROAD', name: 'Offroad Alto Contraste',  sub: 'Fondo oscuro con pistas y caminos resaltados', cls: 'trail-contrast-mode', routeWeight: 8, trackWeight: 7 },
-    { key: 'topo',     icon: '⛰️', label: 'TOPO',    name: 'Topo / Curvas Marcadas',  sub: 'Realce de curvas de nivel, relieve y senderos', cls: 'topo-relief-style',   routeWeight: 7, trackWeight: 7 },
-    { key: 'sun',      icon: '🔆', label: 'SOL',     name: 'Sol Directo',             sub: 'Máximo brillo y contraste bajo luz intensa', cls: 'sunlight-boost-mode', routeWeight: 8, trackWeight: 7 },
-    { key: 'night',    icon: '🌙', label: 'NOCHE',   name: 'Noche / Baja Luz',        sub: 'Tonos oscuros para conducción nocturna', cls: 'night-ride-mode',     routeWeight: 7, trackWeight: 6 }
+    { key: 'normal',   icon: '☀️', label: 'NORMAL',    name: 'Normal (Estándar)',       sub: 'Colores originales de la capa activa', cls: '',                    routeWeight: 6, trackWeight: 6 },
+    { key: 'off_day',  icon: '🌤️', label: 'OFF DÍA',   name: 'Off Día (Alto Contraste)', sub: 'Fondo claro diurno con carreteras amarillas/naranjas y pistas marrones', cls: 'off-day-mode',        routeWeight: 8, trackWeight: 7 },
+    { key: 'contrast', icon: '🌓', label: 'OFF NOCHE', name: 'Off Noche (Alto Contraste)', sub: 'Fondo oscuro con pistas y caminos resaltados', cls: 'trail-contrast-mode', routeWeight: 8, trackWeight: 7 },
+    { key: 'topo',     icon: '⛰️', label: 'TOPO',      name: 'Topo / Curvas Marcadas',  sub: 'Realce de curvas de nivel, relieve y senderos', cls: 'topo-relief-style',   routeWeight: 7, trackWeight: 7 },
+    { key: 'sun',      icon: '🔆', label: 'SOL',       name: 'Sol Directo',             sub: 'Máximo brillo y contraste bajo luz intensa', cls: 'sunlight-boost-mode', routeWeight: 8, trackWeight: 7 },
+    { key: 'night',    icon: '🌙', label: 'NOCHE',     name: 'Noche / Baja Luz',        sub: 'Tonos oscuros para conducción nocturna', cls: 'night-ride-mode',     routeWeight: 7, trackWeight: 6 }
   ];
   let activeDisplayStyleKey = localStorage.getItem('trailsync_display_style') || 'normal';
 
@@ -2574,26 +2581,55 @@
   let lastOffroadBboxKey = '';
   const offroadBboxCache = new Map();
 
+  function isOffroadVectorStyleActive() {
+    return activeDisplayStyleKey === 'contrast' || activeDisplayStyleKey === 'off_day';
+  }
+
   function classifyOffroadWay(tags) {
     if (!tags || !tags.highway) return null;
     const hw = tags.highway;
     const surf = (tags.surface || '').toLowerCase();
     const isUnpavedSurface = ['unpaved', 'gravel', 'fine_gravel', 'compacted', 'dirt', 'earth', 'ground', 'mud', 'sand', 'grass', 'rock', 'pebblestone'].includes(surf);
+    const isDay = activeDisplayStyleKey === 'off_day';
 
     if (hw === 'track' || (hw === 'service' && isUnpavedSurface)) {
-      return { kind: 'track', color: '#c87324', dashColor: '#f5b041', weight: 6.5, dashArray: '14, 10' };
+      return isDay
+        ? { kind: 'track', color: '#6b3e1b', dashColor: '#f8fafc', weight: 6.5, dashArray: '12, 10' }
+        : { kind: 'track', color: '#c87324', dashColor: '#f5b041', weight: 6.5, dashArray: '14, 10' };
     }
     if (hw === 'path' || hw === 'bridleway') {
-      return { kind: 'path', color: '#d97706', dashColor: '#fbbf24', weight: 4.5, dashArray: '8, 8' };
+      return isDay
+        ? { kind: 'path', color: '#7c4a21', dashColor: '#fef3c7', weight: 4.5, dashArray: '8, 8' }
+        : { kind: 'path', color: '#d97706', dashColor: '#fbbf24', weight: 4.5, dashArray: '8, 8' };
     }
-    if (['motorway', 'trunk', 'primary', 'secondary'].includes(hw)) {
-      return isUnpavedSurface
-        ? { kind: 'track', color: '#c87324', dashColor: '#f5b041', weight: 7, dashArray: '14, 10' }
+    if (['motorway', 'trunk', 'primary'].includes(hw)) {
+      if (isUnpavedSurface) {
+        return isDay
+          ? { kind: 'track', color: '#6b3e1b', dashColor: '#f8fafc', weight: 7, dashArray: '12, 10' }
+          : { kind: 'track', color: '#c87324', dashColor: '#f5b041', weight: 7, dashArray: '14, 10' };
+      }
+      return isDay
+        ? { kind: 'paved_main', color: '#fb923c', casing: '#3f3f46', weight: 8 }
         : { kind: 'paved_main', color: '#9c8f54', casing: '#0f1722', weight: 7.5 };
     }
-    if (['tertiary', 'unclassified', 'residential', 'living_street', 'service'].includes(hw)) {
-      return isUnpavedSurface
-        ? { kind: 'track', color: '#c87324', dashColor: '#f5b041', weight: 6.5, dashArray: '14, 10' }
+    if (['secondary', 'tertiary'].includes(hw)) {
+      if (isUnpavedSurface) {
+        return isDay
+          ? { kind: 'track', color: '#6b3e1b', dashColor: '#f8fafc', weight: 6.5, dashArray: '12, 10' }
+          : { kind: 'track', color: '#c87324', dashColor: '#f5b041', weight: 6.5, dashArray: '14, 10' };
+      }
+      return isDay
+        ? { kind: 'paved_main', color: '#fde047', casing: '#4b5563', weight: 7.5 }
+        : { kind: 'paved_main', color: '#9c8f54', casing: '#0f1722', weight: 7.5 };
+    }
+    if (['unclassified', 'residential', 'living_street', 'service'].includes(hw)) {
+      if (isUnpavedSurface) {
+        return isDay
+          ? { kind: 'track', color: '#6b3e1b', dashColor: '#f8fafc', weight: 6.5, dashArray: '12, 10' }
+          : { kind: 'track', color: '#c87324', dashColor: '#f5b041', weight: 6.5, dashArray: '14, 10' };
+      }
+      return isDay
+        ? { kind: 'paved_local', color: '#a8a29e', casing: '#4b5563', weight: 6 }
         : { kind: 'paved_local', color: '#7d7552', casing: '#0f1722', weight: 6 };
     }
     return null;
@@ -2602,7 +2638,7 @@
   function renderOffroadElementsOnMap(elements) {
     if (!offroadRoadsLayer || !map) return;
     offroadRoadsLayer.clearLayers();
-    if (activeDisplayStyleKey !== 'contrast' || map.getZoom() < 13) return;
+    if (!isOffroadVectorStyleActive() || map.getZoom() < 13) return;
 
     const nodes = new Map();
     for (const el of elements) {
@@ -2642,14 +2678,14 @@
 
   function scheduleOffroadRoadsRefresh(force = false) {
     if (!offroadRoadsLayer || !map) return;
-    if (activeDisplayStyleKey !== 'contrast' || map.getZoom() < 13) {
+    if (!isOffroadVectorStyleActive() || map.getZoom() < 13) {
       offroadRoadsLayer.clearLayers();
       lastOffroadBboxKey = '';
       return;
     }
     clearTimeout(offroadFetchTimer);
     offroadFetchTimer = setTimeout(async () => {
-      if (activeDisplayStyleKey !== 'contrast' || !map || map.getZoom() < 13) return;
+      if (!isOffroadVectorStyleActive() || !map || map.getZoom() < 13) return;
       const b = map.getBounds().pad(0.25);
       const s = b.getSouth().toFixed(3);
       const w = b.getWest().toFixed(3);
@@ -2685,7 +2721,7 @@
     localStorage.setItem('trailsync_display_style', m.key);
     const mapEl = document.getElementById('map');
     if (mapEl) {
-      mapEl.classList.remove('trail-contrast-mode', 'topo-relief-style', 'sunlight-boost-mode', 'night-ride-mode');
+      mapEl.classList.remove('off-day-mode', 'trail-contrast-mode', 'topo-relief-style', 'sunlight-boost-mode', 'night-ride-mode');
       if (m.cls) mapEl.classList.add(m.cls);
     }
     if (typeof plannedLine !== 'undefined' && plannedLine) {
@@ -6267,7 +6303,7 @@ window.addEventListener('offline', () => {
     }).join('\n');
 
     return `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="TrailSync v15.2.15" xmlns="http://www.topografix.com/GPX/1/1">
+<gpx version="1.1" creator="TrailSync v15.2.16" xmlns="http://www.topografix.com/GPX/1/1">
   <metadata><name>${escapeXml(titleText)}</name>${descTag}</metadata>
   <trk><name>${escapeXml(titleText)}</name>${descTag}<trkseg>
 ${trkpts}
